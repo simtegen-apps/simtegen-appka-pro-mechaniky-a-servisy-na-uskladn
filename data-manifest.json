@@ -1,0 +1,51 @@
+{
+  "produkt": "",
+  "provozovatel": "SimteGen s.r.o.",
+  "kontakt_email": "",
+  "obsah_zakaznika": "uklada_se",
+  "zpracovani": "worker_a_databaze_eu",
+  "externi_pozadavky": "jen_deklarovane",
+  "ukladame": [
+    {
+      "entita": "uzivatele",
+      "ucel": "účet zákazníka a přihlášení",
+      "pole": "e-mailová adresa, čas založení účtu",
+      "retence": "do smazání účtu zákazníkem"
+    },
+    {
+      "entita": "prihlasovaci_odkazy",
+      "ucel": "jednorázové přihlášení e-mailovým odkazem",
+      "pole": "otisk tokenu, e-mailová adresa, expirace",
+      "retence": "24 hodin"
+    },
+    {
+      "entita": "relace",
+      "ucel": "udržení přihlášení",
+      "pole": "otisk tokenu, odkaz na účet, expirace",
+      "retence": "30 dní od přihlášení"
+    }
+  ],
+  "sluzby_treti_strany": [
+    {
+      "nazev": "Cloudflare",
+      "ucel": "hosting aplikace a databáze (primární instance v EU)",
+      "domena": "",
+      "dpa": "https://www.cloudflare.com/cloudflare-customer-dpa/"
+    },
+    {
+      "nazev": "Resend",
+      "ucel": "odeslání přihlašovacího odkazu na e-mail",
+      "domena": "api.resend.com",
+      "dpa": "https://resend.com/legal/dpa"
+    }
+  ],
+  "uloziste_v_prohlizeci": [],
+  "cookies": [
+    {
+      "nazev": "relace",
+      "ucel": "udržení přihlášení (technická, HttpOnly)",
+      "trvani": "30 dní"
+    }
+  ],
+  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id."
+}

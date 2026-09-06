@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10504b">
+  <title>Produkt SimteGen</title>
+  <style>
+    /* Mobile-first app shell: ~390 px is the design width, desktop only
+       stretches it. Screens swap via .aktivni, animated on transform/opacity
+       so prefers-reduced-motion can turn motion off without breaking layout. */
+    :root {
+      --pozadi: #f4f6f5; --plocha: #ffffff; --inkoust: #1b2423;
+      --inkoust-2: #5a6764; --akcent: #10504b; --akcent-text: #ffffff;
+      --chyba: #9e3527; --okraj: #dbe2e0;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--pozadi); color: var(--inkoust);
+      font-family: system-ui, sans-serif; line-height: 1.5;
+      display: flex; flex-direction: column;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+    main { flex: 1; width: 100%; max-width: 28rem; margin: 0 auto; padding: 1.25rem; position: relative; }
+    .obrazovka {
+      position: absolute; inset: 0; padding: 1.25rem;
+      display: none; flex-direction: column; gap: 1rem;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .obrazovka.aktivni { display: flex; opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .obrazovka { transition: none; transform: none; }
+    }
+    h1 { font-size: 1.35rem; margin: 0.5rem 0 0; }
+    p { margin: 0; color: var(--inkoust-2); }
+    label { font-size: 0.9rem; font-weight: 600; }
+    input[type=email] {
+      width: 100%; min-height: 48px; padding: 0 0.9rem; font-size: 1rem;
+      border: 1px solid var(--okraj); border-radius: 10px; background: var(--plocha);
+      color: var(--inkoust);
+    }
+    button {
+      min-height: 48px; padding: 0 1.1rem; font-size: 1rem; font-weight: 600;
+      border: none; border-radius: 10px; cursor: pointer;
+      background: var(--akcent); color: var(--akcent-text);
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    button:active { transform: scale(0.97); }
+    button.tiche { background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj); }
+    button.varovne { background: var(--plocha); color: var(--chyba); border: 1px solid var(--chyba); }
+    .zprava { min-height: 1.4rem; font-size: 0.92rem; }
+    .zprava.chyba { color: var(--chyba); }
+    .karta { background: var(--plocha); border: 1px solid var(--okraj); border-radius: 12px; padding: 1rem; }
+    footer { text-align: center; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom)); font-size: 0.8rem; }
+    footer a { color: var(--inkoust-2); }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="obrazovka-nacitani" class="obrazovka aktivni" aria-live="polite">
+      <p>Načítání…</p>
+    </section>
+
+    <section id="obrazovka-prihlaseni" class="obrazovka">
+      <h1>Přihlášení</h1>
+      <p>Zadejte svůj e-mail — pošleme vám jednorázový přihlašovací odkaz.
+      Žádné heslo nepotřebujete.</p>
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="vas@email.cz">
+      <button id="poslat-odkaz">Poslat přihlašovací odkaz</button>
+      <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
+    </section>
+
+    <section id="obrazovka-aplikace" class="obrazovka">
+      <h1>Produkt SimteGen</h1>
+      <p>Tahle obrazovka je zárodek ze šablony — stavitel ji nahradí skutečným
+      nástrojem. Přihlášení, účet a zásady zůstávají.</p>
+      <div class="karta">
+        <p>Přihlášeni jako <strong id="ucet-email"></strong></p>
+      </div>
+      <button id="stahnout-data" class="tiche">Stáhnout moje data</button>
+      <button id="odhlasit" class="tiche">Odhlásit se</button>
+      <button id="smazat-ucet" class="varovne">Smazat účet a všechna data</button>
+      <div id="aplikace-zprava" class="zprava" aria-live="polite"></div>
+    </section>
+  </main>
+  <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
+
+  <script>
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    function ukaz(id) {
+      document.querySelectorAll(".obrazovka").forEach((o) =>
+        o.classList.toggle("aktivni", o.id === id));
+    }
+
+    async function api(cesta, metoda, telo) {
+      const odpoved = await fetch(cesta, {
+        method: metoda,
+        headers: telo ? { "Content-Type": "application/json" } : undefined,
+        body: telo ? JSON.stringify(telo) : undefined,
+      });
+      return { ok: odpoved.ok, data: await odpoved.json().catch(() => ({})) };
+    }
+
+    async function obnov() {
+      try {
+        const { data } = await api("/api/ja", "GET");
+        if (data.prihlasen) {
+          $("ucet-email").textContent = data.email;
+          ukaz("obrazovka-aplikace");
+        } else {
+          ukaz("obrazovka-prihlaseni");
+        }
+      } catch {
+        ukaz("obrazovka-prihlaseni");
+      }
+    }
+
+    $("poslat-odkaz").addEventListener("click", async () => {
+      const zprava = $("prihlaseni-zprava");
+      zprava.className = "zprava";
+      zprava.textContent = "Odesílám…";
+      const { ok, data } = await api("/api/prihlaseni", "POST", { email: $("email").value });
+      if (!ok) {
+        zprava.className = "zprava chyba";
+        zprava.textContent = data.chyba || "Něco se nepovedlo. Zkuste to prosím znovu.";
+        return;
+      }
+      if (data.odkaz) {
+        // Development deployments hand the link back instead of e-mailing it.
+        zprava.innerHTML = "";
+        const a = document.createElement("a");
+        a.href = data.odkaz;
+        a.textContent = "Vývojový režim — přihlásit tímto odkazem";
+        zprava.appendChild(a);
+        return;
+      }
+      zprava.textContent = "Hotovo — přihlašovací odkaz najdete v e-mailu.";
+    });
+
+    $("odhlasit").addEventListener("click", async () => {
+      await api("/api/odhlaseni", "POST");
+      obnov();
+    });
+
+    $("stahnout-data").addEventListener("click", () => {
+      location.href = "/api/ucet/export";
+    });
+
+    $("smazat-ucet").addEventListener("click", async () => {
+      if (!confirm("Opravdu smazat účet a všechna data? Krok je nevratný.")) return;
+      const { ok, data } = await api("/api/ucet/smazat", "POST");
+      const zprava = $("aplikace-zprava");
+      if (!ok) {
+        zprava.className = "zprava chyba";
+        zprava.textContent = data.chyba || "Smazání se nepovedlo.";
+        return;
+      }
+      obnov();
+    });
+
+    obnov();
+  </script>
+</body>
+</html>
