@@ -27,31 +27,31 @@
     {
       "entita": "nastaveni_servisu",
       "ucel": "údaje servisu na štítek a nastavení aplikace",
-      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období",
+      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, čas vytvoření záznamu",
       "retence": "do smazání účtu zákazníkem"
     },
     {
       "entita": "zakaznici",
       "ucel": "evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí",
-      "pole": "jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat",
+      "pole": "jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu",
       "retence": "do smazání zákazníka v aplikaci nebo do smazání účtu"
     },
     {
       "entita": "sady",
       "ucel": "evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění",
-      "pole": "kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat",
+      "pole": "kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu",
       "retence": "po dobu uskladnění a 24 měsíců po výdeji sady"
     },
     {
       "entita": "pohyby",
       "ucel": "historie příjmů, výdejů a přesunů sady napříč sezónami",
-      "pole": "odkaz na sadu, typ pohybu, datum, poznámka",
+      "pole": "odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu",
       "retence": "24 měsíců po výdeji sady"
     },
     {
       "entita": "objednavky",
       "ucel": "objednávkový kalendář servisu a příprava kol na následující den",
-      "pole": "odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat",
+      "pole": "odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu",
       "retence": "24 měsíců od termínu"
     }
   ],

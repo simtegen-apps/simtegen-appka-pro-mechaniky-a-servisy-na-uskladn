@@ -49,8 +49,19 @@ const OBJEDNAVKY = [
   { posun: 2, cas: "11:00", sada: 4, ukon: "vydej", delka: 20, poznamka: "Ruší uskladnění." },
 ];
 
+// Returns how many example customers had to stay behind.
+//
+// The order matters and so does the last WHERE clause. sady.zakaznik_id
+// cascades, so deleting an example customer would take with it any REAL set
+// the shop wrote against that customer while trying the app out — the exact
+// records the subscription is paid for, and the opposite of what the button
+// promises. So: example sets first, then only those example customers that
+// nothing real points at any more. A customer with a real set or a real
+// booking survives, same as /api/zakaznici refuses to delete one.
 async function smazUkazku(env, uzivatelId) {
   await env.DB.batch([
+    // Bookings made against an example set go with the set; on their own they
+    // would survive as nameless rows (sada_id is ON DELETE SET NULL).
     env.DB.prepare(
       "DELETE FROM objednavky WHERE uzivatel_id = ? AND (ukazka = 1 OR sada_id IN " +
       "(SELECT id FROM sady WHERE uzivatel_id = ? AND ukazka = 1))"
@@ -60,8 +71,22 @@ async function smazUkazku(env, uzivatelId) {
       "(SELECT id FROM sady WHERE uzivatel_id = ? AND ukazka = 1)"
     ).bind(uzivatelId, uzivatelId),
     env.DB.prepare("DELETE FROM sady WHERE uzivatel_id = ? AND ukazka = 1").bind(uzivatelId),
-    env.DB.prepare("DELETE FROM zakaznici WHERE uzivatel_id = ? AND ukazka = 1").bind(uzivatelId),
   ]);
+
+  // Every set left at this point is a real one, hence the plain subquery.
+  // objednavky.zakaznik_id is nullable and a NULL inside NOT IN would make the
+  // whole predicate never true, which is why it is filtered out explicitly.
+  await env.DB.prepare(
+    "DELETE FROM zakaznici WHERE uzivatel_id = ? AND ukazka = 1 " +
+    "AND id NOT IN (SELECT zakaznik_id FROM sady WHERE uzivatel_id = ?) " +
+    "AND id NOT IN (SELECT zakaznik_id FROM objednavky WHERE uzivatel_id = ? " +
+    "AND zakaznik_id IS NOT NULL)"
+  ).bind(uzivatelId, uzivatelId, uzivatelId).run();
+
+  const ponechani = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM zakaznici WHERE uzivatel_id = ? AND ukazka = 1"
+  ).bind(uzivatelId).first();
+  return ponechani.n;
 }
 
 export async function onRequestPost(context) {
@@ -78,8 +103,8 @@ export async function onRequestPost(context) {
   const uzivatelId = data.uzivatel.id;
 
   if (telo.akce === "smazat") {
-    await smazUkazku(env, uzivatelId);
-    return json({ stav: "smazano" });
+    const ponechani = await smazUkazku(env, uzivatelId);
+    return json({ stav: "smazano", ponechani });
   }
   if (telo.akce !== "naplnit") return json({ chyba: "Neznámá akce." }, 422);
 
@@ -95,6 +120,15 @@ export async function onRequestPost(context) {
 
   const zakaznikIdy = [];
   for (const z of ZAKAZNICI) {
+    // An example customer can survive deletion because the shop hung a real
+    // set on them. Reuse that row rather than adding a twin with the same name.
+    const existujici = await env.DB.prepare(
+      "SELECT id FROM zakaznici WHERE uzivatel_id = ? AND ukazka = 1 AND jmeno = ?"
+    ).bind(uzivatelId, z.jmeno).first();
+    if (existujici) {
+      zakaznikIdy.push(existujici.id);
+      continue;
+    }
     const radek = await env.DB.prepare(
       "INSERT INTO zakaznici (uzivatel_id, jmeno, telefon, email, ukazka) " +
       "VALUES (?, ?, ?, ?, 1) RETURNING id"

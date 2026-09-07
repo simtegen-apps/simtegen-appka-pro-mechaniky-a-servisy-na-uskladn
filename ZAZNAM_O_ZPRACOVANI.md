@@ -11,11 +11,11 @@ Vedeno podle čl. 30 GDPR; zdrojem je `data-manifest.json` tohoto repozitáře.
 | uzivatele | účet zákazníka a přihlášení | e-mailová adresa, čas založení účtu | do smazání účtu zákazníkem |
 | prihlasovaci_odkazy | jednorázové přihlášení e-mailovým odkazem | otisk tokenu, e-mailová adresa, expirace | 24 hodin |
 | relace | udržení přihlášení | otisk tokenu, odkaz na účet, expirace | 30 dní od přihlášení |
-| nastaveni_servisu | údaje servisu na štítek a nastavení aplikace | název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období | do smazání účtu zákazníkem |
-| zakaznici | evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí | jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat | do smazání zákazníka v aplikaci nebo do smazání účtu |
-| sady | evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění | kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat | po dobu uskladnění a 24 měsíců po výdeji sady |
-| pohyby | historie příjmů, výdejů a přesunů sady napříč sezónami | odkaz na sadu, typ pohybu, datum, poznámka | 24 měsíců po výdeji sady |
-| objednavky | objednávkový kalendář servisu a příprava kol na následující den | odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat | 24 měsíců od termínu |
+| nastaveni_servisu | údaje servisu na štítek a nastavení aplikace | název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, čas vytvoření záznamu | do smazání účtu zákazníkem |
+| zakaznici | evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí | jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu | do smazání zákazníka v aplikaci nebo do smazání účtu |
+| sady | evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění | kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu | po dobu uskladnění a 24 měsíců po výdeji sady |
+| pohyby | historie příjmů, výdejů a přesunů sady napříč sezónami | odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu | 24 měsíců po výdeji sady |
+| objednavky | objednávkový kalendář servisu a příprava kol na následující den | odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu | 24 měsíců od termínu |
 
 Subjekty údajů: zákazníci služby. Právní základ: plnění smlouvy
 (čl. 6 odst. 1 písm. b), zabezpečení služby jako oprávněný zájem

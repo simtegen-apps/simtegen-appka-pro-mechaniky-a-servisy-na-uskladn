@@ -1597,11 +1597,16 @@
     });
 
     $("nast-ukazka-smazat").addEventListener("click", async () => {
-      if (!confirm("Smazat všechna ukázková data? Vaše skutečné záznamy zůstanou.")) return;
+      if (!confirm("Smazat ukázková data? Vaše skutečné záznamy zůstanou.")) return;
       const { ok, data } = await api("/api/ukazka", "POST", { akce: "smazat" });
       if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
       await nactiUcet();
-      zprava("nast-zprava", "Ukázková data smazána.");
+      // Example customers you hung a real set or booking on cannot go without
+      // taking that record with them, so they stay — and we say so.
+      zprava("nast-zprava", data.ponechani
+        ? `Ukázková data smazána. ${data.ponechani} ukázkových zákazníků jsme `
+          + "ponechali — máte u nich vedené vlastní sady nebo objednávky."
+        : "Ukázková data smazána.");
     });
 
     $("stahnout-data").addEventListener("click", () => {
