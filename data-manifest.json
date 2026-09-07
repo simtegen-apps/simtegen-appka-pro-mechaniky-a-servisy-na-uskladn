@@ -1,7 +1,7 @@
 {
-  "produkt": "",
+  "produkt": "Pneusklad — evidence uskladněných pneu",
   "provozovatel": "SimteGen s.r.o.",
-  "kontakt_email": "",
+  "kontakt_email": "podpora@simtegen.cz",
   "obsah_zakaznika": "uklada_se",
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
@@ -23,6 +23,36 @@
       "ucel": "udržení přihlášení",
       "pole": "otisk tokenu, odkaz na účet, expirace",
       "retence": "30 dní od přihlášení"
+    },
+    {
+      "entita": "nastaveni_servisu",
+      "ucel": "údaje servisu na štítek a nastavení aplikace",
+      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období",
+      "retence": "do smazání účtu zákazníkem"
+    },
+    {
+      "entita": "zakaznici",
+      "ucel": "evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí",
+      "pole": "jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat",
+      "retence": "do smazání zákazníka v aplikaci nebo do smazání účtu"
+    },
+    {
+      "entita": "sady",
+      "ucel": "evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění",
+      "pole": "kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat",
+      "retence": "po dobu uskladnění a 24 měsíců po výdeji sady"
+    },
+    {
+      "entita": "pohyby",
+      "ucel": "historie příjmů, výdejů a přesunů sady napříč sezónami",
+      "pole": "odkaz na sadu, typ pohybu, datum, poznámka",
+      "retence": "24 měsíců po výdeji sady"
+    },
+    {
+      "entita": "objednavky",
+      "ucel": "objednávkový kalendář servisu a příprava kol na následující den",
+      "pole": "odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat",
+      "retence": "24 měsíců od termínu"
     }
   ],
   "sluzby_treti_strany": [
@@ -34,7 +64,7 @@
     },
     {
       "nazev": "Resend",
-      "ucel": "odeslání přihlašovacího odkazu na e-mail",
+      "ucel": "odeslání přihlašovacího odkazu a odeslání seznamu přípravy na následující den na e-mail servisu",
       "domena": "api.resend.com",
       "dpa": "https://resend.com/legal/dpa"
     }
