@@ -114,11 +114,13 @@
       padding-bottom: env(safe-area-inset-bottom);
     }
     body.prihlasen .lista { display: flex; }
+    /* Five tabs at 390 px leaves ~78 px each, hence the smaller label and
+       nowrap — "Objednávky" must not fold onto a second line. */
     .lista button {
       flex: 1; min-height: 56px; background: transparent; color: var(--inkoust-2);
-      border: none; border-radius: 0; font-size: 0.7rem; font-weight: 600;
+      border: none; border-radius: 0; font-size: 0.64rem; font-weight: 600;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.1rem; padding: 0.25rem 0;
+      gap: 0.1rem; padding: 0.25rem 0.1rem; white-space: nowrap;
     }
     .lista button .glyf { font-size: 1.2rem; line-height: 1; }
     .lista button[aria-current="page"] { color: var(--akcent); }
@@ -303,6 +305,51 @@
       <div class="dolni-akce">
         <button id="sklad-tisk" hidden>Tisk štítků (0)</button>
         <button id="sklad-nova-sada">+ Nová sada na uskladnění</button>
+      </div>
+    </section>
+
+    <!-- ---------------------------- Zákazníci ----------------------------- -->
+    <section id="obrazovka-zakaznici" class="obrazovka">
+      <div class="hlavicka">
+        <h1>Zákazníci</h1>
+        <span class="znacka" id="zak-pocet">0</span>
+      </div>
+      <input id="hledani-zakaznici" type="search" enterkeyhint="search" autocomplete="off"
+             inputmode="search" placeholder="Hledat podle jména nebo telefonu">
+      <div id="zakaznici-seznam" class="seznam" aria-live="polite"></div>
+      <div style="height:1.5rem;flex-shrink:0"></div>
+    </section>
+
+    <!-- ------------------------- Zákazník (úprava) ------------------------ -->
+    <section id="obrazovka-zakaznik" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1 id="zak-titulek">Zákazník</h1>
+      </div>
+      <div class="karta">
+        <div class="radky">
+          <div><span class="klic">Uskladněno sad</span>
+            <span class="hodnota" id="zak-sad-uskladneno">0</span></div>
+          <div><span class="klic">Celkem sad v evidenci</span>
+            <span class="hodnota" id="zak-sad-celkem">0</span></div>
+        </div>
+        <a class="telefon" id="zak-volat" href="tel:"
+           style="display:flex;align-items:center;justify-content:center;min-height:44px;
+                  margin-top:0.75rem;border:1px solid var(--akcent);border-radius:10px">
+          Zavolat</a>
+      </div>
+      <div class="pole"><label for="zak-jmeno">Jméno</label>
+        <input id="zak-jmeno" autocomplete="off"></div>
+      <div class="pole"><label for="zak-telefon">Telefon</label>
+        <input id="zak-telefon" type="tel" inputmode="tel" autocomplete="off"></div>
+      <div class="pole"><label for="zak-email">E-mail (nepovinné)</label>
+        <input id="zak-email" type="email" inputmode="email" autocomplete="off"></div>
+      <div class="pole"><label for="zak-poznamka">Poznámka</label>
+        <textarea id="zak-poznamka"></textarea></div>
+      <div id="zakaznik-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <button id="zak-ulozit">Uložit změny</button>
+        <button class="varovne" id="zak-smazat">Smazat zákazníka</button>
       </div>
     </section>
 
@@ -591,6 +638,8 @@
       <span class="glyf" aria-hidden="true">⌂</span>Dnes</button>
     <button data-obrazovka="obrazovka-sklad">
       <span class="glyf" aria-hidden="true">◎</span>Sklad</button>
+    <button data-obrazovka="obrazovka-zakaznici">
+      <span class="glyf" aria-hidden="true">☏</span>Zákazníci</button>
     <button data-obrazovka="obrazovka-objednavky">
       <span class="glyf" aria-hidden="true">▦</span>Objednávky</button>
     <button data-obrazovka="obrazovka-nastaveni">
@@ -604,12 +653,13 @@
     "use strict";
     const $ = (id) => document.getElementById(id);
 
-    const HLAVNI = ["obrazovka-dnes", "obrazovka-sklad", "obrazovka-objednavky",
-                    "obrazovka-nastaveni"];
+    const HLAVNI = ["obrazovka-dnes", "obrazovka-sklad", "obrazovka-zakaznici",
+                    "obrazovka-objednavky", "obrazovka-nastaveni"];
 
     const stav = {
       nastaveni: null,
       sada: null,
+      zakaznik: null,
       pohyby: [],
       novaSada: null,
       novaObjednavka: null,
@@ -740,6 +790,7 @@
         jdi(cil);
         if (cil === "obrazovka-dnes") nactiDnes();
         if (cil === "obrazovka-sklad") nactiSklad();
+        if (cil === "obrazovka-zakaznici") nactiZakazniky();
         if (cil === "obrazovka-objednavky") nactiObjednavky();
         if (cil === "obrazovka-nastaveni") vykresliNastaveni();
       }));
@@ -947,6 +998,105 @@
       }));
     $("sklad-nova-sada").addEventListener("click", () => zacniNovouSadu());
     $("sklad-tisk").addEventListener("click", () => tiskni([...stav.vybrane.values()]));
+
+    // --------------------------------------------------------- Customers
+    // The policy promises the shop can correct and delete a motorist's record
+    // in the app, so there has to be a screen that actually does it.
+    async function nactiZakazniky() {
+      const dotaz = $("hledani-zakaznici").value.trim();
+      const { ok, data } = await api(
+        `/api/zakaznici?q=${encodeURIComponent(dotaz)}`, "GET");
+      const kontejner = $("zakaznici-seznam");
+      if (!ok) {
+        kontejner.innerHTML = '<div class="prazdno">Zákazníky se nepodařilo načíst.</div>';
+        return;
+      }
+      $("zak-pocet").textContent = data.celkem;
+      if (!data.zakaznici.length) {
+        kontejner.innerHTML = `<div class="prazdno">${dotaz
+          ? "Nikoho takového jsme nenašli."
+          : "Zatím tu nemáte žádné zákazníky. Přidají se sami při zápisu první sady."
+        }</div>`;
+        return;
+      }
+      kontejner.innerHTML = data.zakaznici.map((z) =>
+        `<button class="polozka otevri-zakaznika" data-id="${z.id}">
+          <span class="radek1">
+            <span class="jmeno" style="flex:1">${bezpecne(z.jmeno)}</span>
+            <span class="znacka">${z.sad_uskladneno
+              ? `${z.sad_uskladneno} ve skladu` : "nic uskladněno"}</span>
+          </span>
+          <span class="detail" style="display:block">${bezpecne(z.telefon)}${
+            z.email ? ` · ${bezpecne(z.email)}` : ""}</span>
+          ${z.poznamka
+            ? `<span class="detail" style="display:block">${bezpecne(z.poznamka)}</span>` : ""}
+        </button>`).join("");
+      kontejner.querySelectorAll(".otevri-zakaznika").forEach((b) =>
+        b.addEventListener("click", () =>
+          otevriZakaznika(data.zakaznici.find((z) => z.id === Number(b.dataset.id)))));
+    }
+
+    $("hledani-zakaznici").addEventListener("input", debounce(nactiZakazniky, 250));
+
+    function otevriZakaznika(zakaznik) {
+      stav.zakaznik = zakaznik;
+      $("zak-titulek").textContent = zakaznik.jmeno;
+      $("zak-sad-uskladneno").textContent = zakaznik.sad_uskladneno;
+      $("zak-sad-celkem").textContent = zakaznik.sad_celkem;
+      $("zak-volat").href = `tel:${String(zakaznik.telefon).replace(/\s/g, "")}`;
+      $("zak-jmeno").value = zakaznik.jmeno || "";
+      $("zak-telefon").value = zakaznik.telefon || "";
+      $("zak-email").value = zakaznik.email || "";
+      $("zak-poznamka").value = zakaznik.poznamka || "";
+      zprava("zakaznik-zprava", "");
+      jdi("obrazovka-zakaznik");
+    }
+
+    $("zak-ulozit").addEventListener("click", async () => {
+      zprava("zakaznik-zprava", "Ukládám…");
+      const { ok, data } = await api("/api/zakaznici", "POST", {
+        akce: "upravit",
+        id: stav.zakaznik.id,
+        jmeno: $("zak-jmeno").value.trim(),
+        telefon: $("zak-telefon").value.trim(),
+        email: $("zak-email").value.trim(),
+        poznamka: $("zak-poznamka").value.trim(),
+      });
+      if (!ok) {
+        return zprava("zakaznik-zprava", data.chyba || "Uložení se nepovedlo.", true);
+      }
+      // Keep the open record in step with the form, so a delete right after an
+      // edit warns about the new name and not the old one.
+      stav.zakaznik.jmeno = $("zak-jmeno").value.trim();
+      stav.zakaznik.telefon = $("zak-telefon").value.trim();
+      $("zak-titulek").textContent = stav.zakaznik.jmeno;
+      $("zak-volat").href = `tel:${stav.zakaznik.telefon.replace(/\s/g, "")}`;
+      zprava("zakaznik-zprava", "Uloženo.");
+      nactiZakazniky();
+    });
+
+    $("zak-smazat").addEventListener("click", async () => {
+      const z = stav.zakaznik;
+      // Wheels in the rack block it — the server refuses too, but saying so
+      // here saves a round trip and reads as an explanation, not an error.
+      if (z.sad_uskladneno > 0) {
+        return zprava("zakaznik-zprava",
+          `Zákazníka nelze smazat, dokud u vás má uskladněné sady (${z.sad_uskladneno}). `
+          + "Nejdřív je prosím vydejte.", true);
+      }
+      const varovani = z.sad_celkem
+        ? `Smazat zákazníka ${z.jmeno}? Smaže se i ${z.sad_celkem} vydaných sad `
+          + "v jeho historii. Krok je nevratný."
+        : `Smazat zákazníka ${z.jmeno}? Krok je nevratný.`;
+      if (!confirm(varovani)) return;
+      const { ok, data } = await api("/api/zakaznici", "POST",
+        { akce: "smazat", id: z.id });
+      if (!ok) {
+        return zprava("zakaznik-zprava", data.chyba || "Smazání se nepovedlo.", true);
+      }
+      history.back();
+      nactiZakazniky();
+    });
 
     // ------------------------------------------------------- New set wizard
     function zacniNovouSadu() {
