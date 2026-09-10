@@ -317,7 +317,9 @@
       <input id="hledani-zakaznici" type="search" enterkeyhint="search" autocomplete="off"
              inputmode="search" placeholder="Hledat podle jména nebo telefonu">
       <div id="zakaznici-seznam" class="seznam" aria-live="polite"></div>
-      <div style="height:1.5rem;flex-shrink:0"></div>
+      <div class="dolni-akce">
+        <button id="zakaznici-novy">+ Nový zákazník</button>
+      </div>
     </section>
 
     <!-- ------------------------- Zákazník (úprava) ------------------------ -->
@@ -326,7 +328,7 @@
         <button class="zpet" data-zpet aria-label="Zpět">←</button>
         <h1 id="zak-titulek">Zákazník</h1>
       </div>
-      <div class="karta">
+      <div class="karta" id="zak-karta">
         <div class="radky">
           <div><span class="klic">Uskladněno sad</span>
             <span class="hodnota" id="zak-sad-uskladneno">0</span></div>
@@ -1015,7 +1017,8 @@
       if (!data.zakaznici.length) {
         kontejner.innerHTML = `<div class="prazdno">${dotaz
           ? "Nikoho takového jsme nenašli."
-          : "Zatím tu nemáte žádné zákazníky. Přidají se sami při zápisu první sady."
+          : "Zatím tu nemáte žádné zákazníky. Založte prvního tlačítkem dole, "
+            + "nebo se přidají sami při zápisu první sady."
         }</div>`;
         return;
       }
@@ -1038,32 +1041,58 @@
 
     $("hledani-zakaznici").addEventListener("input", debounce(nactiZakazniky, 250));
 
+    // One screen for both jobs: zakaznik = null means "new". A separate form
+    // for creating would be the same four fields twice, drifting apart the
+    // first time one of them changes.
     function otevriZakaznika(zakaznik) {
-      stav.zakaznik = zakaznik;
-      $("zak-titulek").textContent = zakaznik.jmeno;
-      $("zak-sad-uskladneno").textContent = zakaznik.sad_uskladneno;
-      $("zak-sad-celkem").textContent = zakaznik.sad_celkem;
-      $("zak-volat").href = `tel:${String(zakaznik.telefon).replace(/\s/g, "")}`;
-      $("zak-jmeno").value = zakaznik.jmeno || "";
-      $("zak-telefon").value = zakaznik.telefon || "";
-      $("zak-email").value = zakaznik.email || "";
-      $("zak-poznamka").value = zakaznik.poznamka || "";
+      stav.zakaznik = zakaznik || null;
+      const novy = !zakaznik;
+      $("zak-titulek").textContent = novy ? "Nový zákazník" : zakaznik.jmeno;
+      // A customer that does not exist yet has nothing to count and no number
+      // to call.
+      $("zak-karta").hidden = novy;
+      $("zak-smazat").hidden = novy;
+      $("zak-ulozit").textContent = novy ? "Založit zákazníka" : "Uložit změny";
+      if (!novy) {
+        $("zak-sad-uskladneno").textContent = zakaznik.sad_uskladneno;
+        $("zak-sad-celkem").textContent = zakaznik.sad_celkem;
+        $("zak-volat").href = `tel:${String(zakaznik.telefon).replace(/\s/g, "")}`;
+      }
+      $("zak-jmeno").value = novy ? "" : (zakaznik.jmeno || "");
+      $("zak-telefon").value = novy ? "" : (zakaznik.telefon || "");
+      $("zak-email").value = novy ? "" : (zakaznik.email || "");
+      $("zak-poznamka").value = novy ? "" : (zakaznik.poznamka || "");
       zprava("zakaznik-zprava", "");
       jdi("obrazovka-zakaznik");
     }
 
+    $("zakaznici-novy").addEventListener("click", () => otevriZakaznika(null));
+
     $("zak-ulozit").addEventListener("click", async () => {
-      zprava("zakaznik-zprava", "Ukládám…");
-      const { ok, data } = await api("/api/zakaznici", "POST", {
-        akce: "upravit",
-        id: stav.zakaznik.id,
+      const novy = !stav.zakaznik;
+      zprava("zakaznik-zprava", novy ? "Zakládám…" : "Ukládám…");
+      const telo = {
+        akce: novy ? "novy" : "upravit",
         jmeno: $("zak-jmeno").value.trim(),
         telefon: $("zak-telefon").value.trim(),
         email: $("zak-email").value.trim(),
         poznamka: $("zak-poznamka").value.trim(),
-      });
+      };
+      if (!novy) telo.id = stav.zakaznik.id;
+
+      $("zak-ulozit").disabled = true;
+      const { ok, data } = await api("/api/zakaznici", "POST", telo);
+      $("zak-ulozit").disabled = false;
       if (!ok) {
-        return zprava("zakaznik-zprava", data.chyba || "Uložení se nepovedlo.", true);
+        return zprava("zakaznik-zprava",
+          data.chyba || (novy ? "Založení se nepovedlo." : "Uložení se nepovedlo."), true);
+      }
+      if (novy) {
+        // Back to the list, where the new name is now visible — same as after
+        // a delete.
+        history.back();
+        nactiZakazniky();
+        return;
       }
       // Keep the open record in step with the form, so a delete right after an
       // edit warns about the new name and not the old one.
