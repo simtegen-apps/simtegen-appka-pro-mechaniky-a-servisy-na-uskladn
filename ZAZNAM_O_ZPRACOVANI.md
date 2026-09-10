@@ -11,7 +11,7 @@ Vedeno podle čl. 30 GDPR; zdrojem je `data-manifest.json` tohoto repozitáře.
 | uzivatele | účet zákazníka a přihlášení | e-mailová adresa, čas založení účtu | do smazání účtu zákazníkem |
 | prihlasovaci_odkazy | jednorázové přihlášení e-mailovým odkazem | otisk tokenu, e-mailová adresa, expirace | 24 hodin |
 | relace | udržení přihlášení | otisk tokenu, odkaz na účet, expirace | 30 dní od přihlášení |
-| nastaveni_servisu | údaje servisu na štítek a nastavení aplikace | název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, čas vytvoření záznamu | do smazání účtu zákazníkem |
+| nastaveni_servisu | údaje servisu na štítek a nastavení aplikace | název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, čas vytvoření záznamu | do smazání účtu zákazníkem |
 | zakaznici | evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí | jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu | do smazání zákazníka v aplikaci nebo do smazání účtu |
 | sady | evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění | kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu | po dobu uskladnění a 24 měsíců po výdeji sady |
 | pohyby | historie příjmů, výdejů a přesunů sady napříč sezónami | odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu | 24 měsíců po výdeji sady |
