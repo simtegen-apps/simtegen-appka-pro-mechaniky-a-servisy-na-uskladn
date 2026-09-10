@@ -2,7 +2,7 @@
 // creates the account on first login, opens a session, redirects home.
 
 import {
-  cookieHlavicka, novyToken, otisk, ted, RELACE_TRVANI,
+  cookieHlavicka, novyToken, otisk, ted, uklid, RELACE_TRVANI,
 } from "../../spolecne.js";
 
 export async function onRequestGet(context) {
@@ -49,6 +49,8 @@ export async function onRequestGet(context) {
     ).bind(ted() - 23 * 3600),
     env.DB.prepare("DELETE FROM relace WHERE expirace < ?").bind(ted()),
   ]);
+  // App-table retention rides along for the same reason.
+  await uklid(env, uzivatel.id);
 
   return new Response(null, {
     status: 303,

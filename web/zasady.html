@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Zásady zpracování údajů — Produkt SimteGen</title>
+  <title>Zásady zpracování údajů — Pneusklad — evidence uskladněných pneu</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
     table { border-collapse: collapse; width: 100%; }
@@ -14,9 +14,9 @@
 </head>
 <body>
   <h1>Zásady zpracování údajů</h1>
-  <p>Služba <strong>Produkt SimteGen</strong>, provozovatel a správce údajů
+  <p>Služba <strong>Pneusklad — evidence uskladněných pneu</strong>, provozovatel a správce údajů
   <strong>SimteGen s.r.o.</strong>. S dotazy k údajům nás kontaktujte na
-  <a href="mailto:(kontaktní e-mail bude doplněn)">(kontaktní e-mail bude doplněn)</a>.</p>
+  <a href="mailto:podpora@simtegen.cz">podpora@simtegen.cz</a>.</p>
 
   <h2>Jaké údaje ukládáme a proč</h2>
   <p>Ukládáme pouze to, co je uvedeno níže — nic dalšího. Právním základem je
@@ -30,6 +30,11 @@
       <tr><td>účet zákazníka a přihlášení</td><td>e-mailová adresa, čas založení účtu</td><td>do smazání účtu zákazníkem</td></tr>
       <tr><td>jednorázové přihlášení e-mailovým odkazem</td><td>otisk tokenu, e-mailová adresa, expirace</td><td>24 hodin</td></tr>
       <tr><td>udržení přihlášení</td><td>otisk tokenu, odkaz na účet, expirace</td><td>30 dní od přihlášení</td></tr>
+      <tr><td>údaje servisu na štítek a nastavení aplikace</td><td>název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, čas vytvoření záznamu</td><td>do smazání účtu zákazníkem</td></tr>
+      <tr><td>evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí</td><td>jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu</td><td>do smazání zákazníka v aplikaci nebo do smazání účtu</td></tr>
+      <tr><td>evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění</td><td>kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu</td><td>po dobu uskladnění a 24 měsíců po výdeji sady</td></tr>
+      <tr><td>historie příjmů, výdejů a přesunů sady napříč sezónami</td><td>odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu</td><td>24 měsíců po výdeji sady</td></tr>
+      <tr><td>objednávkový kalendář servisu a příprava kol na následující den</td><td>odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu</td><td>24 měsíců od termínu</td></tr>
     </tbody>
   </table>
 
@@ -39,7 +44,7 @@
   je k reklamním účelům.</p>
   <ul>
     <li><strong>Cloudflare</strong> — hosting aplikace a databáze (primární instance v EU) (<a href="https://www.cloudflare.com/cloudflare-customer-dpa/">zpracovatelská smlouva</a>)</li>
-    <li><strong>Resend</strong> — odeslání přihlašovacího odkazu na e-mail (<a href="https://resend.com/legal/dpa">zpracovatelská smlouva</a>)</li>
+    <li><strong>Resend</strong> — odeslání přihlašovacího odkazu a odeslání seznamu přípravy na následující den na e-mail servisu (<a href="https://resend.com/legal/dpa">zpracovatelská smlouva</a>)</li>
   </ul>
 
   <h2>Cookies</h2>

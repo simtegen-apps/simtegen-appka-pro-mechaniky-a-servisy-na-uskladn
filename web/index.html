@@ -4,58 +4,238 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#10504b">
-  <title>Produkt SimteGen</title>
+  <title>Pneusklad — evidence uskladněných pneu</title>
   <style>
     /* Mobile-first app shell: ~390 px is the design width, desktop only
        stretches it. Screens swap via .aktivni, animated on transform/opacity
-       so prefers-reduced-motion can turn motion off without breaking layout. */
+       so prefers-reduced-motion can turn motion off without breaking layout.
+       The mechanic holds the phone in one hand in the rack, so every screen
+       keeps its primary action stuck to the bottom, above the tab bar. */
     :root {
       --pozadi: #f4f6f5; --plocha: #ffffff; --inkoust: #1b2423;
       --inkoust-2: #5a6764; --akcent: #10504b; --akcent-text: #ffffff;
       --chyba: #9e3527; --okraj: #dbe2e0;
+      --pozor: #8a5300; --pozor-pozadi: #fdf4e6;
+      --klid: #eef3f2;
     }
     * { box-sizing: border-box; }
+    /* Several panels are toggled with the hidden attribute, and a class that
+       sets display would otherwise out-specify the UA rule. */
+    [hidden] { display: none !important; }
     html, body { height: 100%; }
     body {
       margin: 0; background: var(--pozadi); color: var(--inkoust);
       font-family: system-ui, sans-serif; line-height: 1.5;
       display: flex; flex-direction: column;
-      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+      padding: env(safe-area-inset-top) 0 0;
+      -webkit-text-size-adjust: 100%;
     }
-    main { flex: 1; width: 100%; max-width: 28rem; margin: 0 auto; padding: 1.25rem; position: relative; }
+    main { flex: 1; width: 100%; max-width: 28rem; margin: 0 auto; padding: 0; position: relative; }
     .obrazovka {
-      position: absolute; inset: 0; padding: 1.25rem;
-      display: none; flex-direction: column; gap: 1rem;
+      position: absolute; inset: 0; padding: 1rem 1rem 0;
+      display: none; flex-direction: column; gap: 0.85rem;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
       opacity: 0; transform: translateY(8px);
       transition: opacity 0.22s ease, transform 0.22s ease;
     }
     .obrazovka.aktivni { display: flex; opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
       .obrazovka { transition: none; transform: none; }
+      button:active { transform: none; }
     }
-    h1 { font-size: 1.35rem; margin: 0.5rem 0 0; }
+
+    h1 { font-size: 1.35rem; margin: 0.25rem 0 0; }
+    h2 { font-size: 1rem; margin: 0.4rem 0 0; }
     p { margin: 0; color: var(--inkoust-2); }
-    label { font-size: 0.9rem; font-weight: 600; }
-    input[type=email] {
-      width: 100%; min-height: 48px; padding: 0 0.9rem; font-size: 1rem;
-      border: 1px solid var(--okraj); border-radius: 10px; background: var(--plocha);
-      color: var(--inkoust);
+    .maly { font-size: 0.85rem; }
+    .tisene { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--inkoust-2); font-weight: 600; }
+    label { font-size: 0.9rem; font-weight: 600; display: block; }
+
+    input:not([type=checkbox]), select, textarea {
+      width: 100%; min-height: 48px; padding: 0.5rem 0.9rem; font-size: 1rem;
+      font-family: inherit; border: 1px solid var(--okraj); border-radius: 10px;
+      background: var(--plocha); color: var(--inkoust);
     }
+    /* Tick boxes are tapped with a thumb, so 28 px of box inside a 44 px row. */
+    input[type=checkbox] {
+      width: 28px; height: 28px; min-height: 28px; flex-shrink: 0;
+      margin: 0.35rem 0 0; accent-color: var(--akcent);
+    }
+    textarea { min-height: 4.5rem; resize: vertical; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible,
+    button:focus-visible, .polozka:focus-visible {
+      outline: 2px solid var(--akcent); outline-offset: 2px;
+    }
+    .pole { display: flex; flex-direction: column; gap: 0.25rem; }
+    .dvojice { display: flex; gap: 0.5rem; }
+    .dvojice > * { flex: 1; min-width: 0; }
+
     button {
       min-height: 48px; padding: 0 1.1rem; font-size: 1rem; font-weight: 600;
-      border: none; border-radius: 10px; cursor: pointer;
+      border: none; border-radius: 10px; cursor: pointer; font-family: inherit;
       background: var(--akcent); color: var(--akcent-text);
       transition: transform 0.12s ease, opacity 0.12s ease;
     }
     button:active { transform: scale(0.97); }
+    button[disabled] { opacity: 0.45; cursor: default; }
     button.tiche { background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj); }
     button.varovne { background: var(--plocha); color: var(--chyba); border: 1px solid var(--chyba); }
+    button.male { min-height: 44px; font-size: 0.9rem; padding: 0 0.8rem; }
+
     .zprava { min-height: 1.4rem; font-size: 0.92rem; }
     .zprava.chyba { color: var(--chyba); }
     .karta { background: var(--plocha); border: 1px solid var(--okraj); border-radius: 12px; padding: 1rem; }
-    footer { text-align: center; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom)); font-size: 0.8rem; }
+    .karta.pozor { background: var(--pozor-pozadi); border-color: #e6d3b0; }
+
+    /* Screen header: back button plus title, always in the same place so the
+       mechanic never hunts for the way out. */
+    .hlavicka { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.25rem; }
+    .hlavicka h1 { flex: 1; margin: 0; font-size: 1.2rem; }
+    .zpet {
+      min-height: 44px; min-width: 44px; padding: 0; font-size: 1.3rem;
+      background: transparent; color: var(--inkoust); border: none; line-height: 1;
+    }
+
+    /* Bottom sheet of actions: sticky inside the scroller, so it rides in
+       thumb reach without covering the last list item. */
+    .dolni-akce {
+      position: sticky; bottom: 0; margin-top: auto;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      padding: 0.75rem 0 1rem;
+      background: linear-gradient(to bottom, rgba(244,246,245,0), var(--pozadi) 35%);
+    }
+    .dolni-akce .rada { display: flex; gap: 0.5rem; }
+    .dolni-akce .rada > button { flex: 1; }
+
+    .lista {
+      display: none; flex-shrink: 0;
+      border-top: 1px solid var(--okraj); background: var(--plocha);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    body.prihlasen .lista { display: flex; }
+    /* Five tabs at 390 px leaves ~78 px each, hence the smaller label and
+       nowrap — "Objednávky" must not fold onto a second line. */
+    .lista button {
+      flex: 1; min-height: 56px; background: transparent; color: var(--inkoust-2);
+      border: none; border-radius: 0; font-size: 0.64rem; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.1rem; padding: 0.25rem 0.1rem; white-space: nowrap;
+    }
+    .lista button .glyf { font-size: 1.2rem; line-height: 1; }
+    .lista button[aria-current="page"] { color: var(--akcent); }
+
+    footer { text-align: center; padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+      font-size: 0.78rem; background: var(--plocha); }
+    body.prihlasen footer { padding-top: 0; border-top: none; }
     footer a { color: var(--inkoust-2); }
+
+    /* Tiles on the home screen: the two reports the subscription renews for. */
+    .dlazdice { display: flex; gap: 0.6rem; }
+    .dlazdice button {
+      flex: 1; min-height: 84px; flex-direction: column; align-items: flex-start;
+      justify-content: center; gap: 0.15rem; text-align: left;
+      background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj);
+      display: flex; padding: 0.75rem;
+    }
+    .dlazdice .cislo { font-size: 1.6rem; font-weight: 700; line-height: 1; color: var(--akcent); }
+    .dlazdice .popis { font-size: 0.78rem; font-weight: 600; color: var(--inkoust-2); }
+    .dlazdice button.hori .cislo { color: var(--pozor); }
+
+    .chipy { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .chipy button {
+      min-height: 44px; font-size: 0.9rem; padding: 0 0.85rem; flex: 1;
+      background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj);
+    }
+    .chipy button[aria-pressed="true"] { background: var(--akcent); color: var(--akcent-text); border-color: var(--akcent); }
+
+    .seznam { display: flex; flex-direction: column; gap: 0.5rem; }
+    .polozka {
+      display: block; width: 100%; text-align: left; background: var(--plocha);
+      border: 1px solid var(--okraj); border-radius: 12px; padding: 0.75rem;
+      min-height: 44px; color: inherit; font: inherit; cursor: pointer;
+    }
+    .polozka .radek1 { display: flex; align-items: center; gap: 0.4rem; }
+    .polozka .kod { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .polozka .jmeno { font-weight: 600; }
+    .polozka .detail { font-size: 0.82rem; color: var(--inkoust-2); }
+    .polozka .cas { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2rem; }
+
+    .znacka {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+      padding: 0.1rem 0.4rem; border-radius: 6px; background: var(--klid); color: var(--inkoust-2);
+      white-space: nowrap;
+    }
+    .znacka.zimni { background: #e7eff5; color: #1d4e6b; }
+    .znacka.letni { background: #eef3e7; color: #3f5a1d; }
+    .znacka.celorocni { background: #f1eef5; color: #4d3a63; }
+    .znacka.vydano { background: #f2e9e7; color: var(--chyba); }
+    .znacka.pozor { background: var(--pozor-pozadi); color: var(--pozor); }
+
+    .radky { display: flex; flex-direction: column; gap: 0.35rem; }
+    .radky > div { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.92rem; }
+    .radky .klic { color: var(--inkoust-2); flex-shrink: 0; }
+    .radky .hodnota { text-align: right; font-weight: 600; }
+
+    /* Tread depths laid out like the car: front axle on top. Big targets,
+       because this is typed with a glove on. */
+    .mriz-kol { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .mriz-kol .pole input { min-height: 56px; font-size: 1.25rem; text-align: center; font-weight: 600; }
+    .mriz-kol .pole label { text-align: center; font-size: 0.8rem; color: var(--inkoust-2); }
+
+    .kroky { display: flex; gap: 0.3rem; }
+    .kroky span { flex: 1; height: 4px; border-radius: 2px; background: var(--okraj); }
+    .kroky span.hotovo { background: var(--akcent); }
+    .krok { display: none; flex-direction: column; gap: 0.85rem; }
+    .krok.aktivni { display: flex; }
+
+    .vyber { display: flex; align-items: center; gap: 0.5rem; }
+    .vyber input[type=checkbox] { margin: 0; }
+    .vyber label { min-height: 44px; display: flex; align-items: center; padding: 0 0.25rem; font-weight: 500; }
+
+    .prazdno { padding: 1.25rem 0.5rem; text-align: center; color: var(--inkoust-2); font-size: 0.92rem; }
+    .telefon { color: var(--akcent); font-weight: 600; text-decoration: none; }
+    .nahled { white-space: pre-wrap; font-size: 0.8rem; font-family: ui-monospace, monospace;
+      background: var(--klid); border-radius: 10px; padding: 0.75rem; overflow-x: auto; }
+
+    /* ---------------- Label printing ----------------
+       No PDF library and no dependencies: the label is HTML, the page size is
+       injected into #tisk-stranka and the browser's own driver talks to the
+       thermal printer. The A4 grid is the fallback for shops without one. */
+    #tisk { display: none; }
+    .stitek {
+      background: #fff; color: #000; overflow: hidden;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    /* Roll: one label per page, so the thermal printer advances correctly.
+       A4: the standard 70 x 37 mm die-cut sheet is exactly 3 x 8 at zero page
+       margin — hence margin 0 rather than a "safe" print margin, which would
+       shift every label off its backing. */
+    #tisk.role .stitek { width: 100mm; height: 50mm; padding: 3.5mm 4mm; break-after: page; }
+    #tisk.role .stitek:last-child { break-after: auto; }
+    #tisk.mriz .stitek { width: 70mm; height: 37mm; padding: 2.5mm 3mm; border: 1px dashed #bbb; }
+    .s-hlava { display: flex; justify-content: space-between; gap: 2mm; font-size: 2.6mm; font-weight: 700; }
+    .s-kod { font-size: 8mm; font-weight: 800; line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+    #tisk.mriz .s-kod { font-size: 6mm; }
+    .carkod { display: block; width: 100%; height: 8mm; fill: #000; shape-rendering: crispEdges; }
+    #tisk.mriz .carkod { height: 6mm; }
+    .s-radky { font-size: 2.9mm; line-height: 1.35; }
+    #tisk.mriz .s-radky { font-size: 2.4mm; line-height: 1.25; }
+    .s-pata { display: flex; justify-content: space-between; align-items: flex-end;
+      font-size: 2.8mm; border-top: 0.3mm solid #000; padding-top: 1mm; }
+    .s-pozice { font-size: 4.5mm; font-weight: 800; }
+    #tisk.mriz .s-pozice { font-size: 3.6mm; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      body > main, body > nav, body > footer { display: none !important; }
+      /* Block layout for the roll: break-after: page is reliable there in a
+         way it is not inside a flex container. */
+      #tisk { display: block; }
+      #tisk.mriz { display: flex; flex-wrap: wrap; align-content: flex-start; }
+    }
   </style>
+  <style id="tisk-stranka">@page { size: 100mm 50mm; margin: 0; }</style>
 </head>
 <body>
   <main>
@@ -64,36 +244,506 @@
     </section>
 
     <section id="obrazovka-prihlaseni" class="obrazovka">
-      <h1>Přihlášení</h1>
-      <p>Zadejte svůj e-mail — pošleme vám jednorázový přihlašovací odkaz.
+      <h1>Pneusklad</h1>
+      <p>Evidence uskladněných pneu, štítky a objednávky pro váš pneuservis.
+      Zadejte svůj e-mail — pošleme vám jednorázový přihlašovací odkaz.
       Žádné heslo nepotřebujete.</p>
-      <label for="email">E-mail</label>
-      <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="vas@email.cz">
+      <div class="pole">
+        <label for="email">E-mail provozovny</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="servis@email.cz">
+      </div>
       <button id="poslat-odkaz">Poslat přihlašovací odkaz</button>
       <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
     </section>
 
-    <section id="obrazovka-aplikace" class="obrazovka">
-      <h1>Produkt SimteGen</h1>
-      <p>Tahle obrazovka je zárodek ze šablony — stavitel ji nahradí skutečným
-      nástrojem. Přihlášení, účet a zásady zůstávají.</p>
-      <div class="karta">
-        <p>Přihlášeni jako <strong id="ucet-email"></strong></p>
+    <!-- ------------------------------- Dnes ------------------------------- -->
+    <section id="obrazovka-dnes" class="obrazovka">
+      <div class="hlavicka">
+        <h1 id="dnes-titulek">Dnes</h1>
       </div>
-      <button id="stahnout-data" class="tiche">Stáhnout moje data</button>
-      <button id="odhlasit" class="tiche">Odhlásit se</button>
-      <button id="smazat-ucet" class="varovne">Smazat účet a všechna data</button>
-      <div id="aplikace-zprava" class="zprava" aria-live="polite"></div>
+      <div class="pole">
+        <label for="hledani-dnes" class="tisene">Najít sadu</label>
+        <input id="hledani-dnes" type="search" enterkeyhint="search" autocomplete="off"
+               inputmode="search" placeholder="Kód, SPZ, jméno nebo telefon">
+      </div>
+      <div id="dnes-nalezene" class="seznam"></div>
+
+      <div class="dlazdice">
+        <button id="dlazdice-priprava">
+          <span class="cislo" id="pocet-priprava">0</span>
+          <span class="popis">Připravit na zítra</span>
+        </button>
+        <button id="dlazdice-vyzva" class="hori">
+          <span class="cislo" id="pocet-vyzva">0</span>
+          <span class="popis">Sezónní výzva</span>
+        </button>
+      </div>
+
+      <h2>Dnešní objednávky</h2>
+      <div id="dnes-objednavky" class="seznam"></div>
+      <div id="dnes-zprava" class="zprava" aria-live="polite"></div>
+
+      <div class="dolni-akce">
+        <button id="dnes-nova-sada">+ Nová sada na uskladnění</button>
+      </div>
+    </section>
+
+    <!-- ------------------------------- Sklad ------------------------------ -->
+    <section id="obrazovka-sklad" class="obrazovka">
+      <div class="hlavicka">
+        <h1>Sklad</h1>
+        <span class="znacka" id="sklad-pocet">0 sad</span>
+      </div>
+      <div class="chipy" id="sklad-filtr" role="group" aria-label="Filtr skladu">
+        <button data-stav="uskladneno" aria-pressed="true">Uskladněné</button>
+        <button data-stav="vydano" aria-pressed="false">Vydané</button>
+        <button data-stav="vse" aria-pressed="false">Vše</button>
+      </div>
+      <input id="hledani-sklad" type="search" enterkeyhint="search" autocomplete="off"
+             inputmode="search" placeholder="Kód, SPZ, jméno, telefon nebo místo">
+      <div id="sklad-seznam" class="seznam"></div>
+      <div class="dolni-akce">
+        <button id="sklad-tisk" hidden>Tisk štítků (0)</button>
+        <button id="sklad-nova-sada">+ Nová sada na uskladnění</button>
+      </div>
+    </section>
+
+    <!-- ---------------------------- Zákazníci ----------------------------- -->
+    <section id="obrazovka-zakaznici" class="obrazovka">
+      <div class="hlavicka">
+        <h1>Zákazníci</h1>
+        <span class="znacka" id="zak-pocet">0</span>
+      </div>
+      <input id="hledani-zakaznici" type="search" enterkeyhint="search" autocomplete="off"
+             inputmode="search" placeholder="Hledat podle jména nebo telefonu">
+      <div id="zakaznici-seznam" class="seznam" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <button id="zakaznici-novy">+ Nový zákazník</button>
+      </div>
+    </section>
+
+    <!-- ------------------------- Zákazník (úprava) ------------------------ -->
+    <section id="obrazovka-zakaznik" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1 id="zak-titulek">Zákazník</h1>
+      </div>
+      <div class="karta" id="zak-karta">
+        <div class="radky">
+          <div><span class="klic">Uskladněno sad</span>
+            <span class="hodnota" id="zak-sad-uskladneno">0</span></div>
+          <div><span class="klic">Celkem sad v evidenci</span>
+            <span class="hodnota" id="zak-sad-celkem">0</span></div>
+        </div>
+        <a class="telefon" id="zak-volat" href="tel:"
+           style="display:flex;align-items:center;justify-content:center;min-height:44px;
+                  margin-top:0.75rem;border:1px solid var(--akcent);border-radius:10px">
+          Zavolat</a>
+      </div>
+      <div class="pole"><label for="zak-jmeno">Jméno</label>
+        <input id="zak-jmeno" autocomplete="off"></div>
+      <div class="pole"><label for="zak-telefon">Telefon</label>
+        <input id="zak-telefon" type="tel" inputmode="tel" autocomplete="off"></div>
+      <div class="pole"><label for="zak-email">E-mail (nepovinné)</label>
+        <input id="zak-email" type="email" inputmode="email" autocomplete="off"></div>
+      <div class="pole"><label for="zak-poznamka">Poznámka</label>
+        <textarea id="zak-poznamka"></textarea></div>
+      <div id="zakaznik-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <button id="zak-ulozit">Uložit změny</button>
+        <button class="varovne" id="zak-smazat">Smazat zákazníka</button>
+      </div>
+    </section>
+
+    <!-- ----------------------------- Nová sada ---------------------------- -->
+    <section id="obrazovka-nova-sada" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1>Nová sada</h1>
+        <span class="znacka" id="krok-cislo">1 ze 4</span>
+      </div>
+      <div class="kroky" id="krok-ukazatel" aria-hidden="true">
+        <span class="hotovo"></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="krok aktivni" id="krok-1">
+        <h2>Čí jsou kola?</h2>
+        <input id="ns-hledat-zakaznika" type="search" autocomplete="off"
+               placeholder="Hledat zákazníka podle jména nebo telefonu">
+        <div id="ns-zakaznici" class="seznam"></div>
+        <div id="ns-vybrany" class="karta" hidden>
+          <div class="radky">
+            <div><span class="klic">Zákazník</span><span class="hodnota" id="ns-vybrany-jmeno"></span></div>
+            <div><span class="klic">Telefon</span><span class="hodnota" id="ns-vybrany-telefon"></span></div>
+          </div>
+          <button class="tiche male" id="ns-zrusit-vyber" style="margin-top:0.75rem">Vybrat jiného</button>
+        </div>
+        <div id="ns-novy">
+          <p class="maly">Nebo zapište nového zákazníka:</p>
+          <div class="pole"><label for="ns-jmeno">Jméno</label>
+            <input id="ns-jmeno" autocomplete="off" placeholder="Jan Novák"></div>
+          <div class="pole"><label for="ns-telefon">Telefon</label>
+            <input id="ns-telefon" type="tel" inputmode="tel" autocomplete="off" placeholder="601 000 000"></div>
+          <div class="pole"><label for="ns-email">E-mail (nepovinné)</label>
+            <input id="ns-email" type="email" inputmode="email" autocomplete="off" placeholder=""></div>
+        </div>
+      </div>
+
+      <div class="krok" id="krok-2">
+        <h2>Vozidlo a pneu</h2>
+        <div class="dvojice">
+          <div class="pole"><label for="ns-spz">Registrační značka</label>
+            <input id="ns-spz" autocomplete="off" placeholder="1AB 2345"></div>
+          <div class="pole"><label for="ns-pocet">Kusů</label>
+            <input id="ns-pocet" type="number" inputmode="numeric" min="1" max="8" value="4"></div>
+        </div>
+        <div class="pole"><label for="ns-vozidlo">Vozidlo</label>
+          <input id="ns-vozidlo" autocomplete="off" placeholder="Škoda Octavia"></div>
+        <div class="pole"><label>Typ pneu</label>
+          <div class="chipy" id="ns-typ" role="group" aria-label="Typ pneu">
+            <button data-typ="zimni" aria-pressed="true">Zimní</button>
+            <button data-typ="letni" aria-pressed="false">Letní</button>
+            <button data-typ="celorocni" aria-pressed="false">Celoroční</button>
+          </div>
+        </div>
+        <div class="pole"><label for="ns-rozmer">Rozměr</label>
+          <input id="ns-rozmer" autocomplete="off" placeholder="205/55 R16"></div>
+        <div class="pole"><label for="ns-dezen">Značka a dezén</label>
+          <input id="ns-dezen" autocomplete="off" placeholder="Nokian WR"></div>
+        <div class="vyber">
+          <input type="checkbox" id="ns-discich" checked>
+          <label for="ns-discich">Na discích (jinak jen pneu)</label>
+        </div>
+      </div>
+
+      <div class="krok" id="krok-3">
+        <h2>Hloubka dezénu</h2>
+        <p class="maly">V milimetrech. Nechte prázdné, pokud jste neměřili —
+        do přehledu opotřebení se pak sada nezapočítá.</p>
+        <div class="mriz-kol">
+          <div class="pole"><label for="ns-h-lp">Levá přední</label>
+            <input id="ns-h-lp" inputmode="decimal" autocomplete="off" placeholder="—"></div>
+          <div class="pole"><label for="ns-h-pp">Pravá přední</label>
+            <input id="ns-h-pp" inputmode="decimal" autocomplete="off" placeholder="—"></div>
+          <div class="pole"><label for="ns-h-lz">Levá zadní</label>
+            <input id="ns-h-lz" inputmode="decimal" autocomplete="off" placeholder="—"></div>
+          <div class="pole"><label for="ns-h-pz">Pravá zadní</label>
+            <input id="ns-h-pz" inputmode="decimal" autocomplete="off" placeholder="—"></div>
+        </div>
+        <div class="karta pozor" id="ns-varovani" hidden>
+          <p class="maly" id="ns-varovani-text"></p>
+        </div>
+      </div>
+
+      <div class="krok" id="krok-4">
+        <h2>Kam to jde a za kolik</h2>
+        <div class="pole"><label for="ns-pozice">Místo ve skladu</label>
+          <input id="ns-pozice" autocomplete="off" placeholder="A1-04"></div>
+        <div class="pole"><label for="ns-cena">Cena uskladnění (Kč)</label>
+          <input id="ns-cena" type="number" inputmode="numeric" min="0" value="800"></div>
+        <div class="pole"><label for="ns-poznamka">Poznámka</label>
+          <textarea id="ns-poznamka" placeholder="Např. jeden disk oděný."></textarea></div>
+      </div>
+
+      <div class="krok" id="krok-5">
+        <h2>Uskladněno</h2>
+        <div class="karta">
+          <p class="tisene">Kód sady</p>
+          <p style="font-size:2rem;font-weight:800;color:var(--inkoust);line-height:1.1"
+             id="ns-hotovo-kod"></p>
+          <p class="maly" id="ns-hotovo-popis"></p>
+        </div>
+        <button id="ns-tisk">Vytisknout štítek</button>
+        <button class="tiche" id="ns-objednat">Hned objednat přezutí</button>
+        <button class="tiche" id="ns-dalsi">Zapsat další sadu</button>
+        <button class="tiche" id="ns-detail">Otevřít detail sady</button>
+      </div>
+
+      <div id="ns-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce" id="ns-akce">
+        <div class="rada">
+          <button class="tiche" id="ns-krok-zpet">Zpět</button>
+          <button id="ns-krok-dal">Pokračovat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------- Detail sady -------------------------- -->
+    <section id="obrazovka-sada" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1 id="sada-kod">—</h1>
+        <span class="znacka" id="sada-stav"></span>
+      </div>
+      <div id="sada-telo"></div>
+      <div id="sada-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <div class="rada">
+          <button id="sada-tisk">Tisk štítku</button>
+          <button class="tiche" id="sada-objednat">Objednat</button>
+        </div>
+        <div class="rada">
+          <button class="tiche" id="sada-presunout">Přesunout</button>
+          <button class="tiche" id="sada-vydat">Vydat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------- Objednávky ---------------------------- -->
+    <section id="obrazovka-objednavky" class="obrazovka">
+      <div class="hlavicka">
+        <h1>Objednávky</h1>
+      </div>
+      <div class="chipy">
+        <button class="tiche" id="obj-drive">← Týden</button>
+        <button class="tiche" id="obj-dnes">Dnes</button>
+        <button class="tiche" id="obj-pozdeji">Týden →</button>
+      </div>
+      <p class="maly" id="obj-rozsah"></p>
+      <div id="obj-seznam" class="seznam"></div>
+      <div id="obj-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <button id="obj-nova">+ Nová objednávka</button>
+      </div>
+    </section>
+
+    <!-- ------------------------- Nová objednávka -------------------------- -->
+    <section id="obrazovka-nova-objednavka" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1>Nová objednávka</h1>
+      </div>
+      <div class="karta" id="no-vybrana" hidden>
+        <div class="radky">
+          <div><span class="klic">Sada</span><span class="hodnota" id="no-vybrana-kod"></span></div>
+          <div><span class="klic">Zákazník</span><span class="hodnota" id="no-vybrana-jmeno"></span></div>
+          <div><span class="klic">Místo</span><span class="hodnota" id="no-vybrana-pozice"></span></div>
+        </div>
+        <button class="tiche male" id="no-zrusit-vyber" style="margin-top:0.75rem">Vybrat jinou</button>
+      </div>
+      <div id="no-hledani-blok">
+        <div class="pole">
+          <label for="no-hledat">Uskladněná sada</label>
+          <input id="no-hledat" type="search" autocomplete="off"
+                 placeholder="Kód, SPZ, jméno nebo telefon">
+        </div>
+        <div id="no-nalezene" class="seznam"></div>
+        <div class="pole" style="margin-top:0.85rem">
+          <label for="no-jmeno">Nebo jen jméno (průjezd bez uskladnění)</label>
+          <input id="no-jmeno" autocomplete="off" placeholder="Jan Novák">
+        </div>
+      </div>
+      <div class="dvojice">
+        <div class="pole"><label for="no-den">Datum</label>
+          <input id="no-den" type="date"></div>
+        <div class="pole"><label for="no-cas">Čas</label>
+          <input id="no-cas" type="time" value="08:00" step="300"></div>
+      </div>
+      <div class="pole"><label>Úkon</label>
+        <div class="chipy" id="no-ukon" role="group" aria-label="Úkon">
+          <button data-ukon="prezuti" aria-pressed="true">Přezutí</button>
+          <button data-ukon="prehozeni" aria-pressed="false">Přehození</button>
+        </div>
+        <div class="chipy" style="margin-top:0.4rem" id="no-ukon-2" role="group" aria-label="Další úkony">
+          <button data-ukon="uskladneni" aria-pressed="false">Uskladnění</button>
+          <button data-ukon="vydej" aria-pressed="false">Výdej</button>
+          <button data-ukon="oprava" aria-pressed="false">Oprava</button>
+        </div>
+      </div>
+      <div class="pole"><label for="no-delka">Délka (minut)</label>
+        <input id="no-delka" type="number" inputmode="numeric" min="5" max="480" step="5" value="45"></div>
+      <div class="pole"><label for="no-poznamka">Poznámka</label>
+        <textarea id="no-poznamka" placeholder="Např. chce doměřit tlaky."></textarea></div>
+      <div id="no-zprava" class="zprava" aria-live="polite"></div>
+      <div class="dolni-akce">
+        <button id="no-ulozit">Zapsat objednávku</button>
+      </div>
+    </section>
+
+    <!-- ------------------------------ Příprava ---------------------------- -->
+    <section id="obrazovka-priprava" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1>Připravit kola</h1>
+      </div>
+      <div class="chipy" id="pripr-dny" role="group" aria-label="Den přípravy"></div>
+      <p class="maly" id="pripr-souhrn"></p>
+      <div id="pripr-seznam" class="seznam"></div>
+      <div id="pripr-zprava" class="zprava" aria-live="polite"></div>
+      <div id="pripr-nahled" class="nahled" hidden></div>
+      <div class="dolni-akce">
+        <button class="tiche" id="pripr-email">Poslat si seznam e-mailem</button>
+      </div>
+    </section>
+
+    <!-- ------------------------------ Přehled ----------------------------- -->
+    <section id="obrazovka-prehled" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">←</button>
+        <h1>Sezónní přehled</h1>
+      </div>
+      <div id="prehled-telo"></div>
+      <div id="prehled-zprava" class="zprava" aria-live="polite"></div>
+      <div style="height:1.5rem;flex-shrink:0"></div>
+    </section>
+
+    <!-- ----------------------------- Nastavení ---------------------------- -->
+    <section id="obrazovka-nastaveni" class="obrazovka">
+      <div class="hlavicka">
+        <h1>Nastavení</h1>
+      </div>
+      <div class="karta">
+        <div class="radky">
+          <div><span class="klic">Přihlášen</span><span class="hodnota" id="ucet-email"></span></div>
+          <div><span class="klic">Tarif</span><span class="hodnota" id="nast-plan"></span></div>
+          <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno"></span></div>
+        </div>
+      </div>
+
+      <h2>Údaje na štítek</h2>
+      <div class="pole"><label for="nast-nazev">Název servisu</label>
+        <input id="nast-nazev" autocomplete="off" placeholder="Pneuservis Novák"></div>
+      <div class="pole"><label for="nast-telefon">Telefon</label>
+        <input id="nast-telefon" type="tel" inputmode="tel" autocomplete="off" placeholder="601 000 000"></div>
+      <div class="pole"><label for="nast-adresa">Adresa</label>
+        <input id="nast-adresa" autocomplete="off" placeholder="Dílenská 1, Brno"></div>
+
+      <h2>Štítky a ceny</h2>
+      <div class="pole"><label>Formát štítku</label>
+        <div class="chipy" id="nast-format" role="group" aria-label="Formát štítku">
+          <button data-format="role_100x50" aria-pressed="true">Role 100×50 mm</button>
+          <button data-format="a4_3x8" aria-pressed="false">Archy A4</button>
+        </div>
+      </div>
+      <div class="pole"><label for="nast-cena">Výchozí cena uskladnění (Kč)</label>
+        <input id="nast-cena" type="number" inputmode="numeric" min="0" value="800"></div>
+      <button id="nast-ulozit">Uložit nastavení</button>
+      <div id="nast-zprava" class="zprava" aria-live="polite"></div>
+
+      <h2>Ukázková data</h2>
+      <p class="maly">Naplní účet vymyšlenými zákazníky a sadami, abyste si appku
+      mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
+      <button class="tiche" id="nast-ukazka-naplnit">Naplnit ukázkovými daty</button>
+      <button class="tiche" id="nast-ukazka-smazat">Smazat ukázková data</button>
+
+      <h2>Vaše data</h2>
+      <button class="tiche" id="stahnout-data">Stáhnout moje data</button>
+      <button class="tiche" id="odhlasit">Odhlásit se</button>
+      <button class="varovne" id="smazat-ucet">Smazat účet a všechna data</button>
+      <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
+      <div style="height:1.5rem;flex-shrink:0"></div>
     </section>
   </main>
+
+  <nav class="lista" id="lista" aria-label="Hlavní navigace">
+    <button data-obrazovka="obrazovka-dnes" aria-current="page">
+      <span class="glyf" aria-hidden="true">⌂</span>Dnes</button>
+    <button data-obrazovka="obrazovka-sklad">
+      <span class="glyf" aria-hidden="true">◎</span>Sklad</button>
+    <button data-obrazovka="obrazovka-zakaznici">
+      <span class="glyf" aria-hidden="true">☏</span>Zákazníci</button>
+    <button data-obrazovka="obrazovka-objednavky">
+      <span class="glyf" aria-hidden="true">▦</span>Objednávky</button>
+    <button data-obrazovka="obrazovka-nastaveni">
+      <span class="glyf" aria-hidden="true">⚙</span>Nastavení</button>
+  </nav>
+
   <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
+  <div id="tisk" class="role" aria-hidden="true"></div>
 
   <script>
     "use strict";
     const $ = (id) => document.getElementById(id);
-    function ukaz(id) {
-      document.querySelectorAll(".obrazovka").forEach((o) =>
-        o.classList.toggle("aktivni", o.id === id));
+
+    const HLAVNI = ["obrazovka-dnes", "obrazovka-sklad", "obrazovka-zakaznici",
+                    "obrazovka-objednavky", "obrazovka-nastaveni"];
+
+    const stav = {
+      nastaveni: null,
+      sada: null,
+      zakaznik: null,
+      pohyby: [],
+      novaSada: null,
+      novaObjednavka: null,
+      krok: 1,
+      skladStav: "uskladneno",
+      vybrane: new Map(),
+      pripravaDen: null,
+      objednavkyOd: null,
+      predObrazovkou: "obrazovka-dnes",
+    };
+
+    // ---------------------------------------------------------------- utils
+    function bezpecne(hodnota) {
+      return String(hodnota == null ? "" : hodnota)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function mm(desetiny) {
+      if (!desetiny) return "—";
+      return `${String(desetiny / 10).replace(".", ",")} mm`;
+    }
+
+    function korun(n) {
+      return `${Number(n || 0).toLocaleString("cs-CZ")} Kč`;
+    }
+
+    function datumCesky(ts) {
+      if (!ts) return "—";
+      return new Date(ts * 1000).toLocaleDateString("cs-CZ",
+        { day: "numeric", month: "numeric", year: "numeric" });
+    }
+
+    function dnesniDen() {
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+
+    function posunDne(den, o) {
+      const [r, m, d] = den.split("-").map(Number);
+      const dt = new Date(Date.UTC(r, m - 1, d));
+      dt.setUTCDate(dt.getUTCDate() + o);
+      const p = (n) => String(n).padStart(2, "0");
+      return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
+    }
+
+    function denCesky(den, sTydnem) {
+      const [r, m, d] = den.split("-").map(Number);
+      const volby = { day: "numeric", month: "numeric", timeZone: "UTC" };
+      if (sTydnem) volby.weekday = "long";
+      return new Date(Date.UTC(r, m - 1, d)).toLocaleDateString("cs-CZ", volby);
+    }
+
+    const NAZVY_TYPU = { zimni: "Zimní", letni: "Letní", celorocni: "Celoroční" };
+    const NAZVY_UKONU = {
+      prezuti: "Přezutí", prehozeni: "Přehození kol", uskladneni: "Uskladnění",
+      vydej: "Výdej pneu", oprava: "Oprava",
+    };
+    const NAZVY_POHYBU = {
+      prijem: "Příjem na sklad", vydej: "Výdej zákazníkovi",
+      presun: "Přesun ve skladu", kontrola: "Úprava údajů",
+    };
+
+    function nejmensiHloubka(sada) {
+      const merene = [sada.hloubka_lp, sada.hloubka_pp, sada.hloubka_lz, sada.hloubka_pz]
+        .filter((h) => h > 0);
+      return merene.length ? Math.min.apply(null, merene) : 0;
+    }
+
+    function debounce(fn, ms) {
+      let cas = null;
+      return (...argumenty) => {
+        clearTimeout(cas);
+        cas = setTimeout(() => fn(...argumenty), ms);
+      };
+    }
+
+    function zprava(id, text, jeChyba) {
+      const el = $(id);
+      el.className = jeChyba ? "zprava chyba" : "zprava";
+      el.textContent = text || "";
     }
 
     async function api(cesta, metoda, telo) {
@@ -105,62 +755,1106 @@
       return { ok: odpoved.ok, data: await odpoved.json().catch(() => ({})) };
     }
 
-    async function obnov() {
-      try {
-        const { data } = await api("/api/ja", "GET");
-        if (data.prihlasen) {
-          $("ucet-email").textContent = data.email;
-          ukaz("obrazovka-aplikace");
+    // ----------------------------------------------------------- navigation
+    function ukaz(id) {
+      document.querySelectorAll(".obrazovka").forEach((o) =>
+        o.classList.toggle("aktivni", o.id === id));
+      document.querySelectorAll("#lista button").forEach((b) => {
+        if (HLAVNI.indexOf(id) >= 0 && b.dataset.obrazovka === id) {
+          b.setAttribute("aria-current", "page");
         } else {
-          ukaz("obrazovka-prihlaseni");
+          b.removeAttribute("aria-current");
         }
-      } catch {
-        ukaz("obrazovka-prihlaseni");
-      }
+      });
+      const obrazovka = $(id);
+      if (obrazovka) obrazovka.scrollTop = 0;
     }
 
-    $("poslat-odkaz").addEventListener("click", async () => {
-      const zprava = $("prihlaseni-zprava");
-      zprava.className = "zprava";
-      zprava.textContent = "Odesílám…";
-      const { ok, data } = await api("/api/prihlaseni", "POST", { email: $("email").value });
-      if (!ok) {
-        zprava.className = "zprava chyba";
-        zprava.textContent = data.chyba || "Něco se nepovedlo. Zkuste to prosím znovu.";
-        return;
-      }
-      if (data.odkaz) {
-        // Development deployments hand the link back instead of e-mailing it.
-        zprava.innerHTML = "";
-        const a = document.createElement("a");
-        a.href = data.odkaz;
-        a.textContent = "Vývojový režim — přihlásit tímto odkazem";
-        zprava.appendChild(a);
-        return;
-      }
-      zprava.textContent = "Hotovo — přihlašovací odkaz najdete v e-mailu.";
+    // pushState with no URL change: the login redirect lands on "/" and a hash
+    // router would fight it. Back simply pops to the previous screen.
+    function jdi(id) {
+      if (HLAVNI.indexOf(id) >= 0) stav.predObrazovkou = id;
+      history.pushState({ obrazovka: id }, "");
+      ukaz(id);
+    }
+
+    window.addEventListener("popstate", (e) => {
+      const cil = (e.state && e.state.obrazovka) || stav.predObrazovkou;
+      ukaz(document.getElementById(cil) ? cil : "obrazovka-dnes");
     });
 
-    $("odhlasit").addEventListener("click", async () => {
-      await api("/api/odhlaseni", "POST");
-      obnov();
+    document.querySelectorAll("[data-zpet]").forEach((b) =>
+      b.addEventListener("click", () => history.back()));
+
+    document.querySelectorAll("#lista button").forEach((b) =>
+      b.addEventListener("click", () => {
+        const cil = b.dataset.obrazovka;
+        jdi(cil);
+        if (cil === "obrazovka-dnes") nactiDnes();
+        if (cil === "obrazovka-sklad") nactiSklad();
+        if (cil === "obrazovka-zakaznici") nactiZakazniky();
+        if (cil === "obrazovka-objednavky") nactiObjednavky();
+        if (cil === "obrazovka-nastaveni") vykresliNastaveni();
+      }));
+
+    function chipy(kontejner, klic, hodnota) {
+      kontejner.querySelectorAll("button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b.dataset[klic] === hodnota)));
+    }
+
+    // ------------------------------------------------------- Code 39 barcode
+    // Nine elements per character, three of them wide; even indexes are bars.
+    // Enough for the digits and the dash our codes use, plus letters in case a
+    // shop types its own. A cheap USB/Bluetooth scanner types the code back
+    // into the search field as if it were a keyboard.
+    const CODE39 = {
+      0: "nnnwwnwnn", 1: "wnnwnnnnw", 2: "nnwwnnnnw", 3: "wnwwnnnnn",
+      4: "nnnwwnnnw", 5: "wnnwwnnnn", 6: "nnwwwnnnn", 7: "nnnwnnwnw",
+      8: "wnnwnnwnn", 9: "nnwwnnwnn",
+      A: "wnnnnwnnw", B: "nnwnnwnnw", C: "wnwnnwnnn", D: "nnnnwwnnw",
+      E: "wnnnwwnnn", F: "nnwnwwnnn", G: "nnnnnwwnw", H: "wnnnnwwnn",
+      I: "nnwnnwwnn", J: "nnnnwwwnn", K: "wnnnnnnww", L: "nnwnnnnww",
+      M: "wnwnnnnwn", N: "nnnnwnnww", O: "wnnnwnnwn", P: "nnwnwnnwn",
+      Q: "nnnnnnwww", R: "wnnnnnwwn", S: "nnwnnnwwn", T: "nnnnwnwwn",
+      U: "wwnnnnnnw", V: "nwwnnnnnw", W: "wwwnnnnnn", X: "nwnnwnnnw",
+      Y: "wwnnwnnnn", Z: "nwwnwnnnn", "-": "nwnnnnwnw", "*": "nwnnwnwnn",
+    };
+
+    function carkodSvg(text) {
+      const cisty = String(text || "").toUpperCase().replace(/[^0-9A-Z-]/g, "");
+      if (!cisty) return "";
+      const obdelniky = [];
+      let x = 0;
+      for (const znak of `*${cisty}*`) {
+        const vzor = CODE39[znak];
+        if (!vzor) continue;
+        for (let i = 0; i < 9; i += 1) {
+          const sirka = vzor[i] === "w" ? 3 : 1;
+          if (i % 2 === 0) {
+            obdelniky.push(`<rect x="${x}" y="0" width="${sirka}" height="30"/>`);
+          }
+          x += sirka;
+        }
+        x += 1;
+      }
+      return `<svg class="carkod" viewBox="0 0 ${x} 30" preserveAspectRatio="none"`
+        + ` role="img" aria-label="Čárový kód ${bezpecne(cisty)}">${obdelniky.join("")}</svg>`;
+    }
+
+    // --------------------------------------------------------------- labels
+    function stitekHtml(sada) {
+      const n = stav.nastaveni || {};
+      const hloubky = [sada.hloubka_lp, sada.hloubka_pp, sada.hloubka_lz, sada.hloubka_pz]
+        .map((h) => (h ? String(h / 10).replace(".", ",") : "—")).join(" / ");
+      const kusy = `${sada.pocet_kusu} ks`;
+      const disky = sada.na_discich ? "na discích" : "bez disků";
+      return `<div class="stitek">
+        <div class="s-hlava">
+          <span>${bezpecne(n.nazev || "Pneusklad")}</span>
+          <span>${bezpecne(n.telefon || "")}</span>
+        </div>
+        <div class="s-kod">${bezpecne(sada.kod)}</div>
+        ${carkodSvg(sada.kod)}
+        <div class="s-radky">
+          <div><strong>${bezpecne(sada.jmeno)}</strong> · ${bezpecne(sada.telefon)}</div>
+          <div>${bezpecne(sada.spz || "bez SPZ")} · ${bezpecne(sada.vozidlo || "")}</div>
+          <div>${NAZVY_TYPU[sada.typ] || sada.typ} · ${bezpecne(sada.rozmer || "")}
+               · ${kusy} · ${disky}</div>
+          <div>Dezén: ${hloubky} mm</div>
+        </div>
+        <div class="s-pata">
+          <span class="s-pozice">${bezpecne(sada.pozice || "—")}</span>
+          <span>${datumCesky(sada.datum_prijmu)}</span>
+        </div>
+      </div>`;
+    }
+
+    function tiskni(sady) {
+      if (!sady.length) return;
+      const format = (stav.nastaveni && stav.nastaveni.format_stitku) || "role_100x50";
+      const archy = format === "a4_3x8";
+      $("tisk-stranka").textContent = archy
+        ? "@page { size: A4; margin: 0; }"
+        : "@page { size: 100mm 50mm; margin: 0; }";
+      $("tisk").className = archy ? "mriz" : "role";
+      $("tisk").innerHTML = sady.map(stitekHtml).join("");
+      window.print();
+    }
+
+    // ---------------------------------------------------------- set renderer
+    function sadaHtml(sada, sVyberem) {
+      const hloubka = nejmensiHloubka(sada);
+      const znacky = [`<span class="znacka ${sada.typ}">${NAZVY_TYPU[sada.typ] || sada.typ}</span>`];
+      if (sada.stav === "vydano") znacky.push('<span class="znacka vydano">Vydáno</span>');
+      if (hloubka > 0 && hloubka < 40) znacky.push('<span class="znacka pozor">Pod 4 mm</span>');
+      const vyber = sVyberem
+        ? `<input type="checkbox" class="vyber-sady" data-id="${sada.id}"
+             aria-label="Vybrat sadu ${bezpecne(sada.kod)} k tisku"
+             ${stav.vybrane.has(sada.id) ? "checked" : ""}>`
+        : "";
+      return `<div class="polozka" style="display:flex;gap:0.6rem;align-items:flex-start">
+        <button class="otevri-sadu" data-id="${sada.id}"
+                style="flex:1;min-height:auto;background:transparent;border:none;padding:0;text-align:left;color:inherit;font:inherit">
+          <span class="radek1"><span class="kod">${bezpecne(sada.kod)}</span>${znacky.join("")}</span>
+          <span class="detail" style="display:block"><strong>${bezpecne(sada.jmeno)}</strong>
+            · ${bezpecne(sada.telefon)}</span>
+          <span class="detail" style="display:block">${bezpecne(sada.spz || "bez SPZ")}
+            · ${bezpecne(sada.rozmer || "rozměr neuveden")} · ${sada.pocet_kusu} ks</span>
+          <span class="detail" style="display:block">Místo
+            <strong>${bezpecne(sada.pozice || "neuvedeno")}</strong>
+            · dezén ${mm(hloubka)}</span>
+        </button>
+        ${vyber}
+      </div>`;
+    }
+
+    function vykresliSady(kontejner, sady, sVyberem, prazdnyText) {
+      if (!sady.length) {
+        kontejner.innerHTML = `<div class="prazdno">${bezpecne(prazdnyText || "Nic tu není.")}</div>`;
+        return;
+      }
+      kontejner.innerHTML = sady.map((s) => sadaHtml(s, sVyberem)).join("");
+      kontejner.querySelectorAll(".otevri-sadu").forEach((b) =>
+        b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
+      kontejner.querySelectorAll(".vyber-sady").forEach((c) =>
+        c.addEventListener("change", () => {
+          const id = Number(c.dataset.id);
+          const sada = sady.find((s) => s.id === id);
+          if (c.checked) stav.vybrane.set(id, sada);
+          else stav.vybrane.delete(id);
+          obnovTiskoveTlacitko();
+        }));
+    }
+
+    function obnovTiskoveTlacitko() {
+      const tlacitko = $("sklad-tisk");
+      tlacitko.hidden = stav.vybrane.size === 0;
+      tlacitko.textContent = `Tisk štítků (${stav.vybrane.size})`;
+    }
+
+    // ------------------------------------------------------------ Dnes screen
+    async function nactiDnes() {
+      const den = dnesniDen();
+      $("dnes-titulek").textContent = `Dnes · ${denCesky(den, true)}`;
+
+      const [objednavky, priprava, prehled] = await Promise.all([
+        api(`/api/objednavky?od=${den}&do=${den}`, "GET"),
+        api(`/api/priprava?den=${posunDne(den, 1)}`, "GET"),
+        api("/api/prehled", "GET"),
+      ]);
+
+      $("pocet-priprava").textContent = priprava.ok ? priprava.data.zbyva : "—";
+      $("pocet-vyzva").textContent = prehled.ok ? prehled.data.vyzva.length : "—";
+
+      const seznam = $("dnes-objednavky");
+      if (!objednavky.ok) {
+        seznam.innerHTML = '<div class="prazdno">Objednávky se nepodařilo načíst.</div>';
+        return;
+      }
+      vykresliObjednavky(seznam, objednavky.data.objednavky, false,
+        "Dnes nemáte nic naplánovaného.");
+    }
+
+    const hledejDnes = debounce(async (dotaz) => {
+      const kontejner = $("dnes-nalezene");
+      if (!dotaz) { kontejner.innerHTML = ""; return; }
+      const { ok, data } = await api(
+        `/api/sady?stav=vse&q=${encodeURIComponent(dotaz)}`, "GET");
+      if (!ok) return;
+      vykresliSady(kontejner, data.sady.slice(0, 8), false, "Nic jsme nenašli.");
+    }, 250);
+
+    $("hledani-dnes").addEventListener("input", (e) => hledejDnes(e.target.value.trim()));
+    $("dnes-nova-sada").addEventListener("click", () => zacniNovouSadu());
+    $("dlazdice-priprava").addEventListener("click", () => {
+      stav.pripravaDen = posunDne(dnesniDen(), 1);
+      jdi("obrazovka-priprava");
+      nactiPripravu();
+    });
+    $("dlazdice-vyzva").addEventListener("click", () => {
+      jdi("obrazovka-prehled");
+      nactiPrehled();
+    });
+
+    // ----------------------------------------------------------- Sklad screen
+    async function nactiSklad() {
+      const dotaz = $("hledani-sklad").value.trim();
+      const { ok, data } = await api(
+        `/api/sady?stav=${stav.skladStav}&q=${encodeURIComponent(dotaz)}`, "GET");
+      if (!ok) {
+        $("sklad-seznam").innerHTML = '<div class="prazdno">Sklad se nepodařilo načíst.</div>';
+        return;
+      }
+      $("sklad-pocet").textContent = `${data.uskladneno} sad`;
+      vykresliSady($("sklad-seznam"), data.sady, true,
+        dotaz ? "Nic jsme nenašli." : "Ve skladu zatím nic není.");
+      obnovTiskoveTlacitko();
+    }
+
+    $("hledani-sklad").addEventListener("input", debounce(nactiSklad, 250));
+    $("sklad-filtr").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.skladStav = b.dataset.stav;
+        chipy($("sklad-filtr"), "stav", stav.skladStav);
+        nactiSklad();
+      }));
+    $("sklad-nova-sada").addEventListener("click", () => zacniNovouSadu());
+    $("sklad-tisk").addEventListener("click", () => tiskni([...stav.vybrane.values()]));
+
+    // --------------------------------------------------------- Customers
+    // The policy promises the shop can correct and delete a motorist's record
+    // in the app, so there has to be a screen that actually does it.
+    async function nactiZakazniky() {
+      const dotaz = $("hledani-zakaznici").value.trim();
+      const { ok, data } = await api(
+        `/api/zakaznici?q=${encodeURIComponent(dotaz)}`, "GET");
+      const kontejner = $("zakaznici-seznam");
+      if (!ok) {
+        kontejner.innerHTML = '<div class="prazdno">Zákazníky se nepodařilo načíst.</div>';
+        return;
+      }
+      $("zak-pocet").textContent = data.celkem;
+      if (!data.zakaznici.length) {
+        kontejner.innerHTML = `<div class="prazdno">${dotaz
+          ? "Nikoho takového jsme nenašli."
+          : "Zatím tu nemáte žádné zákazníky. Založte prvního tlačítkem dole, "
+            + "nebo se přidají sami při zápisu první sady."
+        }</div>`;
+        return;
+      }
+      kontejner.innerHTML = data.zakaznici.map((z) =>
+        `<button class="polozka otevri-zakaznika" data-id="${z.id}">
+          <span class="radek1">
+            <span class="jmeno" style="flex:1">${bezpecne(z.jmeno)}</span>
+            <span class="znacka">${z.sad_uskladneno
+              ? `${z.sad_uskladneno} ve skladu` : "nic uskladněno"}</span>
+          </span>
+          <span class="detail" style="display:block">${bezpecne(z.telefon)}${
+            z.email ? ` · ${bezpecne(z.email)}` : ""}</span>
+          ${z.poznamka
+            ? `<span class="detail" style="display:block">${bezpecne(z.poznamka)}</span>` : ""}
+        </button>`).join("");
+      kontejner.querySelectorAll(".otevri-zakaznika").forEach((b) =>
+        b.addEventListener("click", () =>
+          otevriZakaznika(data.zakaznici.find((z) => z.id === Number(b.dataset.id)))));
+    }
+
+    $("hledani-zakaznici").addEventListener("input", debounce(nactiZakazniky, 250));
+
+    // One screen for both jobs: zakaznik = null means "new". A separate form
+    // for creating would be the same four fields twice, drifting apart the
+    // first time one of them changes.
+    function otevriZakaznika(zakaznik) {
+      stav.zakaznik = zakaznik || null;
+      const novy = !zakaznik;
+      $("zak-titulek").textContent = novy ? "Nový zákazník" : zakaznik.jmeno;
+      // A customer that does not exist yet has nothing to count and no number
+      // to call.
+      $("zak-karta").hidden = novy;
+      $("zak-smazat").hidden = novy;
+      $("zak-ulozit").textContent = novy ? "Založit zákazníka" : "Uložit změny";
+      if (!novy) {
+        $("zak-sad-uskladneno").textContent = zakaznik.sad_uskladneno;
+        $("zak-sad-celkem").textContent = zakaznik.sad_celkem;
+        $("zak-volat").href = `tel:${String(zakaznik.telefon).replace(/\s/g, "")}`;
+      }
+      $("zak-jmeno").value = novy ? "" : (zakaznik.jmeno || "");
+      $("zak-telefon").value = novy ? "" : (zakaznik.telefon || "");
+      $("zak-email").value = novy ? "" : (zakaznik.email || "");
+      $("zak-poznamka").value = novy ? "" : (zakaznik.poznamka || "");
+      zprava("zakaznik-zprava", "");
+      jdi("obrazovka-zakaznik");
+    }
+
+    $("zakaznici-novy").addEventListener("click", () => otevriZakaznika(null));
+
+    $("zak-ulozit").addEventListener("click", async () => {
+      const novy = !stav.zakaznik;
+      zprava("zakaznik-zprava", novy ? "Zakládám…" : "Ukládám…");
+      const telo = {
+        akce: novy ? "novy" : "upravit",
+        jmeno: $("zak-jmeno").value.trim(),
+        telefon: $("zak-telefon").value.trim(),
+        email: $("zak-email").value.trim(),
+        poznamka: $("zak-poznamka").value.trim(),
+      };
+      if (!novy) telo.id = stav.zakaznik.id;
+
+      $("zak-ulozit").disabled = true;
+      const { ok, data } = await api("/api/zakaznici", "POST", telo);
+      $("zak-ulozit").disabled = false;
+      if (!ok) {
+        return zprava("zakaznik-zprava",
+          data.chyba || (novy ? "Založení se nepovedlo." : "Uložení se nepovedlo."), true);
+      }
+      if (novy) {
+        // Back to the list, where the new name is now visible — same as after
+        // a delete.
+        history.back();
+        nactiZakazniky();
+        return;
+      }
+      // Keep the open record in step with the form, so a delete right after an
+      // edit warns about the new name and not the old one.
+      stav.zakaznik.jmeno = $("zak-jmeno").value.trim();
+      stav.zakaznik.telefon = $("zak-telefon").value.trim();
+      $("zak-titulek").textContent = stav.zakaznik.jmeno;
+      $("zak-volat").href = `tel:${stav.zakaznik.telefon.replace(/\s/g, "")}`;
+      zprava("zakaznik-zprava", "Uloženo.");
+      nactiZakazniky();
+    });
+
+    $("zak-smazat").addEventListener("click", async () => {
+      const z = stav.zakaznik;
+      // Wheels in the rack block it — the server refuses too, but saying so
+      // here saves a round trip and reads as an explanation, not an error.
+      if (z.sad_uskladneno > 0) {
+        return zprava("zakaznik-zprava",
+          `Zákazníka nelze smazat, dokud u vás má uskladněné sady (${z.sad_uskladneno}). `
+          + "Nejdřív je prosím vydejte.", true);
+      }
+      const varovani = z.sad_celkem
+        ? `Smazat zákazníka ${z.jmeno}? Smaže se i ${z.sad_celkem} vydaných sad `
+          + "v jeho historii. Krok je nevratný."
+        : `Smazat zákazníka ${z.jmeno}? Krok je nevratný.`;
+      if (!confirm(varovani)) return;
+      const { ok, data } = await api("/api/zakaznici", "POST",
+        { akce: "smazat", id: z.id });
+      if (!ok) {
+        return zprava("zakaznik-zprava", data.chyba || "Smazání se nepovedlo.", true);
+      }
+      history.back();
+      nactiZakazniky();
+    });
+
+    // ------------------------------------------------------- New set wizard
+    function zacniNovouSadu() {
+      stav.novaSada = {
+        zakaznik: null, typ: "zimni",
+        cena: (stav.nastaveni && stav.nastaveni.vychozi_cena) || 800,
+      };
+      stav.krok = 1;
+      ["ns-hledat-zakaznika", "ns-jmeno", "ns-telefon", "ns-email", "ns-spz",
+       "ns-vozidlo", "ns-rozmer", "ns-dezen", "ns-h-lp", "ns-h-pp", "ns-h-lz",
+       "ns-h-pz", "ns-pozice", "ns-poznamka"].forEach((id) => { $(id).value = ""; });
+      $("ns-pocet").value = "4";
+      $("ns-discich").checked = true;
+      $("ns-cena").value = String(stav.novaSada.cena);
+      $("ns-zakaznici").innerHTML = "";
+      $("ns-vybrany").hidden = true;
+      $("ns-novy").hidden = false;
+      $("ns-varovani").hidden = true;
+      chipy($("ns-typ"), "typ", "zimni");
+      zprava("ns-zprava", "");
+      jdi("obrazovka-nova-sada");
+      ukazKrok(1);
+    }
+
+    function ukazKrok(cislo) {
+      stav.krok = cislo;
+      for (let i = 1; i <= 5; i += 1) {
+        $(`krok-${i}`).classList.toggle("aktivni", i === cislo);
+      }
+      const ukazatel = $("krok-ukazatel");
+      ukazatel.querySelectorAll("span").forEach((s, i) =>
+        s.classList.toggle("hotovo", i < Math.min(cislo, 4)));
+      $("krok-cislo").textContent = cislo > 4 ? "Hotovo" : `${cislo} ze 4`;
+      $("ns-akce").hidden = cislo > 4;
+      $("ns-krok-zpet").hidden = cislo === 1;
+      $("ns-krok-dal").textContent = cislo === 4 ? "Uložit sadu" : "Pokračovat";
+      $("obrazovka-nova-sada").scrollTop = 0;
+    }
+
+    const hledejZakazniky = debounce(async (dotaz) => {
+      const kontejner = $("ns-zakaznici");
+      if (!dotaz) { kontejner.innerHTML = ""; return; }
+      const { ok, data } = await api(`/api/zakaznici?q=${encodeURIComponent(dotaz)}`, "GET");
+      if (!ok) return;
+      if (!data.zakaznici.length) {
+        kontejner.innerHTML = '<div class="prazdno">Nikoho takového tu nemáte — zapište ho níž.</div>';
+        return;
+      }
+      kontejner.innerHTML = data.zakaznici.map((z) =>
+        `<button class="polozka vyber-zakaznika" data-id="${z.id}"
+                 data-jmeno="${bezpecne(z.jmeno)}" data-telefon="${bezpecne(z.telefon)}">
+          <span class="jmeno">${bezpecne(z.jmeno)}</span>
+          <span class="detail" style="display:block">${bezpecne(z.telefon)}</span>
+        </button>`).join("");
+      kontejner.querySelectorAll(".vyber-zakaznika").forEach((b) =>
+        b.addEventListener("click", () => {
+          stav.novaSada.zakaznik = {
+            id: Number(b.dataset.id),
+            jmeno: b.dataset.jmeno,
+            telefon: b.dataset.telefon,
+          };
+          $("ns-vybrany-jmeno").textContent = stav.novaSada.zakaznik.jmeno;
+          $("ns-vybrany-telefon").textContent = stav.novaSada.zakaznik.telefon;
+          $("ns-vybrany").hidden = false;
+          $("ns-novy").hidden = true;
+          $("ns-zakaznici").innerHTML = "";
+          $("ns-hledat-zakaznika").value = "";
+        }));
+    }, 250);
+
+    $("ns-hledat-zakaznika").addEventListener("input", (e) =>
+      hledejZakazniky(e.target.value.trim()));
+    $("ns-zrusit-vyber").addEventListener("click", () => {
+      stav.novaSada.zakaznik = null;
+      $("ns-vybrany").hidden = true;
+      $("ns-novy").hidden = false;
+    });
+    $("ns-typ").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.novaSada.typ = b.dataset.typ;
+        chipy($("ns-typ"), "typ", stav.novaSada.typ);
+      }));
+
+    function hloubkyZFormulare() {
+      const cti = (id) => {
+        const n = Number($(id).value.replace(",", "."));
+        return Number.isFinite(n) && n > 0 ? Math.round(n * 10) : 0;
+      };
+      return {
+        hloubka_lp: cti("ns-h-lp"), hloubka_pp: cti("ns-h-pp"),
+        hloubka_lz: cti("ns-h-lz"), hloubka_pz: cti("ns-h-pz"),
+      };
+    }
+
+    $("ns-krok-zpet").addEventListener("click", () => ukazKrok(Math.max(1, stav.krok - 1)));
+
+    $("ns-krok-dal").addEventListener("click", async () => {
+      zprava("ns-zprava", "");
+      if (stav.krok === 1) {
+        if (!stav.novaSada.zakaznik) {
+          if (!$("ns-jmeno").value.trim()) {
+            return zprava("ns-zprava", "Vyberte zákazníka nebo zapište jméno.", true);
+          }
+          if (!$("ns-telefon").value.trim()) {
+            return zprava("ns-zprava", "Zadejte prosím telefon — bez něj zákazníka nepozvete na přezutí.", true);
+          }
+        }
+        return ukazKrok(2);
+      }
+      if (stav.krok === 2) {
+        if (!$("ns-spz").value.trim() && !$("ns-vozidlo").value.trim()) {
+          return zprava("ns-zprava", "Zadejte registrační značku nebo vozidlo.", true);
+        }
+        return ukazKrok(3);
+      }
+      if (stav.krok === 3) {
+        // Not a blocker, just a heads-up: worn tyres are a sale, not an error.
+        const hloubky = hloubkyZFormulare();
+        const nejmensi = nejmensiHloubka(hloubky);
+        if (nejmensi > 0 && nejmensi < 40) {
+          $("ns-varovani-text").textContent =
+            `Nejmenší hloubka ${mm(nejmensi)} — sada se objeví v přehledu „nabídnout nové pneu“.`;
+          $("ns-varovani").hidden = false;
+        } else {
+          $("ns-varovani").hidden = true;
+        }
+        return ukazKrok(4);
+      }
+      return ulozNovouSadu();
+    });
+
+    async function ulozNovouSadu() {
+      const n = stav.novaSada;
+      const telo = {
+        typ: n.typ,
+        spz: $("ns-spz").value.trim(),
+        vozidlo: $("ns-vozidlo").value.trim(),
+        rozmer: $("ns-rozmer").value.trim(),
+        pocet_kusu: Number($("ns-pocet").value) || 4,
+        dezen: $("ns-dezen").value.trim(),
+        na_discich: $("ns-discich").checked,
+        pozice: $("ns-pozice").value.trim(),
+        cena_skladovani: Number($("ns-cena").value) || 0,
+        poznamka: $("ns-poznamka").value.trim(),
+        ...hloubkyZFormulare(),
+      };
+      if (n.zakaznik) {
+        telo.zakaznik_id = n.zakaznik.id;
+      } else {
+        telo.jmeno = $("ns-jmeno").value.trim();
+        telo.telefon = $("ns-telefon").value.trim();
+        telo.email = $("ns-email").value.trim();
+      }
+
+      $("ns-krok-dal").disabled = true;
+      zprava("ns-zprava", "Ukládám…");
+      const { ok, data } = await api("/api/sady", "POST", telo);
+      $("ns-krok-dal").disabled = false;
+      if (!ok) {
+        return zprava("ns-zprava", data.chyba || "Uložení se nepovedlo.", true);
+      }
+      zprava("ns-zprava", "");
+      stav.sada = data.sada;
+      $("ns-hotovo-kod").textContent = data.sada.kod;
+      $("ns-hotovo-popis").textContent =
+        `${data.sada.jmeno} · ${NAZVY_TYPU[data.sada.typ]} ${data.sada.rozmer || ""}`
+        + ` · místo ${data.sada.pozice || "neuvedeno"}`;
+      ukazKrok(5);
+    }
+
+    $("ns-tisk").addEventListener("click", () => tiskni([stav.sada]));
+    $("ns-dalsi").addEventListener("click", () => zacniNovouSadu());
+    $("ns-detail").addEventListener("click", () => otevriSadu(stav.sada.id));
+    $("ns-objednat").addEventListener("click", () => zacniObjednavku(stav.sada));
+
+    // --------------------------------------------------------- Set detail
+    async function otevriSadu(id) {
+      const { ok, data } = await api(`/api/sady/${id}`, "GET");
+      if (!ok) return;
+      stav.sada = data.sada;
+      stav.pohyby = data.pohyby;
+      vykresliSadu();
+      jdi("obrazovka-sada");
+    }
+
+    function vykresliSadu() {
+      const s = stav.sada;
+      const hloubka = nejmensiHloubka(s);
+      $("sada-kod").textContent = s.kod;
+      const stavZnacka = $("sada-stav");
+      stavZnacka.textContent = s.stav === "vydano" ? "Vydáno" : "Uskladněno";
+      stavZnacka.className = `znacka ${s.stav === "vydano" ? "vydano" : ""}`;
+
+      const historie = stav.pohyby.map((p) =>
+        `<div><span class="klic">${datumCesky(p.datum)}</span>
+          <span class="hodnota">${NAZVY_POHYBU[p.typ] || p.typ}
+          ${p.poznamka ? `<br><span class="maly" style="font-weight:400">${bezpecne(p.poznamka)}</span>` : ""}
+          </span></div>`).join("");
+
+      $("sada-telo").innerHTML = `
+        <div class="karta" style="margin-bottom:0.75rem">
+          <p class="tisene">Zákazník</p>
+          <div class="radky">
+            <div><span class="klic">Jméno</span><span class="hodnota">${bezpecne(s.jmeno)}</span></div>
+            <div><span class="klic">Telefon</span><span class="hodnota">
+              <a class="telefon" href="tel:${bezpecne(String(s.telefon).replace(/\s/g, ""))}">${bezpecne(s.telefon)}</a>
+            </span></div>
+            ${s.email ? `<div><span class="klic">E-mail</span><span class="hodnota">${bezpecne(s.email)}</span></div>` : ""}
+          </div>
+        </div>
+        <div class="karta" style="margin-bottom:0.75rem">
+          <p class="tisene">Kola</p>
+          <div class="radky">
+            <div><span class="klic">Vozidlo</span><span class="hodnota">
+              ${bezpecne(s.spz || "bez SPZ")}${s.vozidlo ? ` · ${bezpecne(s.vozidlo)}` : ""}</span></div>
+            <div><span class="klic">Typ a rozměr</span><span class="hodnota">
+              ${NAZVY_TYPU[s.typ] || s.typ} · ${bezpecne(s.rozmer || "—")}</span></div>
+            <div><span class="klic">Počet</span><span class="hodnota">
+              ${s.pocet_kusu} ks · ${s.na_discich ? "na discích" : "bez disků"}</span></div>
+            ${s.dezen ? `<div><span class="klic">Dezén</span><span class="hodnota">${bezpecne(s.dezen)}</span></div>` : ""}
+            <div><span class="klic">Hloubky (LP/PP/LZ/PZ)</span><span class="hodnota">
+              ${mm(s.hloubka_lp)} / ${mm(s.hloubka_pp)} / ${mm(s.hloubka_lz)} / ${mm(s.hloubka_pz)}</span></div>
+          </div>
+          ${hloubka > 0 && hloubka < 40
+            ? `<p class="maly" style="margin-top:0.6rem;color:var(--pozor)">
+                 Nejmenší hloubka ${mm(hloubka)} — nabídněte zákazníkovi nové pneu.</p>` : ""}
+        </div>
+        <div class="karta" style="margin-bottom:0.75rem">
+          <p class="tisene">Sklad a platba</p>
+          <div class="radky">
+            <div><span class="klic">Místo</span><span class="hodnota">${bezpecne(s.pozice || "neuvedeno")}</span></div>
+            <div><span class="klic">Přijato</span><span class="hodnota">${datumCesky(s.datum_prijmu)}</span></div>
+            ${s.datum_vydeje ? `<div><span class="klic">Vydáno</span><span class="hodnota">${datumCesky(s.datum_vydeje)}</span></div>` : ""}
+            <div><span class="klic">Cena uskladnění</span><span class="hodnota">${korun(s.cena_skladovani)}</span></div>
+          </div>
+          <button class="${s.zaplaceno ? "tiche" : ""} male" id="sada-zaplaceno"
+                  style="margin-top:0.75rem;width:100%">
+            ${s.zaplaceno ? "Zaplaceno ✓ — zrušit" : "Označit jako zaplacené"}</button>
+        </div>
+        ${s.poznamka ? `<div class="karta" style="margin-bottom:0.75rem">
+          <p class="tisene">Poznámka</p><p style="color:var(--inkoust)">${bezpecne(s.poznamka)}</p></div>` : ""}
+        <div class="karta">
+          <p class="tisene">Historie</p>
+          <div class="radky">${historie || '<div><span class="klic">Žádné pohyby.</span></div>'}</div>
+        </div>`;
+
+      $("sada-zaplaceno").addEventListener("click", async () => {
+        const { ok, data } = await api(`/api/sady/${s.id}`, "POST",
+          { akce: "zaplaceno", zaplaceno: !s.zaplaceno });
+        if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
+        stav.sada = data.sada;
+        vykresliSadu();
+      });
+
+      $("sada-vydat").textContent = s.stav === "vydano" ? "Vrátit na sklad" : "Vydat";
+    }
+
+    $("sada-tisk").addEventListener("click", () => tiskni([stav.sada]));
+    $("sada-objednat").addEventListener("click", () => zacniObjednavku(stav.sada));
+
+    $("sada-presunout").addEventListener("click", async () => {
+      const pozice = prompt("Nové místo ve skladu:", stav.sada.pozice || "");
+      if (pozice === null) return;
+      const { ok, data } = await api(`/api/sady/${stav.sada.id}`, "POST",
+        { akce: "presunout", pozice });
+      if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
+      stav.sada = data.sada;
+      const detail = await api(`/api/sady/${stav.sada.id}`, "GET");
+      if (detail.ok) stav.pohyby = detail.data.pohyby;
+      vykresliSadu();
+      zprava("sada-zprava", "Přesunuto.");
+    });
+
+    $("sada-vydat").addEventListener("click", async () => {
+      const vraceni = stav.sada.stav === "vydano";
+      if (!vraceni && !confirm(`Vydat sadu ${stav.sada.kod} zákazníkovi ${stav.sada.jmeno}?`)) return;
+      const telo = vraceni
+        ? { akce: "vratit", pozice: prompt("Kam ji ukládáte?", stav.sada.pozice || "") || "" }
+        : { akce: "vydat" };
+      const { ok, data } = await api(`/api/sady/${stav.sada.id}`, "POST", telo);
+      if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
+      stav.sada = data.sada;
+      const detail = await api(`/api/sady/${stav.sada.id}`, "GET");
+      if (detail.ok) stav.pohyby = detail.data.pohyby;
+      vykresliSadu();
+      zprava("sada-zprava", vraceni ? "Sada je zpět na skladě." : "Sada vydána.");
+    });
+
+    // ----------------------------------------------------- Bookings screen
+    function vykresliObjednavky(kontejner, objednavky, sDatem, prazdnyText) {
+      if (!objednavky.length) {
+        kontejner.innerHTML = `<div class="prazdno">${bezpecne(prazdnyText)}</div>`;
+        return;
+      }
+      let html = "";
+      let poslednyDen = null;
+      for (const o of objednavky) {
+        if (sDatem && o.den !== poslednyDen) {
+          poslednyDen = o.den;
+          html += `<p class="tisene" style="margin-top:0.5rem">${denCesky(o.den, true)}</p>`;
+        }
+        const zruseno = o.stav === "zruseno";
+        const hotovo = o.stav === "hotovo";
+        html += `<div class="polozka" style="${zruseno ? "opacity:0.55" : ""}">
+          <div class="radek1">
+            <span class="cas">${bezpecne(o.cas)}</span>
+            <span class="jmeno" style="flex:1">${bezpecne(o.nazev)}</span>
+            ${hotovo ? '<span class="znacka">Hotovo</span>' : ""}
+            ${zruseno ? '<span class="znacka vydano">Zrušeno</span>' : ""}
+          </div>
+          <div class="detail">${NAZVY_UKONU[o.ukon] || o.ukon} · ${o.delka_min} min
+            ${o.kod ? ` · sada ${bezpecne(o.kod)} · místo ${bezpecne(o.pozice || "—")}` : " · bez uskladněné sady"}</div>
+          ${o.poznamka ? `<div class="detail">${bezpecne(o.poznamka)}</div>` : ""}
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+            ${o.kod ? `<button class="tiche male otevri-sadu" data-id="${o.sada_id}">Sada</button>` : ""}
+            ${!hotovo && !zruseno ? `<button class="male obj-hotovo" data-id="${o.id}">Hotovo</button>` : ""}
+            ${!zruseno ? `<button class="tiche male obj-zrusit" data-id="${o.id}">Zrušit</button>` : ""}
+          </div>
+        </div>`;
+      }
+      kontejner.innerHTML = html;
+      kontejner.querySelectorAll(".otevri-sadu").forEach((b) =>
+        b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
+      kontejner.querySelectorAll(".obj-hotovo").forEach((b) =>
+        b.addEventListener("click", () => zmenObjednavku(b.dataset.id, { akce: "hotovo" })));
+      kontejner.querySelectorAll(".obj-zrusit").forEach((b) =>
+        b.addEventListener("click", () => {
+          if (confirm("Zrušit tuto objednávku?")) {
+            zmenObjednavku(b.dataset.id, { akce: "zruseno" });
+          }
+        }));
+    }
+
+    // The same booking row is tappable from three screens, so the error has to
+    // land on the screen the mechanic is actually looking at.
+    const ZPRAVA_OBRAZOVKY = {
+      "obrazovka-objednavky": "obj-zprava",
+      "obrazovka-priprava": "pripr-zprava",
+      "obrazovka-dnes": "dnes-zprava",
+    };
+
+    async function zmenObjednavku(id, telo) {
+      const aktivni = document.querySelector(".obrazovka.aktivni").id;
+      const { ok, data } = await api(`/api/objednavky/${id}`, "POST", telo);
+      if (!ok) {
+        zprava(ZPRAVA_OBRAZOVKY[aktivni] || "dnes-zprava",
+          data.chyba || "Nepovedlo se.", true);
+        return;
+      }
+      if (aktivni === "obrazovka-objednavky") nactiObjednavky();
+      else if (aktivni === "obrazovka-priprava") nactiPripravu();
+      else nactiDnes();
+    }
+
+    async function nactiObjednavky() {
+      if (!stav.objednavkyOd) stav.objednavkyOd = dnesniDen();
+      const od = stav.objednavkyOd;
+      const doKdy = posunDne(od, 6);
+      $("obj-rozsah").textContent = `${denCesky(od, false)} – ${denCesky(doKdy, false)}`;
+      const { ok, data } = await api(`/api/objednavky?od=${od}&do=${doKdy}`, "GET");
+      if (!ok) {
+        $("obj-seznam").innerHTML = '<div class="prazdno">Nepodařilo se načíst.</div>';
+        return;
+      }
+      vykresliObjednavky($("obj-seznam"), data.objednavky, true,
+        "V tomto týdnu nemáte žádné objednávky.");
+    }
+
+    $("obj-drive").addEventListener("click", () => {
+      stav.objednavkyOd = posunDne(stav.objednavkyOd || dnesniDen(), -7);
+      nactiObjednavky();
+    });
+    $("obj-pozdeji").addEventListener("click", () => {
+      stav.objednavkyOd = posunDne(stav.objednavkyOd || dnesniDen(), 7);
+      nactiObjednavky();
+    });
+    $("obj-dnes").addEventListener("click", () => {
+      stav.objednavkyOd = dnesniDen();
+      nactiObjednavky();
+    });
+    $("obj-nova").addEventListener("click", () => zacniObjednavku(null));
+
+    // ------------------------------------------------------- New booking
+    function zacniObjednavku(sada) {
+      stav.novaObjednavka = { sada: sada || null, ukon: "prezuti" };
+      $("no-jmeno").value = "";
+      $("no-hledat").value = "";
+      $("no-nalezene").innerHTML = "";
+      $("no-poznamka").value = "";
+      $("no-delka").value = "45";
+      $("no-cas").value = "08:00";
+      $("no-den").value = posunDne(dnesniDen(), 1);
+      chipy($("no-ukon"), "ukon", "prezuti");
+      chipy($("no-ukon-2"), "ukon", "prezuti");
+      zprava("no-zprava", "");
+      vykresliVybranouSadu();
+      jdi("obrazovka-nova-objednavka");
+    }
+
+    function vykresliVybranouSadu() {
+      const sada = stav.novaObjednavka.sada;
+      $("no-vybrana").hidden = !sada;
+      $("no-hledani-blok").hidden = !!sada;
+      if (!sada) return;
+      $("no-vybrana-kod").textContent = sada.kod;
+      $("no-vybrana-jmeno").textContent = sada.jmeno;
+      $("no-vybrana-pozice").textContent = sada.pozice || "neuvedeno";
+    }
+
+    $("no-zrusit-vyber").addEventListener("click", () => {
+      stav.novaObjednavka.sada = null;
+      vykresliVybranouSadu();
+    });
+
+    $("no-hledat").addEventListener("input", debounce(async (e) => {
+      const dotaz = e.target.value.trim();
+      const kontejner = $("no-nalezene");
+      if (!dotaz) { kontejner.innerHTML = ""; return; }
+      const { ok, data } = await api(
+        `/api/sady?stav=uskladneno&q=${encodeURIComponent(dotaz)}`, "GET");
+      if (!ok) return;
+      if (!data.sady.length) {
+        kontejner.innerHTML = '<div class="prazdno">Nic jsme nenašli.</div>';
+        return;
+      }
+      kontejner.innerHTML = data.sady.slice(0, 6).map((s) =>
+        `<button class="polozka vyber-sadu" data-id="${s.id}">
+          <span class="radek1"><span class="kod">${bezpecne(s.kod)}</span>
+            <span class="znacka ${s.typ}">${NAZVY_TYPU[s.typ]}</span></span>
+          <span class="detail" style="display:block">${bezpecne(s.jmeno)}
+            · ${bezpecne(s.spz || "")} · místo ${bezpecne(s.pozice || "—")}</span>
+        </button>`).join("");
+      kontejner.querySelectorAll(".vyber-sadu").forEach((b) =>
+        b.addEventListener("click", () => {
+          stav.novaObjednavka.sada = data.sady.find((s) => s.id === Number(b.dataset.id));
+          vykresliVybranouSadu();
+        }));
+    }, 250));
+
+    [$("no-ukon"), $("no-ukon-2")].forEach((skupina) =>
+      skupina.querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () => {
+          stav.novaObjednavka.ukon = b.dataset.ukon;
+          chipy($("no-ukon"), "ukon", b.dataset.ukon);
+          chipy($("no-ukon-2"), "ukon", b.dataset.ukon);
+        })));
+
+    $("no-ulozit").addEventListener("click", async () => {
+      const o = stav.novaObjednavka;
+      const telo = {
+        den: $("no-den").value,
+        cas: $("no-cas").value || "08:00",
+        ukon: o.ukon,
+        delka_min: Number($("no-delka").value) || 45,
+        poznamka: $("no-poznamka").value.trim(),
+      };
+      if (o.sada) telo.sada_id = o.sada.id;
+      else telo.jmeno_bez_zakaznika = $("no-jmeno").value.trim();
+
+      $("no-ulozit").disabled = true;
+      zprava("no-zprava", "Ukládám…");
+      const { ok, data } = await api("/api/objednavky", "POST", telo);
+      $("no-ulozit").disabled = false;
+      if (!ok) return zprava("no-zprava", data.chyba || "Uložení se nepovedlo.", true);
+      stav.objednavkyOd = telo.den;
+      jdi("obrazovka-objednavky");
+      nactiObjednavky();
+    });
+
+    // -------------------------------------------------------- Preparation
+    async function nactiPripravu() {
+      if (!stav.pripravaDen) stav.pripravaDen = posunDne(dnesniDen(), 1);
+      const dny = [dnesniDen(), posunDne(dnesniDen(), 1), posunDne(dnesniDen(), 2)];
+      const nazvy = ["Dnes", "Zítra", denCesky(dny[2], false)];
+      $("pripr-dny").innerHTML = dny.map((d, i) =>
+        `<button data-den="${d}" aria-pressed="${d === stav.pripravaDen}">${bezpecne(nazvy[i])}</button>`
+      ).join("");
+      $("pripr-dny").querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () => {
+          stav.pripravaDen = b.dataset.den;
+          nactiPripravu();
+        }));
+
+      $("pripr-nahled").hidden = true;
+      const { ok, data } = await api(
+        `/api/priprava?den=${stav.pripravaDen}`, "GET");
+      if (!ok) {
+        $("pripr-seznam").innerHTML = '<div class="prazdno">Nepodařilo se načíst.</div>';
+        return;
+      }
+      const celkem = data.polozky.length;
+      $("pripr-souhrn").textContent = celkem
+        ? `${celkem - data.zbyva} z ${celkem} připraveno — ${denCesky(data.den, true)}`
+        : denCesky(data.den, true);
+
+      if (!celkem) {
+        $("pripr-seznam").innerHTML =
+          '<div class="prazdno">Na tento den nemáte naplánováno nic.</div>';
+        return;
+      }
+      $("pripr-seznam").innerHTML = data.polozky.map((p) =>
+        `<div class="polozka" style="display:flex;gap:0.6rem;align-items:flex-start;
+             ${p.pripraveno ? "opacity:0.6" : ""}">
+          <input type="checkbox" class="pripr-hotovo" data-id="${p.id}"
+                 aria-label="Kola pro ${bezpecne(p.nazev)} připravena"
+                 ${p.pripraveno ? "checked" : ""}>
+          <div style="flex:1">
+            <div class="radek1"><span class="cas">${bezpecne(p.cas)}</span>
+              <span class="jmeno">${bezpecne(p.nazev)}</span></div>
+            <div class="detail">${NAZVY_UKONU[p.ukon] || p.ukon}</div>
+            ${p.kod
+              ? `<div class="detail">Sada <strong>${bezpecne(p.kod)}</strong>
+                   · ${bezpecne(p.rozmer || "")} · ${p.pocet_kusu} ks</div>
+                 <div class="detail">Místo
+                   <strong style="font-size:1.05rem">${bezpecne(p.pozice || "neuvedeno")}</strong></div>`
+              : '<div class="detail">Bez uskladněné sady — nic nechystejte.</div>'}
+          </div>
+        </div>`).join("");
+
+      $("pripr-seznam").querySelectorAll(".pripr-hotovo").forEach((c) =>
+        c.addEventListener("change", async () => {
+          await api(`/api/objednavky/${c.dataset.id}`, "POST",
+            { akce: "pripraveno", pripraveno: c.checked });
+          nactiPripravu();
+        }));
+    }
+
+    $("pripr-email").addEventListener("click", async () => {
+      zprava("pripr-zprava", "Odesílám…");
+      const { ok, data } = await api("/api/priprava", "POST", { den: stav.pripravaDen });
+      if (!ok) return zprava("pripr-zprava", data.chyba || "Nepovedlo se.", true);
+      if (data.nahled) {
+        zprava("pripr-zprava", data.upozorneni || "");
+        $("pripr-nahled").textContent = data.nahled;
+        $("pripr-nahled").hidden = false;
+        return;
+      }
+      zprava("pripr-zprava", `Odesláno na váš e-mail (${data.pocet} objednávek).`);
+    });
+
+    // ------------------------------------------------------------ Overview
+    async function nactiPrehled() {
+      const { ok, data } = await api("/api/prehled", "GET");
+      if (!ok) {
+        $("prehled-telo").innerHTML = '<div class="prazdno">Nepodařilo se načíst.</div>';
+        return;
+      }
+
+      const radek = (s, akce) =>
+        `<div class="polozka">
+          <div class="radek1">
+            <span class="kod">${bezpecne(s.kod)}</span>
+            <span class="znacka ${s.typ}">${NAZVY_TYPU[s.typ]}</span>
+            <span style="flex:1"></span>
+            ${s.nejmensi_hloubka ? `<span class="znacka ${s.nejmensi_hloubka < 40 ? "pozor" : ""}">${mm(s.nejmensi_hloubka)}</span>` : ""}
+          </div>
+          <div class="detail"><strong>${bezpecne(s.jmeno)}</strong>
+            · ${bezpecne(s.spz || "")} · místo ${bezpecne(s.pozice || "—")}</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap">
+            <a class="polozka" style="flex:1;text-align:center;padding:0.55rem;text-decoration:none;
+               font-weight:600;color:var(--akcent);border-color:var(--akcent)"
+               href="tel:${bezpecne(String(s.telefon).replace(/\s/g, ""))}">Zavolat</a>
+            <button class="tiche male otevri-sadu" data-id="${s.id}" style="flex:1">Sada</button>
+            ${akce || ""}
+          </div>
+        </div>`;
+
+      const sekce = (titulek, popis, sady, akce) =>
+        `<h2>${bezpecne(titulek)} (${sady.length})</h2>
+         <p class="maly" style="margin-bottom:0.5rem">${bezpecne(popis)}</p>
+         <div class="seznam">${sady.length
+            ? sady.map((s) => radek(s, akce ? akce(s) : "")).join("")
+            : '<div class="prazdno">Nic k řešení.</div>'}</div>`;
+
+      $("prehled-telo").innerHTML = `
+        <div class="karta">
+          <div class="radky">
+            <div><span class="klic">Uskladněno sad</span><span class="hodnota">${data.uskladneno}</span></div>
+            <div><span class="klic">Nezaplaceno</span><span class="hodnota">${korun(data.dluh)}</span></div>
+            <div><span class="klic">Nepřipraveno na zítra</span><span class="hodnota">${data.nepripraveno}</span></div>
+          </div>
+        </div>
+        ${sekce("Obvolat na přezutí",
+          "Kola leží ve skladu a majitel se za posledních pět měsíců neobjednal. "
+          + "Každý telefonát je objednávka.", data.vyzva)}
+        ${sekce("Nabídnout nové pneu",
+          "Nejtenčí měřené kolo pod 4 mm — zákazník to sám nevidí.", data.opotrebene)}
+        ${sekce("Nezaplacené uskladnění",
+          "Uskladnění, které vám zákazník ještě nezaplatil.", data.nezaplacene,
+          (s) => `<button class="male oznac-zaplaceno" data-id="${s.id}" style="flex:1">Zaplaceno</button>`)}`;
+
+      $("prehled-telo").querySelectorAll(".otevri-sadu").forEach((b) =>
+        b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
+      $("prehled-telo").querySelectorAll(".oznac-zaplaceno").forEach((b) =>
+        b.addEventListener("click", async () => {
+          await api(`/api/sady/${b.dataset.id}`, "POST",
+            { akce: "zaplaceno", zaplaceno: true });
+          nactiPrehled();
+        }));
+    }
+
+    // ----------------------------------------------------------- Settings
+    function vykresliNastaveni() {
+      const n = stav.nastaveni;
+      if (!n) return;
+      $("ucet-email").textContent = n.email;
+      $("nast-plan").textContent = n.plan === "zkusebni"
+        ? `Zkušební období — zbývá ${n.zkusebni_zbyva_dnu} dní`
+        : "Předplatné";
+      $("nast-uskladneno").textContent = n.limit_sad
+        ? `${n.uskladneno} z ${n.limit_sad} sad`
+        : `${n.uskladneno} sad`;
+      $("nast-nazev").value = n.nazev || "";
+      $("nast-telefon").value = n.telefon || "";
+      $("nast-adresa").value = n.adresa || "";
+      $("nast-cena").value = String(n.vychozi_cena || 0);
+      chipy($("nast-format"), "format", n.format_stitku);
+    }
+
+    $("nast-format").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.nastaveni.format_stitku = b.dataset.format;
+        chipy($("nast-format"), "format", b.dataset.format);
+      }));
+
+    $("nast-ulozit").addEventListener("click", async () => {
+      zprava("nast-zprava", "Ukládám…");
+      const { ok, data } = await api("/api/nastaveni", "POST", {
+        nazev: $("nast-nazev").value.trim(),
+        telefon: $("nast-telefon").value.trim(),
+        adresa: $("nast-adresa").value.trim(),
+        format_stitku: stav.nastaveni.format_stitku,
+        vychozi_cena: Number($("nast-cena").value) || 0,
+      });
+      if (!ok) return zprava("nast-zprava", data.chyba || "Uložení se nepovedlo.", true);
+      stav.nastaveni = data.nastaveni;
+      vykresliNastaveni();
+      zprava("nast-zprava", "Uloženo.");
+    });
+
+    $("nast-ukazka-naplnit").addEventListener("click", async () => {
+      zprava("nast-zprava", "Plním ukázková data…");
+      const { ok, data } = await api("/api/ukazka", "POST", { akce: "naplnit" });
+      if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
+      await nactiUcet();
+      zprava("nast-zprava",
+        `Hotovo — ${data.sad} sad, ${data.zakazniku} zákazníků, ${data.objednavek} objednávek.`);
+    });
+
+    $("nast-ukazka-smazat").addEventListener("click", async () => {
+      if (!confirm("Smazat ukázková data? Vaše skutečné záznamy zůstanou.")) return;
+      const { ok, data } = await api("/api/ukazka", "POST", { akce: "smazat" });
+      if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
+      await nactiUcet();
+      // Example customers you hung a real set or booking on cannot go without
+      // taking that record with them, so they stay — and we say so.
+      zprava("nast-zprava", data.ponechani
+        ? `Ukázková data smazána. ${data.ponechani} ukázkových zákazníků jsme `
+          + "ponechali — máte u nich vedené vlastní sady nebo objednávky."
+        : "Ukázková data smazána.");
     });
 
     $("stahnout-data").addEventListener("click", () => {
       location.href = "/api/ucet/export";
     });
 
-    $("smazat-ucet").addEventListener("click", async () => {
-      if (!confirm("Opravdu smazat účet a všechna data? Krok je nevratný.")) return;
-      const { ok, data } = await api("/api/ucet/smazat", "POST");
-      const zprava = $("aplikace-zprava");
-      if (!ok) {
-        zprava.className = "zprava chyba";
-        zprava.textContent = data.chyba || "Smazání se nepovedlo.";
-        return;
-      }
+    $("odhlasit").addEventListener("click", async () => {
+      await api("/api/odhlaseni", "POST");
+      document.body.classList.remove("prihlasen");
       obnov();
     });
+
+    $("smazat-ucet").addEventListener("click", async () => {
+      if (!confirm("Opravdu smazat účet a všechna data včetně evidence sad? Krok je nevratný.")) return;
+      const { ok, data } = await api("/api/ucet/smazat", "POST");
+      if (!ok) return zprava("ucet-zprava", data.chyba || "Smazání se nepovedlo.", true);
+      document.body.classList.remove("prihlasen");
+      obnov();
+    });
+
+    // ------------------------------------------------------------- Login
+    $("poslat-odkaz").addEventListener("click", async () => {
+      const el = $("prihlaseni-zprava");
+      el.className = "zprava";
+      el.textContent = "Odesílám…";
+      const { ok, data } = await api("/api/prihlaseni", "POST", { email: $("email").value });
+      if (!ok) {
+        el.className = "zprava chyba";
+        el.textContent = data.chyba || "Něco se nepovedlo. Zkuste to prosím znovu.";
+        return;
+      }
+      if (data.odkaz) {
+        // Development deployments hand the link back instead of e-mailing it.
+        el.innerHTML = "";
+        const a = document.createElement("a");
+        a.href = data.odkaz;
+        a.textContent = "Vývojový režim — přihlásit tímto odkazem";
+        el.appendChild(a);
+        return;
+      }
+      el.textContent = "Hotovo — přihlašovací odkaz najdete v e-mailu.";
+    });
+
+    // ------------------------------------------------------------- Bootstrap
+    async function nactiUcet() {
+      const { ok, data } = await api("/api/nastaveni", "GET");
+      if (ok) stav.nastaveni = data;
+      return ok;
+    }
+
+    async function obnov() {
+      try {
+        const { data } = await api("/api/ja", "GET");
+        if (!data.prihlasen) {
+          document.body.classList.remove("prihlasen");
+          ukaz("obrazovka-prihlaseni");
+          return;
+        }
+        document.body.classList.add("prihlasen");
+        await nactiUcet();
+        vykresliNastaveni();
+        history.replaceState({ obrazovka: "obrazovka-dnes" }, "");
+        ukaz("obrazovka-dnes");
+        nactiDnes();
+      } catch {
+        document.body.classList.remove("prihlasen");
+        ukaz("obrazovka-prihlaseni");
+      }
+    }
 
     obnov();
   </script>
