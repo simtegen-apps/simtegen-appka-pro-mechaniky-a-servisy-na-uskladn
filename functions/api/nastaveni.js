@@ -30,6 +30,8 @@ async function stav(env, uzivatel) {
     limit_sad: nastaveni.plan === "zkusebni" ? nastaveni.limit_sad : null,
     zkusebni_zbyva_dnu: nastaveni.plan === "zkusebni" ? zbyva : null,
     uskladneno: n,
+    // Decides whether the walkthrough opens by itself on arrival.
+    navod_viden: nastaveni.navod_viden ? 1 : 0,
   };
 }
 

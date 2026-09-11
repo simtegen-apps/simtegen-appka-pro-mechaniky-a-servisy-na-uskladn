@@ -27,7 +27,7 @@
     {
       "entita": "nastaveni_servisu",
       "ucel": "údaje servisu na štítek a nastavení aplikace",
-      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, čas vytvoření záznamu",
+      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, čas vytvoření záznamu",
       "retence": "do smazání účtu zákazníkem"
     },
     {

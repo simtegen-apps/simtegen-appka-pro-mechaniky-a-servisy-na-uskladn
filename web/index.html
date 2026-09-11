@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#10504b">
+  <meta name="theme-color" content="#0d4d47">
   <title>Pneusklad — evidence uskladněných pneu</title>
   <style>
     /* Mobile-first app shell: ~390 px is the design width, desktop only
@@ -11,12 +11,25 @@
        so prefers-reduced-motion can turn motion off without breaking layout.
        The mechanic holds the phone in one hand in the rack, so every screen
        keeps its primary action stuck to the bottom, above the tab bar. */
+    /* --- Tokens ---------------------------------------------------------
+       Deep workshop teal on a warm off-white. The ink is warm near-black
+       rather than grey, which reads calmer on a phone held under a shop
+       light, and every surface is separated by a hairline plus a very soft
+       shadow instead of a hard border. */
     :root {
-      --pozadi: #f4f6f5; --plocha: #ffffff; --inkoust: #1b2423;
-      --inkoust-2: #5a6764; --akcent: #10504b; --akcent-text: #ffffff;
-      --chyba: #9e3527; --okraj: #dbe2e0;
-      --pozor: #8a5300; --pozor-pozadi: #fdf4e6;
-      --klid: #eef3f2;
+      --inkoust: #16211f; --inkoust-2: #5c6b67; --inkoust-3: #8b9793;
+      --akcent: #0d4d47; --akcent-svetly: #14685f; --akcent-jemny: #e7f0ee;
+      --akcent-text: #ffffff;
+      --pozadi: #f2f5f4; --plocha: #ffffff; --plocha-2: #f7faf9;
+      --okraj: #e2e9e7; --okraj-2: #cfdad7; --linka: #eef2f1;
+      --chyba: #98352a; --chyba-jemna: #fbeeec;
+      --pozor: #8a5300; --pozor-jemna: #fdf5e8;
+      --uspech: #17624a; --uspech-jemna: #e9f4ee;
+      --r-s: 10px; --r-m: 14px; --r-l: 20px;
+      --stin-1: 0 1px 2px rgba(16,40,36,.05), 0 1px 1px rgba(16,40,36,.04);
+      --stin-2: 0 2px 8px rgba(16,40,36,.07), 0 1px 2px rgba(16,40,36,.05);
+      --stin-3: 0 12px 34px rgba(16,40,36,.16), 0 2px 8px rgba(16,40,36,.08);
+      --pruzina: cubic-bezier(.2,.8,.3,1);
     }
     * { box-sizing: border-box; }
     /* Several panels are toggled with the hidden attribute, and a class that
@@ -24,77 +37,157 @@
     [hidden] { display: none !important; }
     html, body { height: 100%; }
     body {
-      margin: 0; background: var(--pozadi); color: var(--inkoust);
-      font-family: system-ui, sans-serif; line-height: 1.5;
+      /* Deliberately one flat page tone: both the sticky header and the
+         sticky action bar fade into it, and a gradient underneath would show
+         up as a band behind either of them. */
+      margin: 0; color: var(--inkoust); background: var(--pozadi);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5; letter-spacing: -0.006em;
       display: flex; flex-direction: column;
       padding: env(safe-area-inset-top) 0 0;
       -webkit-text-size-adjust: 100%;
     }
     main { flex: 1; width: 100%; max-width: 28rem; margin: 0 auto; padding: 0; position: relative; }
     .obrazovka {
-      position: absolute; inset: 0; padding: 1rem 1rem 0;
+      position: absolute; inset: 0; padding: 0 1rem;
       display: none; flex-direction: column; gap: 0.85rem;
       overflow-y: auto; -webkit-overflow-scrolling: touch;
-      opacity: 0; transform: translateY(8px);
-      transition: opacity 0.22s ease, transform 0.22s ease;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .26s var(--pruzina), transform .26s var(--pruzina);
     }
     .obrazovka.aktivni { display: flex; opacity: 1; transform: none; }
+    /* The two screens without a sticky header supply their own top air. */
+    #obrazovka-nacitani, #obrazovka-prihlaseni { padding-top: 2.25rem; }
+
+    /* List items drift in with a short stagger. fill-mode is backwards, not
+       both: with both, the final keyframe would keep overriding the :active
+       press feedback for the rest of the item's life. */
+    @keyframes vjezd { from { opacity: 0; transform: translateY(7px); } }
+    .seznam > * { animation: vjezd .26s var(--pruzina) backwards; }
+    .seznam > *:nth-child(2) { animation-delay: 30ms; }
+    .seznam > *:nth-child(3) { animation-delay: 60ms; }
+    .seznam > *:nth-child(4) { animation-delay: 90ms; }
+    .seznam > *:nth-child(5) { animation-delay: 120ms; }
+    .seznam > *:nth-child(n+6) { animation-delay: 150ms; }
+
     @media (prefers-reduced-motion: reduce) {
       .obrazovka { transition: none; transform: none; }
-      button:active { transform: none; }
+      button:active, .polozka:active { transform: none; }
+      .seznam > * { animation: none; }
+      .navod, .navod-panel { animation: none !important; }
     }
 
-    h1 { font-size: 1.35rem; margin: 0.25rem 0 0; }
-    h2 { font-size: 1rem; margin: 0.4rem 0 0; }
+    h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.022em; margin: 0; }
+    h2 { font-size: 1.02rem; font-weight: 700; letter-spacing: -0.012em; margin: .55rem 0 0; }
     p { margin: 0; color: var(--inkoust-2); }
-    .maly { font-size: 0.85rem; }
-    .tisene { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
-      color: var(--inkoust-2); font-weight: 600; }
-    label { font-size: 0.9rem; font-weight: 600; display: block; }
+    .maly { font-size: 0.86rem; }
+    .tisene { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--inkoust-3); font-weight: 700; }
+    label { font-size: 0.88rem; font-weight: 600; display: block; color: var(--inkoust); }
 
     input:not([type=checkbox]), select, textarea {
-      width: 100%; min-height: 48px; padding: 0.5rem 0.9rem; font-size: 1rem;
-      font-family: inherit; border: 1px solid var(--okraj); border-radius: 10px;
+      width: 100%; min-height: 50px; padding: 0.6rem 0.9rem; font-size: 1rem;
+      font-family: inherit; border: 1px solid var(--okraj-2); border-radius: var(--r-m);
       background: var(--plocha); color: var(--inkoust);
+      box-shadow: inset 0 1px 2px rgba(16,40,36,.03);
+      transition: border-color .14s ease, box-shadow .14s ease;
     }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--akcent);
+      box-shadow: 0 0 0 3px var(--akcent-jemny);
+    }
+    /* Search is the most-used field in the app, so it gets its own shape. */
+    input[type=search] { border-radius: 999px; padding-left: 1.05rem; }
     /* Tick boxes are tapped with a thumb, so 28 px of box inside a 44 px row. */
     input[type=checkbox] {
       width: 28px; height: 28px; min-height: 28px; flex-shrink: 0;
-      margin: 0.35rem 0 0; accent-color: var(--akcent);
+      margin: 0.35rem 0 0; accent-color: var(--akcent); box-shadow: none;
     }
     textarea { min-height: 4.5rem; resize: vertical; }
-    input:focus-visible, select:focus-visible, textarea:focus-visible,
-    button:focus-visible, .polozka:focus-visible {
+    button:focus-visible, .polozka:focus-visible, a:focus-visible {
       outline: 2px solid var(--akcent); outline-offset: 2px;
     }
-    .pole { display: flex; flex-direction: column; gap: 0.25rem; }
+    .pole { display: flex; flex-direction: column; gap: 0.3rem; }
     .dvojice { display: flex; gap: 0.5rem; }
     .dvojice > * { flex: 1; min-width: 0; }
+    .stoh { display: flex; flex-direction: column; gap: 0.7rem; }
+    .rostouci { flex: 1; min-width: 0; }
+    .dno { height: 1.5rem; flex-shrink: 0; }
+    .odsazene-nad { margin-top: 0.75rem; }
+    .odsazene-nad-male { margin-top: 0.4rem; }
+    .plna-sirka { width: 100%; margin-top: 0.75rem; }
 
     button {
-      min-height: 48px; padding: 0 1.1rem; font-size: 1rem; font-weight: 600;
-      border: none; border-radius: 10px; cursor: pointer; font-family: inherit;
-      background: var(--akcent); color: var(--akcent-text);
-      transition: transform 0.12s ease, opacity 0.12s ease;
+      min-height: 50px; padding: 0 1.15rem; font-size: 1rem; font-weight: 600;
+      border: 1px solid transparent; border-radius: var(--r-m); cursor: pointer;
+      font-family: inherit; letter-spacing: -0.01em;
+      background: linear-gradient(180deg, var(--akcent-svetly), var(--akcent));
+      color: var(--akcent-text); box-shadow: var(--stin-2);
+      transition: transform .14s var(--pruzina), box-shadow .14s ease, opacity .14s ease;
     }
-    button:active { transform: scale(0.97); }
+    button:active { transform: translateY(1px) scale(0.985); box-shadow: var(--stin-1); }
     button[disabled] { opacity: 0.45; cursor: default; }
-    button.tiche { background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj); }
-    button.varovne { background: var(--plocha); color: var(--chyba); border: 1px solid var(--chyba); }
-    button.male { min-height: 44px; font-size: 0.9rem; padding: 0 0.8rem; }
+    button.tiche {
+      background: var(--plocha); color: var(--inkoust);
+      border-color: var(--okraj-2); box-shadow: var(--stin-1);
+    }
+    button.varovne {
+      background: var(--plocha); color: var(--chyba);
+      border-color: #e3c4bf; box-shadow: var(--stin-1);
+    }
+    button.male { min-height: 42px; font-size: 0.875rem; padding: 0 0.8rem; border-radius: var(--r-s); }
+    /* A button that is really just tappable text inside a card. */
+    .nahy {
+      background: none; border: none; box-shadow: none; padding: 0; min-height: auto;
+      border-radius: 0; text-align: left; color: inherit; font: inherit;
+    }
+    .nahy:active { transform: none; box-shadow: none; }
 
-    .zprava { min-height: 1.4rem; font-size: 0.92rem; }
-    .zprava.chyba { color: var(--chyba); }
-    .karta { background: var(--plocha); border: 1px solid var(--okraj); border-radius: 12px; padding: 1rem; }
-    .karta.pozor { background: var(--pozor-pozadi); border-color: #e6d3b0; }
+    .zprava { min-height: 1.4rem; font-size: 0.92rem; color: var(--inkoust-2); }
+    .zprava.chyba { color: var(--chyba); font-weight: 600; }
+    .karta {
+      background: var(--plocha); border: 1px solid var(--okraj);
+      border-radius: var(--r-l); padding: 1rem 1.05rem; box-shadow: var(--stin-1);
+    }
+    .karta.pozor { background: var(--pozor-jemna); border-color: #f0dfc0; }
+    .karta.uspech {
+      background: linear-gradient(180deg, var(--uspech-jemna), var(--plocha));
+      border-color: #cfe6d9;
+    }
 
     /* Screen header: back button plus title, always in the same place so the
-       mechanic never hunts for the way out. */
-    .hlavicka { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.25rem; }
-    .hlavicka h1 { flex: 1; margin: 0; font-size: 1.2rem; }
+       mechanic never hunts for the way out. It sticks to the top and frosts
+       the content sliding under it — that is what makes this read as an app
+       and not as a long web page. */
+    .hlavicka {
+      position: sticky; top: 0; z-index: 3;
+      display: flex; align-items: center; gap: 0.6rem;
+      margin: 0 -1rem; padding: 0.9rem 1rem 0.7rem;
+      background: rgba(242,245,244,.9);
+      -webkit-backdrop-filter: saturate(150%) blur(10px);
+      backdrop-filter: saturate(150%) blur(10px);
+    }
+    /* Soft fade below the bar instead of a hard cut, so a list scrolling
+       under it dissolves rather than getting sliced. */
+    .hlavicka::after {
+      content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 14px;
+      background: linear-gradient(to bottom, rgba(242,245,244,.9), rgba(242,245,244,0));
+      pointer-events: none;
+    }
+    .hlavicka h1 { flex: 1; min-width: 0; font-size: 1.25rem; }
     .zpet {
-      min-height: 44px; min-width: 44px; padding: 0; font-size: 1.3rem;
-      background: transparent; color: var(--inkoust); border: none; line-height: 1;
+      min-height: 40px; min-width: 40px; padding: 0; font-size: 1.25rem;
+      background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj);
+      border-radius: 50%; line-height: 1; box-shadow: var(--stin-1); flex-shrink: 0;
+    }
+    /* Brand mark: a tyre, in the accent, wherever the product introduces
+       itself — login and the walkthrough. */
+    .znak {
+      width: 56px; height: 56px; border-radius: 18px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem; color: var(--akcent-text);
+      background: linear-gradient(160deg, var(--akcent-svetly), var(--akcent));
+      box-shadow: var(--stin-2);
     }
 
     /* Bottom sheet of actions: sticky inside the scroller, so it rides in
@@ -102,101 +195,235 @@
     .dolni-akce {
       position: sticky; bottom: 0; margin-top: auto;
       display: flex; flex-direction: column; gap: 0.5rem;
-      padding: 0.75rem 0 1rem;
-      background: linear-gradient(to bottom, rgba(244,246,245,0), var(--pozadi) 35%);
+      padding: 0.85rem 0 1rem;
+      background: linear-gradient(to bottom, rgba(242,245,244,0), var(--pozadi) 40%);
     }
     .dolni-akce .rada { display: flex; gap: 0.5rem; }
     .dolni-akce .rada > button { flex: 1; }
 
     .lista {
       display: none; flex-shrink: 0;
-      border-top: 1px solid var(--okraj); background: var(--plocha);
-      padding-bottom: env(safe-area-inset-bottom);
+      border-top: 1px solid var(--okraj);
+      background: rgba(255,255,255,.94);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      padding: 0.35rem 0.3rem;
     }
     body.prihlasen .lista { display: flex; }
-    /* Five tabs at 390 px leaves ~78 px each, hence the smaller label and
-       nowrap — "Objednávky" must not fold onto a second line. */
+    /* Five tabs at 390 px leaves ~76 px each, hence the smaller label and
+       nowrap — "Objednávky" must not fold onto a second line. The active tab
+       gets a filled pill rather than just a colour, so it is obvious at a
+       glance which screen you are on. */
     .lista button {
-      flex: 1; min-height: 56px; background: transparent; color: var(--inkoust-2);
-      border: none; border-radius: 0; font-size: 0.64rem; font-weight: 600;
+      flex: 1; min-height: 52px; background: transparent; color: var(--inkoust-3);
+      border: none; border-radius: var(--r-m); font-size: 0.63rem; font-weight: 600;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.1rem; padding: 0.25rem 0.1rem; white-space: nowrap;
+      gap: 0.15rem; padding: 0.3rem 0.1rem; white-space: nowrap; box-shadow: none;
+      letter-spacing: -0.01em;
     }
-    .lista button .glyf { font-size: 1.2rem; line-height: 1; }
-    .lista button[aria-current="page"] { color: var(--akcent); }
+    .lista button .glyf { font-size: 1.15rem; line-height: 1; }
+    .lista button[aria-current="page"] { color: var(--akcent); background: var(--akcent-jemny); }
 
-    footer { text-align: center; padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
-      font-size: 0.78rem; background: var(--plocha); }
-    body.prihlasen footer { padding-top: 0; border-top: none; }
-    footer a { color: var(--inkoust-2); }
+    footer { text-align: center; padding: 0.45rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+      font-size: 0.75rem; background: var(--plocha); }
+    body.prihlasen footer { padding-top: 0; background: rgba(255,255,255,.94); }
+    footer a { color: var(--inkoust-3); text-decoration: none; }
 
-    /* Tiles on the home screen: the two reports the subscription renews for. */
-    .dlazdice { display: flex; gap: 0.6rem; }
+    /* Tiles on the home screen: the two reports the subscription renews for.
+       The soft disc bleeding out of the corner is what stops them looking
+       like plain bordered boxes. */
+    .dlazdice { display: flex; gap: 0.65rem; }
     .dlazdice button {
-      flex: 1; min-height: 84px; flex-direction: column; align-items: flex-start;
-      justify-content: center; gap: 0.15rem; text-align: left;
+      flex: 1; min-height: 92px; flex-direction: column; align-items: flex-start;
+      justify-content: center; gap: 0.1rem; text-align: left;
       background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj);
-      display: flex; padding: 0.75rem;
+      display: flex; padding: 0.85rem; border-radius: var(--r-l);
+      box-shadow: var(--stin-1); position: relative; overflow: hidden;
     }
-    .dlazdice .cislo { font-size: 1.6rem; font-weight: 700; line-height: 1; color: var(--akcent); }
-    .dlazdice .popis { font-size: 0.78rem; font-weight: 600; color: var(--inkoust-2); }
+    .dlazdice button::after {
+      content: ""; position: absolute; right: -28px; bottom: -46px;
+      width: 116px; height: 116px; border-radius: 50%;
+      background: var(--akcent-jemny);
+    }
+    .dlazdice .cislo {
+      font-size: 1.95rem; font-weight: 700; line-height: 1; color: var(--akcent);
+      font-variant-numeric: tabular-nums; position: relative;
+    }
+    .dlazdice .popis {
+      font-size: 0.78rem; font-weight: 600; color: var(--inkoust-2); position: relative;
+    }
+    .dlazdice button.hori::after { background: var(--pozor-jemna); }
     .dlazdice button.hori .cislo { color: var(--pozor); }
 
-    .chipy { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .chipy { display: flex; gap: 0.35rem; flex-wrap: wrap; }
     .chipy button {
-      min-height: 44px; font-size: 0.9rem; padding: 0 0.85rem; flex: 1;
+      min-height: 42px; font-size: 0.9rem; padding: 0 0.8rem; flex: 1;
       background: var(--plocha); color: var(--inkoust); border: 1px solid var(--okraj);
+      border-radius: var(--r-s); box-shadow: none;
     }
-    .chipy button[aria-pressed="true"] { background: var(--akcent); color: var(--akcent-text); border-color: var(--akcent); }
+    .chipy button[aria-pressed="true"] {
+      background: linear-gradient(180deg, var(--akcent-svetly), var(--akcent));
+      color: var(--akcent-text); border-color: var(--akcent); box-shadow: var(--stin-1);
+    }
 
     .seznam { display: flex; flex-direction: column; gap: 0.5rem; }
     .polozka {
       display: block; width: 100%; text-align: left; background: var(--plocha);
-      border: 1px solid var(--okraj); border-radius: 12px; padding: 0.75rem;
+      border: 1px solid var(--okraj); border-radius: var(--r-m); padding: 0.8rem 0.85rem;
       min-height: 44px; color: inherit; font: inherit; cursor: pointer;
+      box-shadow: var(--stin-1); transition: transform .14s var(--pruzina), box-shadow .14s ease;
     }
+    .polozka:active { transform: scale(0.99); }
+    .polozka.radkova { display: flex; gap: 0.65rem; align-items: flex-start; }
+    .polozka.tlumena { opacity: 0.58; }
     .polozka .radek1 { display: flex; align-items: center; gap: 0.4rem; }
-    .polozka .kod { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .polozka .radek1 .jmeno { flex: 1; min-width: 0; }
+    .polozka .kod {
+      font-weight: 700; font-variant-numeric: tabular-nums;
+      font-size: 1.02rem; letter-spacing: 0.01em;
+    }
     .polozka .jmeno { font-weight: 600; }
-    .polozka .detail { font-size: 0.82rem; color: var(--inkoust-2); }
-    .polozka .cas { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2rem; }
+    .polozka .detail {
+      display: block; font-size: 0.83rem; color: var(--inkoust-2); margin-top: 0.1rem;
+    }
+    .polozka .cas {
+      font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2rem;
+      font-size: 1.02rem;
+    }
+    .polozka .misto { font-size: 1.06rem; letter-spacing: 0.01em; }
+    .polozka .pozn { font-weight: 400; color: var(--inkoust-2); }
+
+    .akce-radek { display: flex; gap: 0.4rem; margin-top: 0.65rem; flex-wrap: wrap; }
+    .akce-radek > * { flex: 1; }
+    .den-hlavicka { margin-top: 0.6rem; }
+    .popis-sekce { margin-bottom: 0.15rem; }
+    .vystraha { margin-top: 0.6rem; color: var(--pozor); }
+    .text-inkoust { color: var(--inkoust); }
+    /* Phone number rendered as a tappable pill — the seasonal report is a
+       call list, so calling has to be the obvious thing to do. */
+    .volat {
+      display: flex; align-items: center; justify-content: center; min-height: 42px;
+      border: 1px solid var(--akcent); border-radius: var(--r-s);
+      background: var(--akcent-jemny); color: var(--akcent);
+      font-weight: 600; font-size: 0.875rem; text-decoration: none;
+    }
 
     .znacka {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
-      padding: 0.1rem 0.4rem; border-radius: 6px; background: var(--klid); color: var(--inkoust-2);
+      display: inline-flex; align-items: center; font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.045em;
+      padding: 0.2rem 0.45rem; border-radius: 999px;
+      background: var(--plocha-2); color: var(--inkoust-2); border: 1px solid var(--okraj);
       white-space: nowrap;
     }
-    .znacka.zimni { background: #e7eff5; color: #1d4e6b; }
-    .znacka.letni { background: #eef3e7; color: #3f5a1d; }
-    .znacka.celorocni { background: #f1eef5; color: #4d3a63; }
-    .znacka.vydano { background: #f2e9e7; color: var(--chyba); }
-    .znacka.pozor { background: var(--pozor-pozadi); color: var(--pozor); }
+    .znacka.zimni { background: #e8f1f7; color: #1a4d6d; border-color: #cfe2ee; }
+    .znacka.letni { background: #eef4e6; color: #3d5a1b; border-color: #dde9cd; }
+    .znacka.celorocni { background: #f2eef7; color: #4b3765; border-color: #e5dcef; }
+    .znacka.vydano { background: var(--chyba-jemna); color: var(--chyba); border-color: #efd8d4; }
+    .znacka.pozor { background: var(--pozor-jemna); color: var(--pozor); border-color: #f0dfc0; }
+    .znacka.uspech { background: var(--uspech-jemna); color: var(--uspech); border-color: #cfe6d9; }
 
-    .radky { display: flex; flex-direction: column; gap: 0.35rem; }
-    .radky > div { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.92rem; }
+    /* Key/value rows separated by hairlines instead of gaps: dense enough for
+       a set detail, still scannable. */
+    .radky { display: flex; flex-direction: column; }
+    .radky > div {
+      display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.93rem;
+      padding: 0.42rem 0; border-bottom: 1px solid var(--linka);
+    }
+    .radky > div:first-child { padding-top: 0; }
+    .radky > div:last-child { border-bottom: none; padding-bottom: 0; }
     .radky .klic { color: var(--inkoust-2); flex-shrink: 0; }
-    .radky .hodnota { text-align: right; font-weight: 600; }
+    .radky .hodnota { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .velky-kod {
+      font-size: 2.4rem; font-weight: 700; color: var(--inkoust); line-height: 1.05;
+      letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin: 0.15rem 0 0.35rem;
+    }
 
     /* Tread depths laid out like the car: front axle on top. Big targets,
-       because this is typed with a glove on. */
-    .mriz-kol { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .mriz-kol .pole input { min-height: 56px; font-size: 1.25rem; text-align: center; font-weight: 600; }
-    .mriz-kol .pole label { text-align: center; font-size: 0.8rem; color: var(--inkoust-2); }
+       because this is typed with a glove on. The inset panel makes the four
+       boxes read as one measurement, not four unrelated fields. */
+    .mriz-kol {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;
+      background: var(--plocha-2); border: 1px solid var(--okraj);
+      border-radius: var(--r-m); padding: 0.7rem;
+    }
+    .mriz-kol .pole input {
+      min-height: 58px; font-size: 1.3rem; text-align: center; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .mriz-kol .pole label {
+      text-align: center; font-size: 0.72rem; color: var(--inkoust-3);
+      text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;
+    }
 
     .kroky { display: flex; gap: 0.3rem; }
-    .kroky span { flex: 1; height: 4px; border-radius: 2px; background: var(--okraj); }
-    .kroky span.hotovo { background: var(--akcent); }
+    .kroky span {
+      flex: 1; height: 5px; border-radius: 999px; background: var(--okraj-2);
+      transition: background .25s ease;
+    }
+    .kroky span.hotovo { background: linear-gradient(90deg, var(--akcent-svetly), var(--akcent)); }
     .krok { display: none; flex-direction: column; gap: 0.85rem; }
     .krok.aktivni { display: flex; }
 
-    .vyber { display: flex; align-items: center; gap: 0.5rem; }
+    .vyber {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: var(--plocha); border: 1px solid var(--okraj);
+      border-radius: var(--r-m); padding: 0.35rem 0.75rem; box-shadow: var(--stin-1);
+    }
     .vyber input[type=checkbox] { margin: 0; }
-    .vyber label { min-height: 44px; display: flex; align-items: center; padding: 0 0.25rem; font-weight: 500; }
+    .vyber label { min-height: 44px; display: flex; align-items: center; font-weight: 500; }
 
-    .prazdno { padding: 1.25rem 0.5rem; text-align: center; color: var(--inkoust-2); font-size: 0.92rem; }
+    .prazdno {
+      padding: 1.5rem 1rem; text-align: center; color: var(--inkoust-2); font-size: 0.92rem;
+      background: var(--plocha); border: 1px dashed var(--okraj-2); border-radius: var(--r-m);
+    }
     .telefon { color: var(--akcent); font-weight: 600; text-decoration: none; }
     .nahled { white-space: pre-wrap; font-size: 0.8rem; font-family: ui-monospace, monospace;
-      background: var(--klid); border-radius: 10px; padding: 0.75rem; overflow-x: auto; }
+      background: var(--plocha-2); border: 1px solid var(--okraj);
+      border-radius: var(--r-m); padding: 0.85rem; overflow-x: auto; color: var(--inkoust); }
+
+    /* ---------------- Walkthrough ----------------
+       A bottom sheet, because that is where a thumb already is. Opens by
+       itself on the first visit and from a button in Nastaveni afterwards. */
+    .navod {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; align-items: flex-end; justify-content: center;
+      background: rgba(12,28,26,.55);
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      animation: zjev .2s ease both;
+    }
+    @keyframes zjev { from { opacity: 0; } }
+    @keyframes vyjezd { from { transform: translateY(30px); } }
+    .navod-panel {
+      width: 100%; max-width: 28rem; background: var(--plocha);
+      border-radius: 26px 26px 0 0; box-shadow: var(--stin-3);
+      padding: 0.9rem 1.15rem calc(1.15rem + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; gap: 0.85rem;
+      max-height: 92vh; overflow-y: auto;
+      animation: vyjezd .3s var(--pruzina) both;
+    }
+    @media (min-width: 30rem) {
+      .navod { align-items: center; padding: 1rem; }
+      .navod-panel { border-radius: 26px; padding-bottom: 1.15rem; }
+    }
+    .navod-hlava { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .navod-hlava .znak { width: 48px; height: 48px; border-radius: 15px; font-size: 1.5rem; }
+    .navod-preskoc {
+      background: none; border: none; box-shadow: none; min-height: 40px;
+      color: var(--inkoust-2); font-size: 0.875rem; font-weight: 600; padding: 0 0.4rem;
+      width: auto; flex: 0 0 auto;
+    }
+    .navod-preskoc:active { transform: none; box-shadow: none; }
+    .navod-telo { display: flex; flex-direction: column; gap: 0.5rem; }
+    .navod-telo h2 { font-size: 1.3rem; letter-spacing: -0.02em; margin: 0; }
+    .navod-telo p { font-size: 0.95rem; }
+    .navod-telo p + p { margin-top: 0.4rem; }
+    .navod-tecky { display: flex; gap: 0.3rem; justify-content: center; padding: 0.15rem 0; }
+    .navod-tecky span {
+      width: 7px; height: 7px; border-radius: 999px; background: var(--okraj-2);
+      transition: width .22s var(--pruzina), background .22s ease;
+    }
+    .navod-tecky span.aktivni { background: var(--akcent); width: 20px; }
+    .navod-akce { display: flex; gap: 0.5rem; }
+    .navod-akce > button { flex: 1; }
 
     /* ---------------- Label printing ----------------
        No PDF library and no dependencies: the label is HTML, the page size is
@@ -227,8 +454,8 @@
     #tisk.mriz .s-pozice { font-size: 3.6mm; }
 
     @media print {
-      body { background: #fff; padding: 0; }
-      body > main, body > nav, body > footer { display: none !important; }
+      body { background: #fff none; padding: 0; }
+      body > main, body > nav, body > footer, body > .navod { display: none !important; }
       /* Block layout for the roll: break-after: page is reliable there in a
          way it is not inside a flex container. */
       #tisk { display: block; }
@@ -244,6 +471,7 @@
     </section>
 
     <section id="obrazovka-prihlaseni" class="obrazovka">
+      <div class="znak" aria-hidden="true">◎</div>
       <h1>Pneusklad</h1>
       <p>Evidence uskladněných pneu, štítky a objednávky pro váš pneuservis.
       Zadejte svůj e-mail — pošleme vám jednorázový přihlašovací odkaz.
@@ -335,10 +563,7 @@
           <div><span class="klic">Celkem sad v evidenci</span>
             <span class="hodnota" id="zak-sad-celkem">0</span></div>
         </div>
-        <a class="telefon" id="zak-volat" href="tel:"
-           style="display:flex;align-items:center;justify-content:center;min-height:44px;
-                  margin-top:0.75rem;border:1px solid var(--akcent);border-radius:10px">
-          Zavolat</a>
+        <a class="volat odsazene-nad" id="zak-volat" href="tel:">Zavolat</a>
       </div>
       <div class="pole"><label for="zak-jmeno">Jméno</label>
         <input id="zak-jmeno" autocomplete="off"></div>
@@ -376,7 +601,7 @@
             <div><span class="klic">Zákazník</span><span class="hodnota" id="ns-vybrany-jmeno"></span></div>
             <div><span class="klic">Telefon</span><span class="hodnota" id="ns-vybrany-telefon"></span></div>
           </div>
-          <button class="tiche male" id="ns-zrusit-vyber" style="margin-top:0.75rem">Vybrat jiného</button>
+          <button class="tiche male odsazene-nad" id="ns-zrusit-vyber">Vybrat jiného</button>
         </div>
         <div id="ns-novy">
           <p class="maly">Nebo zapište nového zákazníka:</p>
@@ -447,10 +672,9 @@
 
       <div class="krok" id="krok-5">
         <h2>Uskladněno</h2>
-        <div class="karta">
+        <div class="karta uspech">
           <p class="tisene">Kód sady</p>
-          <p style="font-size:2rem;font-weight:800;color:var(--inkoust);line-height:1.1"
-             id="ns-hotovo-kod"></p>
+          <p class="velky-kod" id="ns-hotovo-kod"></p>
           <p class="maly" id="ns-hotovo-popis"></p>
         </div>
         <button id="ns-tisk">Vytisknout štítek</button>
@@ -519,7 +743,7 @@
           <div><span class="klic">Zákazník</span><span class="hodnota" id="no-vybrana-jmeno"></span></div>
           <div><span class="klic">Místo</span><span class="hodnota" id="no-vybrana-pozice"></span></div>
         </div>
-        <button class="tiche male" id="no-zrusit-vyber" style="margin-top:0.75rem">Vybrat jinou</button>
+        <button class="tiche male odsazene-nad" id="no-zrusit-vyber">Vybrat jinou</button>
       </div>
       <div id="no-hledani-blok">
         <div class="pole">
@@ -528,7 +752,7 @@
                  placeholder="Kód, SPZ, jméno nebo telefon">
         </div>
         <div id="no-nalezene" class="seznam"></div>
-        <div class="pole" style="margin-top:0.85rem">
+        <div class="pole odsazene-nad">
           <label for="no-jmeno">Nebo jen jméno (průjezd bez uskladnění)</label>
           <input id="no-jmeno" autocomplete="off" placeholder="Jan Novák">
         </div>
@@ -544,7 +768,7 @@
           <button data-ukon="prezuti" aria-pressed="true">Přezutí</button>
           <button data-ukon="prehozeni" aria-pressed="false">Přehození</button>
         </div>
-        <div class="chipy" style="margin-top:0.4rem" id="no-ukon-2" role="group" aria-label="Další úkony">
+        <div class="chipy odsazene-nad-male" id="no-ukon-2" role="group" aria-label="Další úkony">
           <button data-ukon="uskladneni" aria-pressed="false">Uskladnění</button>
           <button data-ukon="vydej" aria-pressed="false">Výdej</button>
           <button data-ukon="oprava" aria-pressed="false">Oprava</button>
@@ -584,7 +808,7 @@
       </div>
       <div id="prehled-telo"></div>
       <div id="prehled-zprava" class="zprava" aria-live="polite"></div>
-      <div style="height:1.5rem;flex-shrink:0"></div>
+      <div class="dno"></div>
     </section>
 
     <!-- ----------------------------- Nastavení ---------------------------- -->
@@ -599,6 +823,11 @@
           <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno"></span></div>
         </div>
       </div>
+
+      <h2>Návod</h2>
+      <p class="maly">Krátké provedení appkou — co se kde dělá a jak to funguje.
+      Poprvé se spustí sám, pak ho najdete tady.</p>
+      <button class="tiche" id="nast-navod">Zobrazit návod</button>
 
       <h2>Údaje na štítek</h2>
       <div class="pole"><label for="nast-nazev">Název servisu</label>
@@ -631,7 +860,7 @@
       <button class="tiche" id="odhlasit">Odhlásit se</button>
       <button class="varovne" id="smazat-ucet">Smazat účet a všechna data</button>
       <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
-      <div style="height:1.5rem;flex-shrink:0"></div>
+      <div class="dno"></div>
     </section>
   </main>
 
@@ -649,6 +878,27 @@
   </nav>
 
   <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
+
+  <div class="navod" id="navod" hidden role="dialog" aria-modal="true"
+       aria-labelledby="navod-titulek">
+    <div class="navod-panel">
+      <div class="navod-hlava">
+        <span class="znak" aria-hidden="true" id="navod-glyf">◎</span>
+        <button class="navod-preskoc" id="navod-preskocit">Přeskočit</button>
+      </div>
+      <div class="navod-telo">
+        <p class="tisene" id="navod-krok"></p>
+        <h2 id="navod-titulek"></h2>
+        <div id="navod-text"></div>
+      </div>
+      <div class="navod-tecky" id="navod-tecky" aria-hidden="true"></div>
+      <div class="navod-akce">
+        <button class="tiche" id="navod-zpet">Zpět</button>
+        <button id="navod-dal">Pokračovat</button>
+      </div>
+    </div>
+  </div>
+
   <div id="tisk" class="role" aria-hidden="true"></div>
 
   <script>
@@ -892,16 +1142,15 @@
              aria-label="Vybrat sadu ${bezpecne(sada.kod)} k tisku"
              ${stav.vybrane.has(sada.id) ? "checked" : ""}>`
         : "";
-      return `<div class="polozka" style="display:flex;gap:0.6rem;align-items:flex-start">
-        <button class="otevri-sadu" data-id="${sada.id}"
-                style="flex:1;min-height:auto;background:transparent;border:none;padding:0;text-align:left;color:inherit;font:inherit">
+      return `<div class="polozka radkova">
+        <button class="otevri-sadu nahy rostouci" data-id="${sada.id}">
           <span class="radek1"><span class="kod">${bezpecne(sada.kod)}</span>${znacky.join("")}</span>
-          <span class="detail" style="display:block"><strong>${bezpecne(sada.jmeno)}</strong>
+          <span class="detail"><strong>${bezpecne(sada.jmeno)}</strong>
             · ${bezpecne(sada.telefon)}</span>
-          <span class="detail" style="display:block">${bezpecne(sada.spz || "bez SPZ")}
+          <span class="detail">${bezpecne(sada.spz || "bez SPZ")}
             · ${bezpecne(sada.rozmer || "rozměr neuveden")} · ${sada.pocet_kusu} ks</span>
-          <span class="detail" style="display:block">Místo
-            <strong>${bezpecne(sada.pozice || "neuvedeno")}</strong>
+          <span class="detail">Místo
+            <strong class="misto">${bezpecne(sada.pozice || "neuvedeno")}</strong>
             · dezén ${mm(hloubka)}</span>
         </button>
         ${vyber}
@@ -1025,14 +1274,14 @@
       kontejner.innerHTML = data.zakaznici.map((z) =>
         `<button class="polozka otevri-zakaznika" data-id="${z.id}">
           <span class="radek1">
-            <span class="jmeno" style="flex:1">${bezpecne(z.jmeno)}</span>
+            <span class="jmeno">${bezpecne(z.jmeno)}</span>
             <span class="znacka">${z.sad_uskladneno
               ? `${z.sad_uskladneno} ve skladu` : "nic uskladněno"}</span>
           </span>
-          <span class="detail" style="display:block">${bezpecne(z.telefon)}${
+          <span class="detail">${bezpecne(z.telefon)}${
             z.email ? ` · ${bezpecne(z.email)}` : ""}</span>
           ${z.poznamka
-            ? `<span class="detail" style="display:block">${bezpecne(z.poznamka)}</span>` : ""}
+            ? `<span class="detail">${bezpecne(z.poznamka)}</span>` : ""}
         </button>`).join("");
       kontejner.querySelectorAll(".otevri-zakaznika").forEach((b) =>
         b.addEventListener("click", () =>
@@ -1178,7 +1427,7 @@
         `<button class="polozka vyber-zakaznika" data-id="${z.id}"
                  data-jmeno="${bezpecne(z.jmeno)}" data-telefon="${bezpecne(z.telefon)}">
           <span class="jmeno">${bezpecne(z.jmeno)}</span>
-          <span class="detail" style="display:block">${bezpecne(z.telefon)}</span>
+          <span class="detail">${bezpecne(z.telefon)}</span>
         </button>`).join("");
       kontejner.querySelectorAll(".vyber-zakaznika").forEach((b) =>
         b.addEventListener("click", () => {
@@ -1322,11 +1571,11 @@
       const historie = stav.pohyby.map((p) =>
         `<div><span class="klic">${datumCesky(p.datum)}</span>
           <span class="hodnota">${NAZVY_POHYBU[p.typ] || p.typ}
-          ${p.poznamka ? `<br><span class="maly" style="font-weight:400">${bezpecne(p.poznamka)}</span>` : ""}
+          ${p.poznamka ? `<br><span class="maly pozn">${bezpecne(p.poznamka)}</span>` : ""}
           </span></div>`).join("");
 
-      $("sada-telo").innerHTML = `
-        <div class="karta" style="margin-bottom:0.75rem">
+      $("sada-telo").innerHTML = `<div class="stoh">
+        <div class="karta">
           <p class="tisene">Zákazník</p>
           <div class="radky">
             <div><span class="klic">Jméno</span><span class="hodnota">${bezpecne(s.jmeno)}</span></div>
@@ -1336,7 +1585,7 @@
             ${s.email ? `<div><span class="klic">E-mail</span><span class="hodnota">${bezpecne(s.email)}</span></div>` : ""}
           </div>
         </div>
-        <div class="karta" style="margin-bottom:0.75rem">
+        <div class="karta">
           <p class="tisene">Kola</p>
           <div class="radky">
             <div><span class="klic">Vozidlo</span><span class="hodnota">
@@ -1350,10 +1599,10 @@
               ${mm(s.hloubka_lp)} / ${mm(s.hloubka_pp)} / ${mm(s.hloubka_lz)} / ${mm(s.hloubka_pz)}</span></div>
           </div>
           ${hloubka > 0 && hloubka < 40
-            ? `<p class="maly" style="margin-top:0.6rem;color:var(--pozor)">
+            ? `<p class="maly vystraha">
                  Nejmenší hloubka ${mm(hloubka)} — nabídněte zákazníkovi nové pneu.</p>` : ""}
         </div>
-        <div class="karta" style="margin-bottom:0.75rem">
+        <div class="karta">
           <p class="tisene">Sklad a platba</p>
           <div class="radky">
             <div><span class="klic">Místo</span><span class="hodnota">${bezpecne(s.pozice || "neuvedeno")}</span></div>
@@ -1361,16 +1610,17 @@
             ${s.datum_vydeje ? `<div><span class="klic">Vydáno</span><span class="hodnota">${datumCesky(s.datum_vydeje)}</span></div>` : ""}
             <div><span class="klic">Cena uskladnění</span><span class="hodnota">${korun(s.cena_skladovani)}</span></div>
           </div>
-          <button class="${s.zaplaceno ? "tiche" : ""} male" id="sada-zaplaceno"
-                  style="margin-top:0.75rem;width:100%">
+          <button class="${s.zaplaceno ? "tiche" : ""} male plna-sirka" id="sada-zaplaceno">
             ${s.zaplaceno ? "Zaplaceno ✓ — zrušit" : "Označit jako zaplacené"}</button>
         </div>
-        ${s.poznamka ? `<div class="karta" style="margin-bottom:0.75rem">
-          <p class="tisene">Poznámka</p><p style="color:var(--inkoust)">${bezpecne(s.poznamka)}</p></div>` : ""}
+        ${s.poznamka ? `<div class="karta">
+          <p class="tisene">Poznámka</p><p class="text-inkoust">${bezpecne(s.poznamka)}</p></div>` : ""}
         <div class="karta">
           <p class="tisene">Historie</p>
           <div class="radky">${historie || '<div><span class="klic">Žádné pohyby.</span></div>'}</div>
-        </div>`;
+        </div>
+        <div class="dno"></div>
+      </div>`;
 
       $("sada-zaplaceno").addEventListener("click", async () => {
         const { ok, data } = await api(`/api/sady/${s.id}`, "POST",
@@ -1425,21 +1675,21 @@
       for (const o of objednavky) {
         if (sDatem && o.den !== poslednyDen) {
           poslednyDen = o.den;
-          html += `<p class="tisene" style="margin-top:0.5rem">${denCesky(o.den, true)}</p>`;
+          html += `<p class="tisene den-hlavicka">${denCesky(o.den, true)}</p>`;
         }
         const zruseno = o.stav === "zruseno";
         const hotovo = o.stav === "hotovo";
-        html += `<div class="polozka" style="${zruseno ? "opacity:0.55" : ""}">
+        html += `<div class="polozka${zruseno ? " tlumena" : ""}">
           <div class="radek1">
             <span class="cas">${bezpecne(o.cas)}</span>
-            <span class="jmeno" style="flex:1">${bezpecne(o.nazev)}</span>
-            ${hotovo ? '<span class="znacka">Hotovo</span>' : ""}
+            <span class="jmeno">${bezpecne(o.nazev)}</span>
+            ${hotovo ? '<span class="znacka uspech">Hotovo</span>' : ""}
             ${zruseno ? '<span class="znacka vydano">Zrušeno</span>' : ""}
           </div>
           <div class="detail">${NAZVY_UKONU[o.ukon] || o.ukon} · ${o.delka_min} min
             ${o.kod ? ` · sada ${bezpecne(o.kod)} · místo ${bezpecne(o.pozice || "—")}` : " · bez uskladněné sady"}</div>
           ${o.poznamka ? `<div class="detail">${bezpecne(o.poznamka)}</div>` : ""}
-          <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+          <div class="akce-radek">
             ${o.kod ? `<button class="tiche male otevri-sadu" data-id="${o.sada_id}">Sada</button>` : ""}
             ${!hotovo && !zruseno ? `<button class="male obj-hotovo" data-id="${o.id}">Hotovo</button>` : ""}
             ${!zruseno ? `<button class="tiche male obj-zrusit" data-id="${o.id}">Zrušit</button>` : ""}
@@ -1555,7 +1805,7 @@
         `<button class="polozka vyber-sadu" data-id="${s.id}">
           <span class="radek1"><span class="kod">${bezpecne(s.kod)}</span>
             <span class="znacka ${s.typ}">${NAZVY_TYPU[s.typ]}</span></span>
-          <span class="detail" style="display:block">${bezpecne(s.jmeno)}
+          <span class="detail">${bezpecne(s.jmeno)}
             · ${bezpecne(s.spz || "")} · místo ${bezpecne(s.pozice || "—")}</span>
         </button>`).join("");
       kontejner.querySelectorAll(".vyber-sadu").forEach((b) =>
@@ -1627,12 +1877,11 @@
         return;
       }
       $("pripr-seznam").innerHTML = data.polozky.map((p) =>
-        `<div class="polozka" style="display:flex;gap:0.6rem;align-items:flex-start;
-             ${p.pripraveno ? "opacity:0.6" : ""}">
+        `<div class="polozka radkova${p.pripraveno ? " tlumena" : ""}">
           <input type="checkbox" class="pripr-hotovo" data-id="${p.id}"
                  aria-label="Kola pro ${bezpecne(p.nazev)} připravena"
                  ${p.pripraveno ? "checked" : ""}>
-          <div style="flex:1">
+          <div class="rostouci">
             <div class="radek1"><span class="cas">${bezpecne(p.cas)}</span>
               <span class="jmeno">${bezpecne(p.nazev)}</span></div>
             <div class="detail">${NAZVY_UKONU[p.ukon] || p.ukon}</div>
@@ -1640,7 +1889,7 @@
               ? `<div class="detail">Sada <strong>${bezpecne(p.kod)}</strong>
                    · ${bezpecne(p.rozmer || "")} · ${p.pocet_kusu} ks</div>
                  <div class="detail">Místo
-                   <strong style="font-size:1.05rem">${bezpecne(p.pozice || "neuvedeno")}</strong></div>`
+                   <strong class="misto">${bezpecne(p.pozice || "neuvedeno")}</strong></div>`
               : '<div class="detail">Bez uskladněné sady — nic nechystejte.</div>'}
           </div>
         </div>`).join("");
@@ -1679,23 +1928,21 @@
           <div class="radek1">
             <span class="kod">${bezpecne(s.kod)}</span>
             <span class="znacka ${s.typ}">${NAZVY_TYPU[s.typ]}</span>
-            <span style="flex:1"></span>
+            <span class="rostouci"></span>
             ${s.nejmensi_hloubka ? `<span class="znacka ${s.nejmensi_hloubka < 40 ? "pozor" : ""}">${mm(s.nejmensi_hloubka)}</span>` : ""}
           </div>
           <div class="detail"><strong>${bezpecne(s.jmeno)}</strong>
             · ${bezpecne(s.spz || "")} · místo ${bezpecne(s.pozice || "—")}</div>
-          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap">
-            <a class="polozka" style="flex:1;text-align:center;padding:0.55rem;text-decoration:none;
-               font-weight:600;color:var(--akcent);border-color:var(--akcent)"
-               href="tel:${bezpecne(String(s.telefon).replace(/\s/g, ""))}">Zavolat</a>
-            <button class="tiche male otevri-sadu" data-id="${s.id}" style="flex:1">Sada</button>
+          <div class="akce-radek">
+            <a class="volat" href="tel:${bezpecne(String(s.telefon).replace(/\s/g, ""))}">Zavolat</a>
+            <button class="tiche male otevri-sadu" data-id="${s.id}">Sada</button>
             ${akce || ""}
           </div>
         </div>`;
 
       const sekce = (titulek, popis, sady, akce) =>
         `<h2>${bezpecne(titulek)} (${sady.length})</h2>
-         <p class="maly" style="margin-bottom:0.5rem">${bezpecne(popis)}</p>
+         <p class="maly popis-sekce">${bezpecne(popis)}</p>
          <div class="seznam">${sady.length
             ? sady.map((s) => radek(s, akce ? akce(s) : "")).join("")
             : '<div class="prazdno">Nic k řešení.</div>'}</div>`;
@@ -1715,7 +1962,7 @@
           "Nejtenčí měřené kolo pod 4 mm — zákazník to sám nevidí.", data.opotrebene)}
         ${sekce("Nezaplacené uskladnění",
           "Uskladnění, které vám zákazník ještě nezaplatil.", data.nezaplacene,
-          (s) => `<button class="male oznac-zaplaceno" data-id="${s.id}" style="flex:1">Zaplaceno</button>`)}`;
+          (s) => `<button class="male oznac-zaplaceno" data-id="${s.id}">Zaplaceno</button>`)}`;
 
       $("prehled-telo").querySelectorAll(".otevri-sadu").forEach((b) =>
         b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
@@ -1806,6 +2053,128 @@
       obnov();
     });
 
+    // --------------------------------------------------------- Walkthrough
+    // Eight short cards describing where things are. Opens by itself the
+    // first time an account arrives (the flag lives on the account, not in
+    // the browser — see db/migrace/0003_navod.sql) and from Nastaveni after.
+    const NAVOD = [
+      {
+        glyf: "◎", titulek: "Vítejte v Pneuskladu",
+        text: [
+          "Appka vede evidenci uskladněných pneu, tiskne na ně štítky a drží "
+          + "objednávkový kalendář vaší provozovny.",
+          "Projdeme to za minutu. Návod si můžete kdykoli znovu otevřít "
+          + "v Nastavení.",
+        ],
+      },
+      {
+        glyf: "⌂", titulek: "Dnes",
+        text: [
+          "Domovská obrazovka. Nahoře najdete sadu, pod tím jsou dvě dlaždice: "
+          + "kolik kol máte připravit na zítra a kolik zákazníků je potřeba obvolat.",
+          "Dole běží dnešní objednávky — jedním tapnutím je odbavíte.",
+        ],
+      },
+      {
+        glyf: "＋", titulek: "Nová sada ve čtyřech krocích",
+        text: [
+          "Zákazník → vozidlo a pneu → hloubka dezénu → místo ve skladu a cena.",
+          "Appka sadě přidělí kód (třeba 25-0042) a hned nabídne tisk štítku. "
+          + "Nového zákazníka můžete zapsat rovnou v prvním kroku.",
+        ],
+      },
+      {
+        glyf: "◎", titulek: "Sklad a hledání",
+        text: [
+          "Sadu najdete podle kódu, registrační značky, jména, telefonu i místa "
+          + "v regálu. Stačí část — telefon najde i bez mezer.",
+          "Zaškrtnutím více sad vytisknete štítky dávkou. Filtrem přepnete mezi "
+          + "uskladněnými a vydanými.",
+        ],
+      },
+      {
+        glyf: "▦", titulek: "Objednávky",
+        text: [
+          "Termíny zapisujete vy, ne zákazník. U objednávky vyberete uskladněnou "
+          + "sadu, takže appka ví, která kola k ní patří.",
+          "Průjezd bez uskladnění zapíšete jen jménem.",
+        ],
+      },
+      {
+        glyf: "✓", titulek: "Připravit kola",
+        text: [
+          "Seznam na zítra, u každé položky místo sady v regálu. Odškrtáváte, "
+          + "co je nachystané.",
+          "Tlačítkem dole si seznam pošlete na e-mail, než zamknete dílnu.",
+        ],
+      },
+      {
+        glyf: "↗", titulek: "Sezónní přehled",
+        text: [
+          "Tady jsou peníze. Kdo má u vás kola a letos se neobjednal — rovnou "
+          + "z něj zavoláte. Které sady mají dezén pod 4 mm — nabídnete nové pneu.",
+          "A kdo vám ještě nezaplatil uskladnění.",
+        ],
+      },
+      {
+        glyf: "⚙", titulek: "Zákazníci, nastavení a vaše data",
+        text: [
+          "V Zákaznících vedete kartotéku motoristů — založíte, opravíte i smažete.",
+          "V Nastavení vyplníte údaje, které se tisknou na štítek, zvolíte formát "
+          + "štítku (role nebo archy A4) a výchozí cenu. Kdykoli si odtud stáhnete "
+          + "všechna data nebo smažete účet — a najdete tu i tenhle návod.",
+        ],
+      },
+    ];
+
+    let navodKrok = 0;
+
+    function vykresliNavod() {
+      const k = NAVOD[navodKrok];
+      $("navod-glyf").textContent = k.glyf;
+      $("navod-krok").textContent = `Krok ${navodKrok + 1} z ${NAVOD.length}`;
+      $("navod-titulek").textContent = k.titulek;
+      $("navod-text").innerHTML = k.text.map((t) => `<p>${bezpecne(t)}</p>`).join("");
+      $("navod-tecky").innerHTML = NAVOD.map((_, i) =>
+        `<span class="${i === navodKrok ? "aktivni" : ""}"></span>`).join("");
+      $("navod-zpet").hidden = navodKrok === 0;
+      $("navod-dal").textContent = navodKrok === NAVOD.length - 1
+        ? "Jdeme na to" : "Pokračovat";
+      $("navod").querySelector(".navod-panel").scrollTop = 0;
+    }
+
+    function ukazNavod() {
+      navodKrok = 0;
+      vykresliNavod();
+      $("navod").hidden = false;
+      $("navod-dal").focus();
+    }
+
+    async function zavriNavod() {
+      $("navod").hidden = true;
+      // Remembered server-side, so the tour does not reappear on the next
+      // device the shop logs in from.
+      if (stav.nastaveni && !stav.nastaveni.navod_viden) {
+        stav.nastaveni.navod_viden = 1;
+        await api("/api/navod", "POST");
+      }
+    }
+
+    $("navod-dal").addEventListener("click", () => {
+      if (navodKrok >= NAVOD.length - 1) return zavriNavod();
+      navodKrok += 1;
+      vykresliNavod();
+    });
+    $("navod-zpet").addEventListener("click", () => {
+      navodKrok = Math.max(0, navodKrok - 1);
+      vykresliNavod();
+    });
+    $("navod-preskocit").addEventListener("click", () => zavriNavod());
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("navod").hidden) zavriNavod();
+    });
+    $("nast-navod").addEventListener("click", () => ukazNavod());
+
     // ------------------------------------------------------------- Login
     $("poslat-odkaz").addEventListener("click", async () => {
       const el = $("prihlaseni-zprava");
@@ -1850,6 +2219,9 @@
         history.replaceState({ obrazovka: "obrazovka-dnes" }, "");
         ukaz("obrazovka-dnes");
         nactiDnes();
+        // First arrival on this account: show the walkthrough over the home
+        // screen, so the tour describes something the shop can already see.
+        if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();
       } catch {
         document.body.classList.remove("prihlasen");
         ukaz("obrazovka-prihlaseni");
