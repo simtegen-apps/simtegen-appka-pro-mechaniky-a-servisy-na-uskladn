@@ -8,8 +8,8 @@
 // a name written in the doorway.
 
 import {
-  cislo, epochZDataCasu, json, objednavkaProFrontend, ocisti, ted, zacatekDne,
-  DEN, OBJEDNAVKY_SELECT, UKONY,
+  epochZDataCasu, json, objednavkaProFrontend, odepriZapis, pripravObjednavku,
+  smiPsat, ted, zacatekDne, zkontrolujKolizi, DEN, OBJEDNAVKY_SELECT,
 } from "../../spolecne.js";
 
 export async function onRequestGet(context) {
@@ -22,15 +22,19 @@ export async function onRequestGet(context) {
 
   const nalezene = await env.DB.prepare(
     `${OBJEDNAVKY_SELECT} WHERE o.uzivatel_id = ? AND o.datum >= ? AND o.datum < ? ` +
-    "ORDER BY o.datum LIMIT 200"
-  ).bind(data.uzivatel.id, od, doKdy).all();
+    "ORDER BY o.cely_den, o.datum LIMIT 200"
+  ).bind(data.servis.id, od, doKdy).all();
 
-  return json({ objednavky: nalezene.results.map(objednavkaProFrontend) });
+  return json({
+    objednavky: nalezene.results.map(objednavkaProFrontend),
+    ted: ted(),
+  });
 }
 
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;
   try {
@@ -39,45 +43,28 @@ export async function onRequestPost(context) {
     return json({ chyba: "Tělo požadavku musí být JSON." }, 400);
   }
 
-  const datum = epochZDataCasu(ocisti(telo.den, 10), ocisti(telo.cas, 5) || "08:00");
-  if (!datum) return json({ chyba: "Zadejte prosím datum termínu." }, 422);
+  const v = await pripravObjednavku(env, data.servis.id, telo);
+  if (v.chyba) return json({ chyba: v.chyba }, 422);
 
-  let sadaId = Number(telo.sada_id) || null;
-  let zakaznikId = Number(telo.zakaznik_id) || null;
-
-  if (sadaId) {
-    const sada = await env.DB.prepare(
-      "SELECT id, zakaznik_id FROM sady WHERE uzivatel_id = ? AND id = ?"
-    ).bind(data.uzivatel.id, sadaId).first();
-    if (!sada) return json({ chyba: "Sada nebyla nalezena." }, 404);
-    // The set already knows whose it is — never make the mechanic pick twice.
-    zakaznikId = sada.zakaznik_id;
-  } else if (zakaznikId) {
-    const zakaznik = await env.DB.prepare(
-      "SELECT id FROM zakaznici WHERE uzivatel_id = ? AND id = ?"
-    ).bind(data.uzivatel.id, zakaznikId).first();
-    if (!zakaznik) return json({ chyba: "Zákazník nebyl nalezen." }, 404);
+  // The shop is warned, not blocked: the mechanic is the one who knows
+  // whether two cars really fit. Re-sending with potvrzeno skips the check.
+  if (!telo.potvrzeno) {
+    const kolize = await zkontrolujKolizi(env, data.servis.id, v, null);
+    if (kolize) return json({ chyba: kolize, kolize: true }, 409);
   }
-
-  const jmenoBez = ocisti(telo.jmeno_bez_zakaznika, 80);
-  if (!zakaznikId && !jmenoBez) {
-    return json({ chyba: "Vyberte zákazníka nebo napište jméno." }, 422);
-  }
-
-  const ukon = UKONY.includes(telo.ukon) ? telo.ukon : "prezuti";
-  const delka = Math.min(Math.max(cislo(telo.delka_min, 30), 5), 480);
 
   const novy = await env.DB.prepare(
     "INSERT INTO objednavky (uzivatel_id, zakaznik_id, sada_id, jmeno_bez_zakaznika, " +
-    "datum, delka_min, ukon, poznamka) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"
+    "datum, delka_min, ukon, na_discich, cely_den, poznamka) " +
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"
   ).bind(
-    data.uzivatel.id, zakaznikId, sadaId, zakaznikId ? "" : jmenoBez,
-    datum, delka, ukon, ocisti(telo.poznamka, 300),
+    data.servis.id, v.zakaznikId, v.sadaId, v.jmenoBez,
+    v.datum, v.delka, v.ukon, v.naDiscich, v.celyDen, v.poznamka,
   ).first();
 
   const ulozena = await env.DB.prepare(
     `${OBJEDNAVKY_SELECT} WHERE o.uzivatel_id = ? AND o.id = ?`
-  ).bind(data.uzivatel.id, novy.id).first();
+  ).bind(data.servis.id, novy.id).first();
 
   return json({ stav: "objednano", objednavka: objednavkaProFrontend(ulozena) });
 }

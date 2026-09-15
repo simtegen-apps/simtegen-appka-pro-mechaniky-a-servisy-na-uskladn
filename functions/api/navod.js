@@ -12,10 +12,10 @@ export async function onRequestPost(context) {
 
   // The settings row may not exist yet — a brand new account sees the tour
   // before it ever opens Nastaveni.
-  await nactiNastaveni(env, data.uzivatel.id);
+  await nactiNastaveni(env, data.servis.id);
   await env.DB.prepare(
     "UPDATE nastaveni_servisu SET navod_viden = 1 WHERE uzivatel_id = ?"
-  ).bind(data.uzivatel.id).run();
+  ).bind(data.servis.id).run();
 
   return json({ stav: "ulozeno" });
 }

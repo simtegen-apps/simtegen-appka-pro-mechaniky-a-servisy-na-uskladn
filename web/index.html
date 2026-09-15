@@ -35,6 +35,11 @@
     /* Several panels are toggled with the hidden attribute, and a class that
        sets display would otherwise out-specify the UA rule. */
     [hidden] { display: none !important; }
+    /* Role gating. Two switches on <body> so that buttons rendered later from
+       a template are covered without anyone remembering to gate them. */
+    body.jen-cteni .jen-zapis { display: none !important; }
+    body:not(.spravce) .jen-spravce { display: none !important; }
+    body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
     html, body { height: 100%; }
     body {
       /* Deliberately one flat page tone: both the sticky header and the
@@ -108,6 +113,7 @@
       outline: 2px solid var(--akcent); outline-offset: 2px;
     }
     .pole { display: flex; flex-direction: column; gap: 0.3rem; }
+    .napoveda { font-size: 0.75rem; color: var(--inkoust-3); }
     .dvojice { display: flex; gap: 0.5rem; }
     .dvojice > * { flex: 1; min-width: 0; }
     .stoh { display: flex; flex-direction: column; gap: 0.7rem; }
@@ -142,6 +148,13 @@
       border-radius: 0; text-align: left; color: inherit; font: inherit;
     }
     .nahy:active { transform: none; box-shadow: none; }
+
+    /* Standing notice inside a screen (read-only account, full slot…), as
+       opposed to .zprava which is the transient result of an action. */
+    .hlaska { padding: 0.7rem 0.9rem; border-radius: var(--r-m); font-size: 0.88rem; }
+    .hlaska.varovani { background: var(--pozor-jemna); color: var(--pozor); border: 1px solid #f0dfc0; }
+    .hlaska.chyba { background: var(--chyba-jemna); color: var(--chyba); border: 1px solid #efd8d4; }
+    .hlaska.uspech { background: var(--uspech-jemna); color: var(--uspech); border: 1px solid #cfe6d9; }
 
     .zprava { min-height: 1.4rem; font-size: 0.92rem; color: var(--inkoust-2); }
     .zprava.chyba { color: var(--chyba); font-weight: 600; }
@@ -292,6 +305,12 @@
     .polozka .misto { font-size: 1.06rem; letter-spacing: 0.01em; }
     .polozka .pozn { font-weight: 400; color: var(--inkoust-2); }
 
+    /* Plate, size and shelf position are written in capitals in every shop,
+       so the field does it instead of the mechanic. */
+    .velka-pismena { text-transform: uppercase; }
+    /* A booking whose time has passed while still marked "planovano" — the
+       rail is on the leading edge so it reads down a scrolled list. */
+    .polozka.po-terminu { border-left: 4px solid var(--chyba); }
     .akce-radek { display: flex; gap: 0.4rem; margin-top: 0.65rem; flex-wrap: wrap; }
     .akce-radek > * { flex: 1; }
     .den-hlavicka { margin-top: 0.6rem; }
@@ -512,7 +531,7 @@
       <div id="dnes-zprava" class="zprava" aria-live="polite"></div>
 
       <div class="dolni-akce">
-        <button id="dnes-nova-sada">+ Nová sada na uskladnění</button>
+        <button class="jen-zapis" id="dnes-nova-sada">+ Nová sada na uskladnění</button>
       </div>
     </section>
 
@@ -532,7 +551,7 @@
       <div id="sklad-seznam" class="seznam"></div>
       <div class="dolni-akce">
         <button id="sklad-tisk" hidden>Tisk štítků (0)</button>
-        <button id="sklad-nova-sada">+ Nová sada na uskladnění</button>
+        <button class="jen-zapis" id="sklad-nova-sada">+ Nová sada na uskladnění</button>
       </div>
     </section>
 
@@ -546,7 +565,7 @@
              inputmode="search" placeholder="Hledat podle jména nebo telefonu">
       <div id="zakaznici-seznam" class="seznam" aria-live="polite"></div>
       <div class="dolni-akce">
-        <button id="zakaznici-novy">+ Nový zákazník</button>
+        <button class="jen-zapis" id="zakaznici-novy">+ Nový zákazník</button>
       </div>
     </section>
 
@@ -575,8 +594,11 @@
         <textarea id="zak-poznamka"></textarea></div>
       <div id="zakaznik-zprava" class="zprava" aria-live="polite"></div>
       <div class="dolni-akce">
-        <button id="zak-ulozit">Uložit změny</button>
-        <button class="varovne" id="zak-smazat">Smazat zákazníka</button>
+        <button class="jen-zapis" id="zak-nova-sada">+ Uskladnit pneu tomuto zákazníkovi</button>
+        <div class="rada jen-zapis">
+          <button class="tiche" id="zak-ulozit">Uložit změny</button>
+          <button class="varovne" id="zak-smazat">Smazat</button>
+        </div>
       </div>
     </section>
 
@@ -618,7 +640,8 @@
         <h2>Vozidlo a pneu</h2>
         <div class="dvojice">
           <div class="pole"><label for="ns-spz">Registrační značka</label>
-            <input id="ns-spz" autocomplete="off" placeholder="1AB 2345"></div>
+            <input id="ns-spz" class="velka-pismena" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" placeholder="1AB 2345"></div>
           <div class="pole"><label for="ns-pocet">Kusů</label>
             <input id="ns-pocet" type="number" inputmode="numeric" min="1" max="8" value="4"></div>
         </div>
@@ -632,12 +655,17 @@
           </div>
         </div>
         <div class="pole"><label for="ns-rozmer">Rozměr</label>
-          <input id="ns-rozmer" autocomplete="off" placeholder="205/55 R16"></div>
+          <input id="ns-rozmer" class="velka-pismena" autocomplete="off" list="seznam-rozmery"
+                 inputmode="numeric" autocapitalize="characters" spellcheck="false"
+                 placeholder="205/55 R16">
+          <span class="napoveda">Pište jen čísla — lomítko a R doplní appka.</span></div>
         <div class="pole"><label for="ns-dezen">Značka a dezén</label>
-          <input id="ns-dezen" autocomplete="off" placeholder="Nokian WR"></div>
-        <div class="vyber">
-          <input type="checkbox" id="ns-discich" checked>
-          <label for="ns-discich">Na discích (jinak jen pneu)</label>
+          <input id="ns-dezen" autocomplete="off" list="seznam-znacky" placeholder="Nokian WR"></div>
+        <div class="pole"><label>Uskladnění</label>
+          <div class="chipy" id="ns-disky" role="group" aria-label="Na discích nebo bez disků">
+            <button data-disky="1" aria-pressed="true">Na discích</button>
+            <button data-disky="0" aria-pressed="false">Bez disků</button>
+          </div>
         </div>
       </div>
 
@@ -663,7 +691,9 @@
       <div class="krok" id="krok-4">
         <h2>Kam to jde a za kolik</h2>
         <div class="pole"><label for="ns-pozice">Místo ve skladu</label>
-          <input id="ns-pozice" autocomplete="off" placeholder="A1-04"></div>
+          <input id="ns-pozice" class="velka-pismena" autocomplete="off" list="seznam-pozice"
+                 autocapitalize="characters" spellcheck="false" placeholder="A1-04">
+          <span class="napoveda" id="ns-pozice-napoveda"></span></div>
         <div class="pole"><label for="ns-cena">Cena uskladnění (Kč)</label>
           <input id="ns-cena" type="number" inputmode="numeric" min="0" value="800"></div>
         <div class="pole"><label for="ns-poznamka">Poznámka</label>
@@ -704,9 +734,9 @@
       <div class="dolni-akce">
         <div class="rada">
           <button id="sada-tisk">Tisk štítku</button>
-          <button class="tiche" id="sada-objednat">Objednat</button>
+          <button class="tiche jen-zapis" id="sada-objednat">Objednat</button>
         </div>
-        <div class="rada">
+        <div class="rada jen-zapis">
           <button class="tiche" id="sada-presunout">Přesunout</button>
           <button class="tiche" id="sada-vydat">Vydat</button>
         </div>
@@ -727,7 +757,7 @@
       <div id="obj-seznam" class="seznam"></div>
       <div id="obj-zprava" class="zprava" aria-live="polite"></div>
       <div class="dolni-akce">
-        <button id="obj-nova">+ Nová objednávka</button>
+        <button class="jen-zapis" id="obj-nova">+ Nová objednávka</button>
       </div>
     </section>
 
@@ -735,7 +765,7 @@
     <section id="obrazovka-nova-objednavka" class="obrazovka">
       <div class="hlavicka">
         <button class="zpet" data-zpet aria-label="Zpět">←</button>
-        <h1>Nová objednávka</h1>
+        <h1 id="no-titulek">Nová objednávka</h1>
       </div>
       <div class="karta" id="no-vybrana" hidden>
         <div class="radky">
@@ -760,18 +790,28 @@
       <div class="dvojice">
         <div class="pole"><label for="no-den">Datum</label>
           <input id="no-den" type="date"></div>
-        <div class="pole"><label for="no-cas">Čas</label>
+        <div class="pole" id="no-cas-pole"><label for="no-cas">Čas</label>
           <input id="no-cas" type="time" value="08:00" step="300"></div>
+      </div>
+      <p class="napoveda" id="no-provoz"></p>
+      <div class="vyber">
+        <input type="checkbox" id="no-cely-den">
+        <label for="no-cely-den">Bez určené hodiny — auto čeká celý den</label>
       </div>
       <div class="pole"><label>Úkon</label>
         <div class="chipy" id="no-ukon" role="group" aria-label="Úkon">
           <button data-ukon="prezuti" aria-pressed="true">Přezutí</button>
-          <button data-ukon="prehozeni" aria-pressed="false">Přehození</button>
+          <button data-ukon="uskladneni" aria-pressed="false">Uskladnění</button>
         </div>
         <div class="chipy odsazene-nad-male" id="no-ukon-2" role="group" aria-label="Další úkony">
-          <button data-ukon="uskladneni" aria-pressed="false">Uskladnění</button>
           <button data-ukon="vydej" aria-pressed="false">Výdej</button>
           <button data-ukon="oprava" aria-pressed="false">Oprava</button>
+        </div>
+      </div>
+      <div class="pole" id="no-disky-pole"><label>Kola</label>
+        <div class="chipy" id="no-disky" role="group" aria-label="Na discích nebo bez disků">
+          <button data-disky="1" aria-pressed="true">Na discích</button>
+          <button data-disky="0" aria-pressed="false">Bez disků</button>
         </div>
       </div>
       <div class="pole"><label for="no-delka">Délka (minut)</label>
@@ -819,16 +859,20 @@
       <div class="karta">
         <div class="radky">
           <div><span class="klic">Přihlášen</span><span class="hodnota" id="ucet-email"></span></div>
+          <div><span class="klic">Oprávnění</span><span class="hodnota" id="nast-role"></span></div>
           <div><span class="klic">Tarif</span><span class="hodnota" id="nast-plan"></span></div>
           <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno"></span></div>
         </div>
       </div>
+      <p class="hlaska varovani jen-cteni-zprava">Máte přístup jen pro čtení.
+      Zapisovat sady a objednávky může mechanik nebo správce.</p>
 
       <h2>Návod</h2>
       <p class="maly">Krátké provedení appkou — co se kde dělá a jak to funguje.
       Poprvé se spustí sám, pak ho najdete tady.</p>
       <button class="tiche" id="nast-navod">Zobrazit návod</button>
 
+      <div class="jen-spravce stoh">
       <h2>Údaje na štítek</h2>
       <div class="pole"><label for="nast-nazev">Název servisu</label>
         <input id="nast-nazev" autocomplete="off" placeholder="Pneuservis Novák"></div>
@@ -846,14 +890,55 @@
       </div>
       <div class="pole"><label for="nast-cena">Výchozí cena uskladnění (Kč)</label>
         <input id="nast-cena" type="number" inputmode="numeric" min="0" value="800"></div>
+
+      <h2>Provoz</h2>
+      <p class="maly">Podle toho vám appka u objednávek napoví, kdy máte
+      otevřeno a kdy už je plno.</p>
+      <div class="dvojice">
+        <div class="pole"><label for="nast-otevreno-od">Otevřeno od</label>
+          <input id="nast-otevreno-od" type="time" step="300" value="08:00"></div>
+        <div class="pole"><label for="nast-otevreno-do">Otevřeno do</label>
+          <input id="nast-otevreno-do" type="time" step="300" value="17:00"></div>
+      </div>
+      <div class="dvojice">
+        <div class="pole"><label for="nast-obed-od">Oběd od</label>
+          <input id="nast-obed-od" type="time" step="300" value="12:00"></div>
+        <div class="pole"><label for="nast-obed-do">Oběd do</label>
+          <input id="nast-obed-do" type="time" step="300" value="12:30"></div>
+      </div>
+      <div class="pole"><label for="nast-soubezne">Kolik zákazníků zvládnete najednou</label>
+        <input id="nast-soubezne" type="number" inputmode="numeric" min="1" max="20" value="1">
+        <span class="napoveda">Při překročení vás appka upozorní, že máte plno.</span></div>
+
       <button id="nast-ulozit">Uložit nastavení</button>
       <div id="nast-zprava" class="zprava" aria-live="polite"></div>
+
+      <div id="nast-tym-blok">
+        <h2>Tým</h2>
+        <p class="maly">Kolega se přihlásí svým e-mailem — stejným odkazem jako vy —
+        a uvidí váš servis. Správce může všechno, mechanik dělá běžnou práci bez
+        nastavení, „jen čtení" se nesmí ničeho dotknout.</p>
+        <div id="tym-seznam" class="seznam" aria-live="polite"></div>
+        <div class="pole odsazene-nad"><label for="tym-email">E-mail kolegy</label>
+          <input id="tym-email" type="email" inputmode="email" autocomplete="off"
+                 placeholder="kolega@email.cz"></div>
+        <div class="pole"><label>Oprávnění</label>
+          <div class="chipy" id="tym-role" role="group" aria-label="Oprávnění">
+            <button data-role="spravce" aria-pressed="false">Správce</button>
+            <button data-role="mechanik" aria-pressed="true">Mechanik</button>
+            <button data-role="cteni" aria-pressed="false">Jen čtení</button>
+          </div>
+        </div>
+        <button class="tiche odsazene-nad" id="tym-pridat">Přidat kolegu</button>
+        <div id="tym-zprava" class="zprava" aria-live="polite"></div>
+      </div>
 
       <h2>Ukázková data</h2>
       <p class="maly">Naplní účet vymyšlenými zákazníky a sadami, abyste si appku
       mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
       <button class="tiche" id="nast-ukazka-naplnit">Naplnit ukázkovými daty</button>
       <button class="tiche" id="nast-ukazka-smazat">Smazat ukázková data</button>
+      </div>
 
       <h2>Vaše data</h2>
       <button class="tiche" id="stahnout-data">Stáhnout moje data</button>
@@ -898,6 +983,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Suggestions for the wizard: a static list of brands sold in Czech shops,
+       merged at runtime with whatever this shop has already typed. -->
+  <datalist id="seznam-znacky"></datalist>
+  <datalist id="seznam-pozice"></datalist>
+  <datalist id="seznam-rozmery"></datalist>
 
   <div id="tisk" class="role" aria-hidden="true"></div>
 
@@ -968,8 +1059,11 @@
 
     const NAZVY_TYPU = { zimni: "Zimní", letni: "Letní", celorocni: "Celoroční" };
     const NAZVY_UKONU = {
-      prezuti: "Přezutí", prehozeni: "Přehození kol", uskladneni: "Uskladnění",
+      prezuti: "Přezutí", uskladneni: "Uskladnění",
       vydej: "Výdej pneu", oprava: "Oprava",
+    };
+    const NAZVY_ROLI = {
+      spravce: "Správce", mechanik: "Mechanik", cteni: "Jen čtení",
     };
     const NAZVY_POHYBU = {
       prijem: "Příjem na sklad", vydej: "Výdej zákazníkovi",
@@ -1044,7 +1138,10 @@
         if (cil === "obrazovka-sklad") nactiSklad();
         if (cil === "obrazovka-zakaznici") nactiZakazniky();
         if (cil === "obrazovka-objednavky") nactiObjednavky();
-        if (cil === "obrazovka-nastaveni") vykresliNastaveni();
+        if (cil === "obrazovka-nastaveni") {
+          vykresliNastaveni();
+          if (stav.nastaveni && stav.nastaveni.role === "spravce") nactiTym();
+        }
       }));
 
     function chipy(kontejner, klic, hodnota) {
@@ -1301,6 +1398,8 @@
       // to call.
       $("zak-karta").hidden = novy;
       $("zak-smazat").hidden = novy;
+      // Nothing to store wheels against until the customer exists.
+      $("zak-nova-sada").hidden = novy;
       $("zak-ulozit").textContent = novy ? "Založit zákazníka" : "Uložit změny";
       if (!novy) {
         $("zak-sad-uskladneno").textContent = zakaznik.sad_uskladneno;
@@ -1316,6 +1415,13 @@
     }
 
     $("zakaznici-novy").addEventListener("click", () => otevriZakaznika(null));
+
+    // The reason a shop opens a customer at all: their wheels are in the boot
+    // and they want them stored. Straight into the wizard, past the search.
+    $("zak-nova-sada").addEventListener("click", () => {
+      const z = stav.zakaznik;
+      zacniNovouSadu({ id: z.id, jmeno: z.jmeno, telefon: z.telefon });
+    });
 
     $("zak-ulozit").addEventListener("click", async () => {
       const novy = !stav.zakaznik;
@@ -1377,9 +1483,11 @@
     });
 
     // ------------------------------------------------------- New set wizard
-    function zacniNovouSadu() {
+    // zakaznik !== null comes from the customer screen: "uskladnit pneu tomuto
+    // zákazníkovi" skips straight past step one's search.
+    function zacniNovouSadu(zakaznik) {
       stav.novaSada = {
-        zakaznik: null, typ: "zimni",
+        zakaznik: zakaznik || null, typ: "zimni", naDiscich: 1,
         cena: (stav.nastaveni && stav.nastaveni.vychozi_cena) || 800,
       };
       stav.krok = 1;
@@ -1387,16 +1495,26 @@
        "ns-vozidlo", "ns-rozmer", "ns-dezen", "ns-h-lp", "ns-h-pp", "ns-h-lz",
        "ns-h-pz", "ns-pozice", "ns-poznamka"].forEach((id) => { $(id).value = ""; });
       $("ns-pocet").value = "4";
-      $("ns-discich").checked = true;
       $("ns-cena").value = String(stav.novaSada.cena);
       $("ns-zakaznici").innerHTML = "";
-      $("ns-vybrany").hidden = true;
-      $("ns-novy").hidden = false;
       $("ns-varovani").hidden = true;
       chipy($("ns-typ"), "typ", "zimni");
+      chipy($("ns-disky"), "disky", "1");
+      vykresliVybranehoZakaznika();
+      nactiNapovedy();
       zprava("ns-zprava", "");
       jdi("obrazovka-nova-sada");
-      ukazKrok(1);
+      // With the customer already known, step one has nothing left to ask.
+      ukazKrok(stav.novaSada.zakaznik ? 2 : 1);
+    }
+
+    function vykresliVybranehoZakaznika() {
+      const z = stav.novaSada.zakaznik;
+      $("ns-vybrany").hidden = !z;
+      $("ns-novy").hidden = !!z;
+      if (!z) return;
+      $("ns-vybrany-jmeno").textContent = z.jmeno;
+      $("ns-vybrany-telefon").textContent = z.telefon;
     }
 
     function ukazKrok(cislo) {
@@ -1436,10 +1554,7 @@
             jmeno: b.dataset.jmeno,
             telefon: b.dataset.telefon,
           };
-          $("ns-vybrany-jmeno").textContent = stav.novaSada.zakaznik.jmeno;
-          $("ns-vybrany-telefon").textContent = stav.novaSada.zakaznik.telefon;
-          $("ns-vybrany").hidden = false;
-          $("ns-novy").hidden = true;
+          vykresliVybranehoZakaznika();
           $("ns-zakaznici").innerHTML = "";
           $("ns-hledat-zakaznika").value = "";
         }));
@@ -1449,14 +1564,84 @@
       hledejZakazniky(e.target.value.trim()));
     $("ns-zrusit-vyber").addEventListener("click", () => {
       stav.novaSada.zakaznik = null;
-      $("ns-vybrany").hidden = true;
-      $("ns-novy").hidden = false;
+      vykresliVybranehoZakaznika();
     });
     $("ns-typ").querySelectorAll("button").forEach((b) =>
       b.addEventListener("click", () => {
         stav.novaSada.typ = b.dataset.typ;
         chipy($("ns-typ"), "typ", stav.novaSada.typ);
       }));
+    $("ns-disky").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.novaSada.naDiscich = Number(b.dataset.disky);
+        chipy($("ns-disky"), "disky", b.dataset.disky);
+      }));
+
+    // Capitals without the mechanic reaching for shift. The caret is only
+    // restored when the text actually changed, otherwise typing in the middle
+    // of a value would jump to the end on every keystroke.
+    function velkaPismena(id) {
+      const pole = $(id);
+      pole.addEventListener("input", () => {
+        const velke = pole.value.toUpperCase();
+        if (velke === pole.value) return;
+        const kurzor = pole.selectionStart;
+        pole.value = velke;
+        pole.setSelectionRange(kurzor, kurzor);
+      });
+    }
+    ["ns-spz", "ns-pozice"].forEach(velkaPismena);
+
+    // "2055516" -> "205/55 R16". Everything the mechanic types beyond the
+    // eighth character is left alone, so "225/65 R16C" still works.
+    function formatujRozmer(hodnota) {
+      const znaky = String(hodnota).toUpperCase().replace(/[^0-9A-Z]/g, "");
+      if (!/^\d/.test(znaky)) return String(hodnota).toUpperCase();
+      let vysledek = znaky.slice(0, 3);
+      if (znaky.length > 3) vysledek += `/${znaky.slice(3, 5)}`;
+      if (znaky.length > 5) {
+        const zbytek = znaky.slice(5).replace(/^R/, "");
+        vysledek += ` R${zbytek}`;
+      }
+      return vysledek;
+    }
+
+    $("ns-rozmer").addEventListener("input", (e) => {
+      // Only reformat while typing at the end — editing mid-value would fight
+      // the caret.
+      if (e.target.selectionStart !== e.target.value.length) return;
+      e.target.value = formatujRozmer(e.target.value);
+    });
+
+    // Brands sold across Czech tyre shops, merged with whatever this shop has
+    // written before. Static list first so a brand-new account still gets
+    // suggestions on day one.
+    const ZNACKY = [
+      "Continental", "Michelin", "Goodyear", "Bridgestone", "Pirelli", "Dunlop",
+      "Nokian", "Barum", "Matador", "Semperit", "Hankook", "Kumho", "Kleber",
+      "Fulda", "Sava", "Firestone", "Yokohama", "Toyo", "Falken", "Vredestein",
+      "Nexen", "Uniroyal", "Dębica", "Riken", "Lassa", "Apollo", "Maxxis",
+      "Cooper", "Gislaved", "Laufenn", "Kormoran", "Tigar", "Mabor",
+    ];
+
+    function naplnSeznam(id, hodnoty) {
+      $(id).innerHTML = hodnoty
+        .map((h) => `<option value="${bezpecne(h)}"></option>`).join("");
+    }
+
+    async function nactiNapovedy() {
+      naplnSeznam("seznam-znacky", ZNACKY);
+      const { ok, data } = await api("/api/napovedy", "GET");
+      if (!ok) return;
+      // Shop's own values first — they are the likely answer.
+      const znacky = data.znacky.concat(ZNACKY.filter((z) => !data.znacky.includes(z)));
+      naplnSeznam("seznam-znacky", znacky);
+      naplnSeznam("seznam-pozice", data.pozice);
+      naplnSeznam("seznam-rozmery", data.rozmery);
+      $("ns-pozice-napoveda").textContent = data.pozice.length
+        ? `Používáte třeba ${data.pozice.slice(0, 3).join(", ")}.`
+        : "";
+    }
 
     function hloubkyZFormulare() {
       const cti = (id) => {
@@ -1515,7 +1700,7 @@
         rozmer: $("ns-rozmer").value.trim(),
         pocet_kusu: Number($("ns-pocet").value) || 4,
         dezen: $("ns-dezen").value.trim(),
-        na_discich: $("ns-discich").checked,
+        na_discich: stav.novaSada.naDiscich === 1,
         pozice: $("ns-pozice").value.trim(),
         cena_skladovani: Number($("ns-cena").value) || 0,
         poznamka: $("ns-poznamka").value.trim(),
@@ -1679,18 +1864,26 @@
         }
         const zruseno = o.stav === "zruseno";
         const hotovo = o.stav === "hotovo";
-        html += `<div class="polozka${zruseno ? " tlumena" : ""}">
+        // Still planned, but its slot has already gone by — the shop needs to
+        // see that before the customer rings asking where their wheels are.
+        const poTerminu = !hotovo && !zruseno && !o.cely_den
+          && (o.datum + o.delka_min * 60) < Math.floor(Date.now() / 1000);
+        const disky = o.ukon === "prezuti"
+          ? ` · ${o.na_discich ? "na discích" : "bez disků"}` : "";
+        html += `<div class="polozka${zruseno ? " tlumena" : ""}${poTerminu ? " po-terminu" : ""}">
           <div class="radek1">
-            <span class="cas">${bezpecne(o.cas)}</span>
+            <span class="cas">${o.cely_den ? "celý den" : bezpecne(o.cas)}</span>
             <span class="jmeno">${bezpecne(o.nazev)}</span>
             ${hotovo ? '<span class="znacka uspech">Hotovo</span>' : ""}
             ${zruseno ? '<span class="znacka vydano">Zrušeno</span>' : ""}
+            ${poTerminu ? '<span class="znacka vydano">Po termínu</span>' : ""}
           </div>
-          <div class="detail">${NAZVY_UKONU[o.ukon] || o.ukon} · ${o.delka_min} min
+          <div class="detail">${NAZVY_UKONU[o.ukon] || o.ukon}${disky} · ${o.delka_min} min
             ${o.kod ? ` · sada ${bezpecne(o.kod)} · místo ${bezpecne(o.pozice || "—")}` : " · bez uskladněné sady"}</div>
           ${o.poznamka ? `<div class="detail">${bezpecne(o.poznamka)}</div>` : ""}
           <div class="akce-radek">
             ${o.kod ? `<button class="tiche male otevri-sadu" data-id="${o.sada_id}">Sada</button>` : ""}
+            ${!zruseno ? `<button class="tiche male obj-upravit" data-id="${o.id}">Upravit</button>` : ""}
             ${!hotovo && !zruseno ? `<button class="male obj-hotovo" data-id="${o.id}">Hotovo</button>` : ""}
             ${!zruseno ? `<button class="tiche male obj-zrusit" data-id="${o.id}">Zrušit</button>` : ""}
           </div>
@@ -1699,6 +1892,11 @@
       kontejner.innerHTML = html;
       kontejner.querySelectorAll(".otevri-sadu").forEach((b) =>
         b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
+      kontejner.querySelectorAll(".obj-upravit").forEach((b) =>
+        b.addEventListener("click", () => {
+          const objednavka = objednavky.find((x) => x.id === Number(b.dataset.id));
+          if (objednavka) zacniObjednavku(null, objednavka);
+        }));
       kontejner.querySelectorAll(".obj-hotovo").forEach((b) =>
         b.addEventListener("click", () => zmenObjednavku(b.dataset.id, { akce: "hotovo" })));
       kontejner.querySelectorAll(".obj-zrusit").forEach((b) =>
@@ -1759,21 +1957,56 @@
     $("obj-nova").addEventListener("click", () => zacniObjednavku(null));
 
     // ------------------------------------------------------- New booking
-    function zacniObjednavku(sada) {
-      stav.novaObjednavka = { sada: sada || null, ukon: "prezuti" };
-      $("no-jmeno").value = "";
+    // One screen for booking and for editing an existing one, so a changed
+    // time runs exactly the same validation and "you are full" check.
+    function zacniObjednavku(sada, objednavka) {
+      const o = objednavka || null;
+      stav.novaObjednavka = {
+        id: o ? o.id : null,
+        sada: o ? (o.sada_id ? { id: o.sada_id, kod: o.kod, jmeno: o.jmeno, pozice: o.pozice } : null)
+                : (sada || null),
+        ukon: o ? o.ukon : "prezuti",
+        naDiscich: o ? (o.na_discich ? 1 : 0) : 1,
+      };
+      $("no-titulek").textContent = o ? "Upravit objednávku" : "Nová objednávka";
+      $("no-ulozit").textContent = o ? "Uložit změny" : "Zapsat objednávku";
+      $("no-jmeno").value = o ? (o.jmeno_bez_zakaznika || "") : "";
       $("no-hledat").value = "";
       $("no-nalezene").innerHTML = "";
-      $("no-poznamka").value = "";
-      $("no-delka").value = "45";
-      $("no-cas").value = "08:00";
-      $("no-den").value = posunDne(dnesniDen(), 1);
-      chipy($("no-ukon"), "ukon", "prezuti");
-      chipy($("no-ukon-2"), "ukon", "prezuti");
+      $("no-poznamka").value = o ? (o.poznamka || "") : "";
+      $("no-delka").value = String(o ? o.delka_min : 45);
+      $("no-cas").value = o ? o.cas : "08:00";
+      $("no-den").value = o ? o.den : posunDne(dnesniDen(), 1);
+      $("no-cely-den").checked = !!(o && o.cely_den);
+      chipy($("no-ukon"), "ukon", stav.novaObjednavka.ukon);
+      chipy($("no-ukon-2"), "ukon", stav.novaObjednavka.ukon);
+      chipy($("no-disky"), "disky", String(stav.novaObjednavka.naDiscich));
       zprava("no-zprava", "");
       vykresliVybranouSadu();
+      vykresliProvoz();
       jdi("obrazovka-nova-objednavka");
     }
+
+    // Opening hours next to the time field, plus the two fields that stop
+    // making sense once the car simply waits all day.
+    function vykresliProvoz() {
+      const n = stav.nastaveni;
+      const celyDen = $("no-cely-den").checked;
+      $("no-cas-pole").hidden = celyDen;
+      $("no-disky-pole").hidden = stav.novaObjednavka.ukon !== "prezuti";
+      if (!n) return;
+      const obed = n.obed_do > n.obed_od ? `, oběd ${n.obed_od}–${n.obed_do}` : "";
+      $("no-provoz").textContent = celyDen
+        ? "Auto čeká celý den — appka ho nepočítá do obsazenosti."
+        : `Otevřeno ${n.otevreno_od}–${n.otevreno_do}${obed}.`;
+    }
+
+    $("no-cely-den").addEventListener("change", vykresliProvoz);
+    $("no-disky").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.novaObjednavka.naDiscich = Number(b.dataset.disky);
+        chipy($("no-disky"), "disky", b.dataset.disky);
+      }));
 
     function vykresliVybranouSadu() {
       const sada = stav.novaObjednavka.sada;
@@ -1821,6 +2054,7 @@
           stav.novaObjednavka.ukon = b.dataset.ukon;
           chipy($("no-ukon"), "ukon", b.dataset.ukon);
           chipy($("no-ukon-2"), "ukon", b.dataset.ukon);
+          vykresliProvoz();
         })));
 
     $("no-ulozit").addEventListener("click", async () => {
@@ -1828,16 +2062,34 @@
       const telo = {
         den: $("no-den").value,
         cas: $("no-cas").value || "08:00",
+        cely_den: $("no-cely-den").checked,
         ukon: o.ukon,
+        na_discich: o.naDiscich === 1,
         delka_min: Number($("no-delka").value) || 45,
         poznamka: $("no-poznamka").value.trim(),
       };
       if (o.sada) telo.sada_id = o.sada.id;
       else telo.jmeno_bez_zakaznika = $("no-jmeno").value.trim();
 
+      const cesta = o.id ? `/api/objednavky/${o.id}` : "/api/objednavky";
+      if (o.id) telo.akce = "upravit";
+
       $("no-ulozit").disabled = true;
       zprava("no-zprava", "Ukládám…");
-      const { ok, data } = await api("/api/objednavky", "POST", telo);
+      let { ok, data } = await api(cesta, "POST", telo);
+
+      // A full slot is a warning, not a refusal — the mechanic knows whether
+      // two cars really fit. Confirm and send it again.
+      if (!ok && data.kolize) {
+        $("no-ulozit").disabled = false;
+        if (!confirm(`${data.chyba}\n\nZapsat i tak?`)) {
+          return zprava("no-zprava", "");
+        }
+        $("no-ulozit").disabled = true;
+        zprava("no-zprava", "Ukládám…");
+        ({ ok, data } = await api(cesta, "POST", { ...telo, potvrzeno: true }));
+      }
+
       $("no-ulozit").disabled = false;
       if (!ok) return zprava("no-zprava", data.chyba || "Uložení se nepovedlo.", true);
       stav.objednavkyOd = telo.den;
@@ -1882,9 +2134,10 @@
                  aria-label="Kola pro ${bezpecne(p.nazev)} připravena"
                  ${p.pripraveno ? "checked" : ""}>
           <div class="rostouci">
-            <div class="radek1"><span class="cas">${bezpecne(p.cas)}</span>
+            <div class="radek1"><span class="cas">${p.cely_den ? "celý den" : bezpecne(p.cas)}</span>
               <span class="jmeno">${bezpecne(p.nazev)}</span></div>
-            <div class="detail">${NAZVY_UKONU[p.ukon] || p.ukon}</div>
+            <div class="detail">${NAZVY_UKONU[p.ukon] || p.ukon}${p.ukon === "prezuti"
+              ? ` · ${p.na_discich ? "na discích" : "bez disků"}` : ""}</div>
             ${p.kod
               ? `<div class="detail">Sada <strong>${bezpecne(p.kod)}</strong>
                    · ${bezpecne(p.rozmer || "")} · ${p.pocet_kusu} ks</div>
@@ -1979,6 +2232,7 @@
       const n = stav.nastaveni;
       if (!n) return;
       $("ucet-email").textContent = n.email;
+      $("nast-role").textContent = NAZVY_ROLI[n.role] || n.role;
       $("nast-plan").textContent = n.plan === "zkusebni"
         ? `Zkušební období — zbývá ${n.zkusebni_zbyva_dnu} dní`
         : "Předplatné";
@@ -1989,7 +2243,28 @@
       $("nast-telefon").value = n.telefon || "";
       $("nast-adresa").value = n.adresa || "";
       $("nast-cena").value = String(n.vychozi_cena || 0);
+      $("nast-otevreno-od").value = n.otevreno_od;
+      $("nast-otevreno-do").value = n.otevreno_do;
+      $("nast-obed-od").value = n.obed_od;
+      $("nast-obed-do").value = n.obed_do;
+      $("nast-soubezne").value = String(n.soubezne_objednavky || 1);
       chipy($("nast-format"), "format", n.format_stitku);
+      uplatniOpravneni();
+    }
+
+    // Permissions are applied with two body classes rather than a list of
+    // element ids: buttons rendered later from templates are then covered by
+    // construction, and nothing can be forgotten when a screen grows a new
+    // action. Hidden, not disabled — a mechanic should not stare at a greyed
+    // out team list wondering what is behind it.
+    function uplatniOpravneni() {
+      const role = (stav.nastaveni && stav.nastaveni.role) || "spravce";
+      document.body.classList.toggle("jen-cteni", role === "cteni");
+      document.body.classList.toggle("spravce", role === "spravce");
+    }
+
+    function muzePsat() {
+      return !stav.nastaveni || stav.nastaveni.role !== "cteni";
     }
 
     $("nast-format").querySelectorAll("button").forEach((b) =>
@@ -2006,11 +2281,85 @@
         adresa: $("nast-adresa").value.trim(),
         format_stitku: stav.nastaveni.format_stitku,
         vychozi_cena: Number($("nast-cena").value) || 0,
+        soubezne_objednavky: Number($("nast-soubezne").value) || 1,
+        otevreno_od: $("nast-otevreno-od").value,
+        otevreno_do: $("nast-otevreno-do").value,
+        obed_od: $("nast-obed-od").value,
+        obed_do: $("nast-obed-do").value,
       });
       if (!ok) return zprava("nast-zprava", data.chyba || "Uložení se nepovedlo.", true);
       stav.nastaveni = data.nastaveni;
       vykresliNastaveni();
       zprava("nast-zprava", "Uloženo.");
+    });
+
+    // ------------------------------------------------------------- Team
+    let tymRole = "mechanik";
+
+    async function nactiTym() {
+      const { ok, data } = await api("/api/clenove", "GET");
+      const kontejner = $("tym-seznam");
+      if (!ok) {
+        kontejner.innerHTML = '<div class="prazdno">Tým se nepodařilo načíst.</div>';
+        return;
+      }
+      if (!data.clenove.length) {
+        kontejner.innerHTML = '<div class="prazdno">Zatím jste tu sami. '
+          + 'Přidejte kolegu níž — přihlásí se svým e-mailem.</div>';
+        return;
+      }
+      kontejner.innerHTML = data.clenove.map((c) =>
+        `<div class="polozka">
+          <div class="radek1">
+            <span class="jmeno">${bezpecne(c.email)}</span>
+            <span class="znacka">${NAZVY_ROLI[c.role] || c.role}</span>
+          </div>
+          <div class="akce-radek">
+            <button class="tiche male tym-zmenit" data-id="${c.id}"
+                    data-email="${bezpecne(c.email)}" data-role="${bezpecne(c.role)}">Změnit roli</button>
+            <button class="varovne male tym-odebrat" data-id="${c.id}"
+                    data-email="${bezpecne(c.email)}">Odebrat</button>
+          </div>
+        </div>`).join("");
+
+      kontejner.querySelectorAll(".tym-zmenit").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const poradi = ["spravce", "mechanik", "cteni"];
+          const dalsi = poradi[(poradi.indexOf(b.dataset.role) + 1) % poradi.length];
+          if (!confirm(`Změnit ${b.dataset.email} na „${NAZVY_ROLI[dalsi]}"?`)) return;
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "zmenit", id: Number(b.dataset.id), email: b.dataset.email, role: dalsi });
+          if (!o) return zprava("tym-zprava", d.chyba || "Nepovedlo se.", true);
+          zprava("tym-zprava", "Oprávnění změněno.");
+          nactiTym();
+        }));
+
+      kontejner.querySelectorAll(".tym-odebrat").forEach((b) =>
+        b.addEventListener("click", async () => {
+          if (!confirm(`Odebrat ${b.dataset.email} přístup k vašemu servisu?`)) return;
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "odebrat", id: Number(b.dataset.id) });
+          if (!o) return zprava("tym-zprava", d.chyba || "Nepovedlo se.", true);
+          zprava("tym-zprava", "Kolega odebrán.");
+          nactiTym();
+        }));
+    }
+
+    $("tym-role").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        tymRole = b.dataset.role;
+        chipy($("tym-role"), "role", tymRole);
+      }));
+
+    $("tym-pridat").addEventListener("click", async () => {
+      zprava("tym-zprava", "Přidávám…");
+      const { ok, data } = await api("/api/clenove", "POST", {
+        akce: "pridat", email: $("tym-email").value.trim(), role: tymRole,
+      });
+      if (!ok) return zprava("tym-zprava", data.chyba || "Nepovedlo se.", true);
+      $("tym-email").value = "";
+      zprava("tym-zprava", "Hotovo — kolega se přihlásí svým e-mailem.");
+      nactiTym();
     });
 
     $("nast-ukazka-naplnit").addEventListener("click", async () => {

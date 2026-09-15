@@ -6,7 +6,7 @@
 // batch that changes the state — never as a best-effort afterthought.
 
 import {
-  cislo, json, ocisti, ted, SADY_SELECT, TYPY_PNEU,
+  cislo, json, ocisti, odepriZapis, smiPsat, ted, SADY_SELECT, TYPY_PNEU,
 } from "../../../spolecne.js";
 
 function hloubka(hodnota) {
@@ -26,13 +26,13 @@ export async function onRequestGet(context) {
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
 
   const id = Number(params.id);
-  const sada = await nactiSadu(env, data.uzivatel.id, id);
+  const sada = await nactiSadu(env, data.servis.id, id);
   if (!sada) return json({ chyba: "Sada nebyla nalezena." }, 404);
 
   const pohyby = await env.DB.prepare(
     "SELECT typ, datum, poznamka FROM pohyby WHERE uzivatel_id = ? AND sada_id = ? " +
     "ORDER BY datum DESC, id DESC LIMIT 40"
-  ).bind(data.uzivatel.id, id).all();
+  ).bind(data.servis.id, id).all();
 
   return json({ sada, pohyby: pohyby.results });
 }
@@ -40,6 +40,7 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data, params } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;
   try {
@@ -49,7 +50,7 @@ export async function onRequestPost(context) {
   }
 
   const id = Number(params.id);
-  const sada = await nactiSadu(env, data.uzivatel.id, id);
+  const sada = await nactiSadu(env, data.servis.id, id);
   if (!sada) return json({ chyba: "Sada nebyla nalezena." }, 404);
   const akce = ocisti(telo.akce, 20);
   const nyni = ted();
@@ -61,10 +62,10 @@ export async function onRequestPost(context) {
     await env.DB.batch([
       env.DB.prepare(
         "UPDATE sady SET stav = 'vydano', datum_vydeje = ? WHERE uzivatel_id = ? AND id = ?"
-      ).bind(nyni, data.uzivatel.id, id),
+      ).bind(nyni, data.servis.id, id),
       env.DB.prepare(
         "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-      ).bind(data.uzivatel.id, id, "vydej", nyni, ocisti(telo.poznamka, 200)),
+      ).bind(data.servis.id, id, "vydej", nyni, ocisti(telo.poznamka, 200)),
     ]);
   } else if (akce === "vratit") {
     // A set handed out by mistake, or the same wheels coming back for another
@@ -73,10 +74,10 @@ export async function onRequestPost(context) {
       env.DB.prepare(
         "UPDATE sady SET stav = 'uskladneno', datum_vydeje = NULL, datum_prijmu = ?, " +
         "pozice = ? WHERE uzivatel_id = ? AND id = ?"
-      ).bind(nyni, ocisti(telo.pozice, 40) || sada.pozice, data.uzivatel.id, id),
+      ).bind(nyni, ocisti(telo.pozice, 40) || sada.pozice, data.servis.id, id),
       env.DB.prepare(
         "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-      ).bind(data.uzivatel.id, id, "prijem", nyni, ocisti(telo.pozice, 40) || sada.pozice),
+      ).bind(data.servis.id, id, "prijem", nyni, ocisti(telo.pozice, 40) || sada.pozice),
     ]);
   } else if (akce === "presunout") {
     const pozice = ocisti(telo.pozice, 40);
@@ -84,15 +85,15 @@ export async function onRequestPost(context) {
     await env.DB.batch([
       env.DB.prepare(
         "UPDATE sady SET pozice = ? WHERE uzivatel_id = ? AND id = ?"
-      ).bind(pozice, data.uzivatel.id, id),
+      ).bind(pozice, data.servis.id, id),
       env.DB.prepare(
         "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-      ).bind(data.uzivatel.id, id, "presun", nyni, `${sada.pozice || "—"} → ${pozice}`),
+      ).bind(data.servis.id, id, "presun", nyni, `${sada.pozice || "—"} → ${pozice}`),
     ]);
   } else if (akce === "zaplaceno") {
     await env.DB.prepare(
       "UPDATE sady SET zaplaceno = ? WHERE uzivatel_id = ? AND id = ?"
-    ).bind(telo.zaplaceno ? 1 : 0, data.uzivatel.id, id).run();
+    ).bind(telo.zaplaceno ? 1 : 0, data.servis.id, id).run();
   } else if (akce === "upravit") {
     const typ = TYPY_PNEU.includes(telo.typ) ? telo.typ : sada.typ;
     await env.DB.batch([
@@ -108,15 +109,15 @@ export async function onRequestPost(context) {
         hloubka(telo.hloubka_lp), hloubka(telo.hloubka_pp),
         hloubka(telo.hloubka_lz), hloubka(telo.hloubka_pz),
         Math.min(Math.max(cislo(telo.cena_skladovani, sada.cena_skladovani), 0), 100000),
-        ocisti(telo.poznamka, 300), data.uzivatel.id, id,
+        ocisti(telo.poznamka, 300), data.servis.id, id,
       ),
       env.DB.prepare(
         "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-      ).bind(data.uzivatel.id, id, "kontrola", nyni, "úprava údajů sady"),
+      ).bind(data.servis.id, id, "kontrola", nyni, "úprava údajů sady"),
     ]);
   } else {
     return json({ chyba: "Neznámá akce." }, 422);
   }
 
-  return json({ stav: "ulozeno", sada: await nactiSadu(env, data.uzivatel.id, id) });
+  return json({ stav: "ulozeno", sada: await nactiSadu(env, data.servis.id, id) });
 }

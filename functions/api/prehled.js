@@ -32,14 +32,14 @@ export async function onRequestGet(context) {
 
   // Opening the overview is the second housekeeping moment (login is the
   // first) — a shop that never logs out still keeps its retention promises.
-  await uklid(env, data.uzivatel.id);
+  await uklid(env, data.servis.id);
 
   const nyni = ted();
   const uskladnene = await env.DB.prepare(
     `${SADY_SLOUPCE}, (SELECT COUNT(*) FROM objednavky o WHERE o.sada_id = s.id ` +
     `AND o.stav != 'zruseno' AND o.datum >= ?) AS objednavek ${SADY_ZDROJ} ` +
     "WHERE s.uzivatel_id = ? AND s.stav = 'uskladneno' ORDER BY z.jmeno"
-  ).bind(nyni - SEZONA, data.uzivatel.id).all();
+  ).bind(nyni - SEZONA, data.servis.id).all();
 
   const sady = uskladnene.results;
   const vyzva = [];
@@ -65,7 +65,7 @@ export async function onRequestGet(context) {
   const zitra = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM objednavky WHERE uzivatel_id = ? AND stav = 'planovano' " +
     "AND pripraveno = 0 AND datum >= ? AND datum < ?"
-  ).bind(data.uzivatel.id, zitrejsiPolnoc, zitrejsiPolnoc + DEN).first();
+  ).bind(data.servis.id, zitrejsiPolnoc, zitrejsiPolnoc + DEN).first();
 
   return json({
     uskladneno: sady.length,

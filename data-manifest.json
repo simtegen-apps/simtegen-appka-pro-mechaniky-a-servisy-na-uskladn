@@ -27,7 +27,7 @@
     {
       "entita": "nastaveni_servisu",
       "ucel": "údaje servisu na štítek a nastavení aplikace",
-      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, čas vytvoření záznamu",
+      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, otevírací doba a pauza na oběd, počet souběžně odbavovaných zákazníků, čas vytvoření záznamu",
       "retence": "do smazání účtu zákazníkem"
     },
     {
@@ -51,8 +51,14 @@
     {
       "entita": "objednavky",
       "ucel": "objednávkový kalendář servisu a příprava kol na následující den",
-      "pole": "odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu",
+      "pole": "odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, údaj o montáži na discích, příznak celodenního čekání, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu",
       "retence": "24 měsíců od termínu"
+    },
+    {
+      "entita": "clenove",
+      "ucel": "přístup dalších pracovníků servisu do aplikace a jejich oprávnění",
+      "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), čas vytvoření záznamu",
+      "retence": "do odebrání pracovníka v aplikaci nebo do smazání účtu"
     }
   ],
   "sluzby_treti_strany": [

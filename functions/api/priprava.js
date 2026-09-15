@@ -14,7 +14,6 @@ import {
 
 const NAZVY_UKONU = {
   prezuti: "přezutí",
-  prehozeni: "přehození kol",
   uskladneni: "uskladnění",
   vydej: "výdej pneu",
   oprava: "oprava",
@@ -37,7 +36,7 @@ export async function onRequestGet(context) {
   const vychozi = denACas(zacatekDne(ted()) + DEN).den;
   const den = /^\d{4}-\d{2}-\d{2}$/.test(zadany) ? zadany : vychozi;
 
-  const { polozky } = await seznam(env, data.uzivatel.id, den);
+  const { polozky } = await seznam(env, data.servis.id, den);
   return json({
     den,
     polozky,
@@ -60,17 +59,20 @@ export async function onRequestPost(context) {
   const den = /^\d{4}-\d{2}-\d{2}$/.test(zadany)
     ? zadany : denACas(zacatekDne(ted()) + DEN).den;
 
-  const { polozky } = await seznam(env, data.uzivatel.id, den);
+  const { polozky } = await seznam(env, data.servis.id, den);
   if (!polozky.length) {
     return json({ chyba: "Na tento den nemáte žádné naplánované objednávky." }, 409);
   }
 
-  const nastaveni = await nactiNastaveni(env, data.uzivatel.id);
+  const nastaveni = await nactiNastaveni(env, data.servis.id);
   const radky = polozky.map((p) => {
     const kola = p.kod
       ? `sada ${p.kod}, místo ${p.pozice || "neuvedeno"}`
       : "bez uskladněné sady";
-    return `${p.cas}  ${p.nazev} — ${NAZVY_UKONU[p.ukon] || p.ukon}\n        ${kola}`;
+    const disky = p.ukon === "prezuti"
+      ? (p.na_discich ? ", na discích" : ", bez disků") : "";
+    const kdy = p.cely_den ? "celý den" : p.cas;
+    return `${kdy}  ${p.nazev} — ${NAZVY_UKONU[p.ukon] || p.ukon}${disky}\n        ${kola}`;
   });
   const text =
     `Dobrý den,\n\npříprava na ${den} — ${polozky.length} objednávek:\n\n`

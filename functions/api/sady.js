@@ -7,8 +7,8 @@
 // saying a name, a car in the doorway, or a barcode scanner typing the code.
 
 import {
-  cislo, json, nactiNastaveni, novyKodSady, ocisti, ted, zkontrolujLimit,
-  SADY_SELECT, TYPY_PNEU,
+  bezDiakritiky, cislo, json, nactiNastaveni, novyKodSady, ocisti, odepriZapis,
+  smiPsat, sqlBezDiakritiky, ted, zkontrolujLimit, SADY_SELECT, TYPY_PNEU,
 } from "../../spolecne.js";
 
 const STAVY = ["uskladneno", "vydano", "vse"];
@@ -29,21 +29,23 @@ export async function onRequestGet(context) {
   const stav = STAVY.includes(parametry.get("stav")) ? parametry.get("stav") : "uskladneno";
 
   const podminky = ["s.uzivatel_id = ?"];
-  const vazby = [data.uzivatel.id];
+  const vazby = [data.servis.id];
   if (stav !== "vse") {
     podminky.push("s.stav = ?");
     vazby.push(stav);
   }
   if (q) {
-    const vzor = `%${q.toLowerCase()}%`;
+    // Diacritics folded on both sides, so "sim" finds Šimon and "Š" does too.
+    const vzor = `%${bezDiakritiky(q)}%`;
     // Phone numbers and plates are stored the way the mechanic wrote them
     // ("601 000 101", "1AB 2345") but searched the way he types them into a
     // phone keypad — without the spaces. Both forms have to match.
-    const bezMezer = `%${q.toLowerCase().replace(/\s/g, "")}%`;
+    const bezMezer = `%${bezDiakritiky(q).replace(/\s/g, "")}%`;
     podminky.push(
-      "(LOWER(s.kod) LIKE ? OR LOWER(s.spz) LIKE ? " +
-      "OR REPLACE(LOWER(s.spz), ' ', '') LIKE ? OR LOWER(z.jmeno) LIKE ? " +
-      "OR REPLACE(z.telefon, ' ', '') LIKE ? OR LOWER(s.pozice) LIKE ?)"
+      `(${sqlBezDiakritiky("s.kod")} LIKE ? OR ${sqlBezDiakritiky("s.spz")} LIKE ? ` +
+      `OR REPLACE(${sqlBezDiakritiky("s.spz")}, ' ', '') LIKE ? ` +
+      `OR ${sqlBezDiakritiky("z.jmeno")} LIKE ? ` +
+      `OR REPLACE(z.telefon, ' ', '') LIKE ? OR ${sqlBezDiakritiky("s.pozice")} LIKE ?)`
     );
     vazby.push(vzor, vzor, bezMezer, vzor, bezMezer, vzor);
   }
@@ -55,7 +57,7 @@ export async function onRequestGet(context) {
 
   const celkem = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM sady WHERE uzivatel_id = ? AND stav = 'uskladneno'"
-  ).bind(data.uzivatel.id).first();
+  ).bind(data.servis.id).first();
 
   return json({ sady: nalezene.results, uskladneno: celkem.n });
 }
@@ -63,6 +65,7 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;
   try {
@@ -71,8 +74,8 @@ export async function onRequestPost(context) {
     return json({ chyba: "Tělo požadavku musí být JSON." }, 400);
   }
 
-  const nastaveni = await nactiNastaveni(env, data.uzivatel.id);
-  const zamitnuti = await zkontrolujLimit(env, data.uzivatel.id, nastaveni);
+  const nastaveni = await nactiNastaveni(env, data.servis.id);
+  const zamitnuti = await zkontrolujLimit(env, data.servis.id, nastaveni);
   if (zamitnuti) return json({ chyba: zamitnuti }, 403);
 
   // Either an existing motorist or a new one created in the same step — the
@@ -81,7 +84,7 @@ export async function onRequestPost(context) {
   if (zakaznikId) {
     const existuje = await env.DB.prepare(
       "SELECT id FROM zakaznici WHERE uzivatel_id = ? AND id = ?"
-    ).bind(data.uzivatel.id, zakaznikId).first();
+    ).bind(data.servis.id, zakaznikId).first();
     if (!existuje) return json({ chyba: "Zákazník nebyl nalezen." }, 404);
   } else {
     const jmeno = ocisti(telo.jmeno, 80);
@@ -91,11 +94,11 @@ export async function onRequestPost(context) {
     const novy = await env.DB.prepare(
       "INSERT INTO zakaznici (uzivatel_id, jmeno, telefon, email) " +
       "VALUES (?, ?, ?, ?) RETURNING id"
-    ).bind(data.uzivatel.id, jmeno, telefon, ocisti(telo.email, 120)).first();
+    ).bind(data.servis.id, jmeno, telefon, ocisti(telo.email, 120)).first();
     zakaznikId = novy.id;
   }
 
-  const kod = await novyKodSady(env, data.uzivatel.id);
+  const kod = await novyKodSady(env, data.servis.id);
   const typ = TYPY_PNEU.includes(telo.typ) ? telo.typ : "zimni";
   const pocet = Math.min(Math.max(cislo(telo.pocet_kusu, 4), 1), 8);
   const cena = Math.min(Math.max(cislo(telo.cena_skladovani, nastaveni.vychozi_cena), 0), 100000);
@@ -106,7 +109,7 @@ export async function onRequestPost(context) {
     "pozice, datum_prijmu, cena_skladovani, poznamka) " +
     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"
   ).bind(
-    data.uzivatel.id, zakaznikId, kod,
+    data.servis.id, zakaznikId, kod,
     ocisti(telo.spz, 15).toUpperCase(), ocisti(telo.vozidlo, 60), typ,
     ocisti(telo.rozmer, 30), pocet, ocisti(telo.dezen, 60),
     telo.na_discich === false ? 0 : 1,
@@ -117,11 +120,11 @@ export async function onRequestPost(context) {
 
   await env.DB.prepare(
     "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-  ).bind(data.uzivatel.id, sada.id, "prijem", ted(), ocisti(telo.pozice, 40)).run();
+  ).bind(data.servis.id, sada.id, "prijem", ted(), ocisti(telo.pozice, 40)).run();
 
   const ulozena = await env.DB.prepare(
     `${SADY_SELECT} WHERE s.uzivatel_id = ? AND s.id = ?`
-  ).bind(data.uzivatel.id, sada.id).first();
+  ).bind(data.servis.id, sada.id).first();
 
   return json({ stav: "uskladneno", sada: ulozena });
 }

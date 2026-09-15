@@ -220,6 +220,7 @@ export const SADY_SELECT = `${SADY_SLOUPCE} ${SADY_ZDROJ}`;
 // so the joins and the flattening live here and not in three handlers.
 export const OBJEDNAVKY_SELECT =
   "SELECT o.id, o.datum, o.delka_min, o.ukon, o.stav, o.pripraveno, o.poznamka, " +
+  "o.na_discich, o.cely_den, " +
   "o.zakaznik_id, o.sada_id, o.jmeno_bez_zakaznika, z.jmeno, z.telefon, " +
   "s.kod, s.pozice, s.typ AS sada_typ, s.rozmer, s.pocet_kusu, s.spz " +
   "FROM objednavky o " +
@@ -237,7 +238,186 @@ export function objednavkaProFrontend(radek) {
 }
 
 export const TYPY_PNEU = ["zimni", "letni", "celorocni"];
-export const UKONY = ["prezuti", "prehozeni", "uskladneni", "vydej", "oprava"];
+// "Přehození" is gone: the distinction that matters in the bay is whether the
+// wheels are on rims, which is now a flag on the booking. Migration 0004
+// folded the old rows into 'prezuti'.
+export const UKONY = ["prezuti", "uskladneni", "vydej", "oprava"];
+
+// ---------------------------------------------------------------------------
+// Searching Czech names
+// ---------------------------------------------------------------------------
+// SQLite's LOWER() only folds ASCII, so "Šimon" stays "Šimon" while the
+// browser sends "šimon" — every customer with a diacritic was unfindable.
+// There is no ICU in D1, so the folding is done explicitly on both sides: the
+// query is folded in JS, and the column is folded in SQL by the same table of
+// pairs. Both cases are listed because LOWER() cannot lowercase 'Š' either.
+const DIAKRITIKA = [
+  ["á", "a"], ["Á", "a"], ["č", "c"], ["Č", "c"], ["ď", "d"], ["Ď", "d"],
+  ["é", "e"], ["É", "e"], ["ě", "e"], ["Ě", "e"], ["í", "i"], ["Í", "i"],
+  ["ň", "n"], ["Ň", "n"], ["ó", "o"], ["Ó", "o"], ["ř", "r"], ["Ř", "r"],
+  ["š", "s"], ["Š", "s"], ["ť", "t"], ["Ť", "t"], ["ú", "u"], ["Ú", "u"],
+  ["ů", "u"], ["Ů", "u"], ["ý", "y"], ["Ý", "y"], ["ž", "z"], ["Ž", "z"],
+];
+
+// Wraps a column reference in the REPLACE() chain. The pairs are a fixed
+// literal table, never user input, so there is nothing to escape.
+export function sqlBezDiakritiky(sloupec) {
+  let vyraz = `LOWER(${sloupec})`;
+  for (const [znak, nahrada] of DIAKRITIKA) {
+    vyraz = `REPLACE(${vyraz}, '${znak}', '${nahrada}')`;
+  }
+  return vyraz;
+}
+
+export function bezDiakritiky(text) {
+  let vysledek = String(text == null ? "" : text).toLowerCase();
+  for (const [znak, nahrada] of DIAKRITIKA) {
+    vysledek = vysledek.split(znak).join(nahrada);
+  }
+  return vysledek;
+}
+
+// ---------------------------------------------------------------------------
+// Who is signed in, and for which shop
+// ---------------------------------------------------------------------------
+// One account is one shop. A colleague signs in with their own e-mail through
+// the ordinary one-time link; a row in clenove is what turns that login into
+// access to this shop. Everything else in the product keys off servis.id, so
+// a colleague's own (empty) account never owns any shop data — which is also
+// why /api/ucet/smazat stays correct without changes.
+export const ROLE = ["spravce", "mechanik", "cteni"];
+
+export async function nactiKontext(env, uzivatel) {
+  if (!uzivatel) return null;
+  const clenstvi = await env.DB.prepare(
+    "SELECT uzivatel_id, role FROM clenove WHERE email = ? ORDER BY id LIMIT 1"
+  ).bind(uzivatel.email).first();
+  if (clenstvi) {
+    return { id: clenstvi.uzivatel_id, role: clenstvi.role, vlastni: false };
+  }
+  return { id: uzivatel.id, role: "spravce", vlastni: true };
+}
+
+export function smiPsat(servis) {
+  return !!servis && servis.role !== "cteni";
+}
+
+export function smiSpravovat(servis) {
+  return !!servis && servis.role === "spravce";
+}
+
+// Two guards with the sentences the customer actually reads.
+export function odepriZapis() {
+  return json({ chyba: "Máte přístup jen pro čtení. Požádejte správce účtu o vyšší oprávnění." }, 403);
+}
+
+export function odepriSpravu() {
+  return json({ chyba: "Tuto část smí měnit jen správce účtu." }, 403);
+}
+
+// ---------------------------------------------------------------------------
+// Time of day (opening hours, lunch) — MINUTES since midnight
+// ---------------------------------------------------------------------------
+export function minutyNaCas(minuty) {
+  const m = Math.max(0, Math.min(cislo(minuty, 0), 24 * 60));
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+export function casNaMinuty(cas, vychozi = 0) {
+  const shoda = /^(\d{1,2}):(\d{2})$/.exec(String(cas || "").trim());
+  if (!shoda) return vychozi;
+  return Math.max(0, Math.min(Number(shoda[1]) * 60 + Number(shoda[2]), 24 * 60));
+}
+
+// ---------------------------------------------------------------------------
+// Booking validation and the "you are full here" check
+// ---------------------------------------------------------------------------
+function sklonujObjednavky(n) {
+  if (n === 1) return "objednávku";
+  if (n >= 2 && n <= 4) return "objednávky";
+  return "objednávek";
+}
+
+// Everything the mechanic typed, validated once — shared by create and edit so
+// the two cannot drift apart.
+export async function pripravObjednavku(env, servisId, telo) {
+  const nastaveni = await nactiNastaveni(env, servisId);
+  const celyDen = telo.cely_den ? 1 : 0;
+  // A car with no agreed hour is parked at opening time: it sorts to the top
+  // of the day without pretending to hold a slot.
+  const cas = celyDen
+    ? minutyNaCas(nastaveni.otevreno_od)
+    : (ocisti(telo.cas, 5) || "08:00");
+  const datum = epochZDataCasu(ocisti(telo.den, 10), cas);
+  if (!datum) return { chyba: "Zadejte prosím datum termínu." };
+
+  let sadaId = Number(telo.sada_id) || null;
+  let zakaznikId = Number(telo.zakaznik_id) || null;
+
+  if (sadaId) {
+    const sada = await env.DB.prepare(
+      "SELECT id, zakaznik_id FROM sady WHERE uzivatel_id = ? AND id = ?"
+    ).bind(servisId, sadaId).first();
+    if (!sada) return { chyba: "Sada nebyla nalezena." };
+    // The set already knows whose it is — never make the mechanic pick twice.
+    zakaznikId = sada.zakaznik_id;
+  } else if (zakaznikId) {
+    const zakaznik = await env.DB.prepare(
+      "SELECT id FROM zakaznici WHERE uzivatel_id = ? AND id = ?"
+    ).bind(servisId, zakaznikId).first();
+    if (!zakaznik) return { chyba: "Zákazník nebyl nalezen." };
+  }
+
+  const jmenoBez = ocisti(telo.jmeno_bez_zakaznika, 80);
+  if (!zakaznikId && !jmenoBez) {
+    return { chyba: "Vyberte zákazníka nebo napište jméno." };
+  }
+
+  return {
+    datum,
+    celyDen,
+    sadaId,
+    zakaznikId,
+    jmenoBez: zakaznikId ? "" : jmenoBez,
+    ukon: UKONY.includes(telo.ukon) ? telo.ukon : "prezuti",
+    naDiscich: telo.na_discich === false ? 0 : 1,
+    delka: Math.min(Math.max(cislo(telo.delka_min, 30), 5), 480),
+    poznamka: ocisti(telo.poznamka, 300),
+    nastaveni,
+  };
+}
+
+// Returns a Czech sentence to confirm, or null. Deliberately a warning and
+// not a refusal: the mechanic is the one who knows whether two cars really
+// fit in the bay at once. An all-day car is excluded both ways — it is the
+// job you slot into a gap, so counting it would make every slot look full.
+export async function zkontrolujKolizi(env, servisId, v, vyjmoutId) {
+  if (v.celyDen) return null;
+
+  const kapacita = Math.max(1, cislo(v.nastaveni.soubezne_objednavky, 1));
+  const konec = v.datum + v.delka * 60;
+  const { n } = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM objednavky WHERE uzivatel_id = ? AND stav != 'zruseno' " +
+    "AND cely_den = 0 AND id != ? AND datum < ? AND (datum + delka_min * 60) > ?"
+  ).bind(servisId, vyjmoutId || 0, konec, v.datum).first();
+  if (n >= kapacita) {
+    return `V tomhle čase už máte ${n} ${sklonujObjednavky(n)} a najednou zvládáte `
+      + `${kapacita}. Tady máte plno.`;
+  }
+
+  const zacatek = casNaMinuty(denACas(v.datum).cas);
+  const konecMin = zacatek + v.delka;
+  const n2 = v.nastaveni;
+  if (zacatek < n2.otevreno_od || konecMin > n2.otevreno_do) {
+    return `Termín je mimo otevírací dobu (${minutyNaCas(n2.otevreno_od)}–`
+      + `${minutyNaCas(n2.otevreno_do)}).`;
+  }
+  if (n2.obed_do > n2.obed_od && zacatek < n2.obed_do && konecMin > n2.obed_od) {
+    return `Termín zasahuje do pauzy na oběd (${minutyNaCas(n2.obed_od)}–`
+      + `${minutyNaCas(n2.obed_do)}).`;
+  }
+  return null;
+}
 
 export function ocisti(hodnota, maxDelka = 120) {
   return String(hodnota == null ? "" : hodnota).trim().slice(0, maxDelka);

@@ -11,7 +11,8 @@
 // for examples and the plates are not issued sequences.
 
 import {
-  cislo, denACas, json, nactiNastaveni, ted, zacatekDne, DEN,
+  cislo, denACas, json, nactiNastaveni, odepriSpravu, smiSpravovat, ted,
+  zacatekDne, DEN,
 } from "../../spolecne.js";
 
 const ZAKAZNICI = [
@@ -92,6 +93,7 @@ async function smazUkazku(env, uzivatelId) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   let telo;
   try {
@@ -100,7 +102,7 @@ export async function onRequestPost(context) {
     return json({ chyba: "Tělo požadavku musí být JSON." }, 400);
   }
 
-  const uzivatelId = data.uzivatel.id;
+  const uzivatelId = data.servis.id;
 
   if (telo.akce === "smazat") {
     const ponechani = await smazUkazku(env, uzivatelId);
