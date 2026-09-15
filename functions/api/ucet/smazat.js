@@ -19,6 +19,11 @@ export async function onRequestPost(context) {
   prikazy.push(
     env.DB.prepare("DELETE FROM prihlasovaci_odkazy WHERE email = ?")
       .bind(data.uzivatel.email),
+    // Membership of SOMEONE ELSE'S shop is keyed by e-mail, not by this
+    // account's id, so the generic pass above would miss it and "smazat účet"
+    // would leave the colleague's address in that shop's data.
+    env.DB.prepare("DELETE FROM clenove WHERE email = ?")
+      .bind(data.uzivatel.email),
     env.DB.prepare("DELETE FROM uzivatele WHERE id = ?").bind(data.uzivatel.id),
   );
   await env.DB.batch(prikazy);
