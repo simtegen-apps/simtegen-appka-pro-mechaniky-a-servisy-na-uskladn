@@ -447,30 +447,55 @@
     /* ---------------- Label printing ----------------
        No PDF library and no dependencies: the label is HTML, the page size is
        injected into #tisk-stranka and the browser's own driver talks to the
-       thermal printer. The A4 grid is the fallback for shops without one. */
+       printer. The target is a Zebra ZD230 on 100x50 mm roll; the A4 grid is
+       the fallback for shops that do not own one.
+       Nothing on the label depends on background graphics — the text is ink,
+       the rules are borders and the barcode is filled SVG — so it prints the
+       same whether or not that box is ticked in the print dialog. */
     #tisk { display: none; }
+    /* line-height is pinned here rather than inherited from the body's 1.5:
+       the label has a fixed height and no scrollbar, so the text block has a
+       millimetre budget. At 1.5 the footer row overflows a 50 mm label by
+       about a millimetre and overflow:hidden silently eats the storage date.
+       Measured budget at 1.15: 2.9 + 8.5 + 10 + 13.8 + 6.3 = 41.5 mm of the
+       43.5 mm available, leaving 2 mm for label stock drift. */
     .stitek {
-      background: #fff; color: #000; overflow: hidden;
+      background: #fff; color: #000; overflow: hidden; line-height: 1.15;
       display: flex; flex-direction: column; justify-content: space-between;
     }
-    /* Roll: one label per page, so the thermal printer advances correctly.
-       A4: the standard 70 x 37 mm die-cut sheet is exactly 3 x 8 at zero page
-       margin — hence margin 0 rather than a "safe" print margin, which would
-       shift every label off its backing. */
-    #tisk.role .stitek { width: 100mm; height: 50mm; padding: 3.5mm 4mm; break-after: page; }
+    /* Zebra ZD230 prints at 203 dpi — 8 dots per millimetre, one dot is
+       0.125 mm. Every dimension here is a whole number of dots, because a
+       direct thermal head cannot render half a dot: it rounds, and an 0.3 mm
+       rule (2.4 dots) lands 2 dots thick on one label and 3 on the next.
+       Roll: one label per page, so the printer's gap sensor advances exactly
+       one label. Height is 49.5 mm on a 50 mm label, not 50 — at exactly the
+       page height a sub-pixel rounding error emits a second, empty page per
+       label, which on a roll is one wasted label for every set printed.
+       A4 keeps the exact 37 mm pitch instead: those are die-cut sheets, so
+       slack would accumulate down the page and push the bottom row off its
+       backing. */
+    #tisk.role .stitek {
+      width: 100mm; height: 49.5mm; padding: 3mm 4mm;
+      break-after: page; break-inside: avoid;
+    }
     #tisk.role .stitek:last-child { break-after: auto; }
-    #tisk.mriz .stitek { width: 70mm; height: 37mm; padding: 2.5mm 3mm; border: 1px dashed #bbb; }
-    .s-hlava { display: flex; justify-content: space-between; gap: 2mm; font-size: 2.6mm; font-weight: 700; }
-    .s-kod { font-size: 8mm; font-weight: 800; line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-    #tisk.mriz .s-kod { font-size: 6mm; }
-    .carkod { display: block; width: 100%; height: 8mm; fill: #000; shape-rendering: crispEdges; }
-    #tisk.mriz .carkod { height: 6mm; }
-    .s-radky { font-size: 2.9mm; line-height: 1.35; }
-    #tisk.mriz .s-radky { font-size: 2.4mm; line-height: 1.25; }
+    #tisk.mriz .stitek {
+      width: 70mm; height: 37mm; padding: 2.5mm 3mm;
+      border: 0.25mm dashed #666; break-inside: avoid;
+    }
+    .s-hlava { display: flex; justify-content: space-between; gap: 2mm; font-size: 2.5mm; font-weight: 700; }
+    .s-kod { font-size: 8.5mm; font-weight: 800; line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+    #tisk.mriz .s-kod { font-size: 5.5mm; }
+    /* Width and height come from the element's own attributes, not from CSS,
+       so one module stays an exact multiple of the print dot — see
+       carkodSvg(). A CSS width here would stretch it back off the grid. */
+    .carkod { display: block; margin: 0 auto; fill: #000; shape-rendering: crispEdges; }
+    .s-radky { font-size: 2.875mm; line-height: 1.2; }
+    #tisk.mriz .s-radky { font-size: 2.25mm; line-height: 1.2; }
     .s-pata { display: flex; justify-content: space-between; align-items: flex-end;
-      font-size: 2.8mm; border-top: 0.3mm solid #000; padding-top: 1mm; }
+      font-size: 2.75mm; border-top: 0.25mm solid #000; padding-top: 0.875mm; }
     .s-pozice { font-size: 4.5mm; font-weight: 800; }
-    #tisk.mriz .s-pozice { font-size: 3.6mm; }
+    #tisk.mriz .s-pozice { font-size: 3.5mm; }
 
     @media print {
       body { background: #fff none; padding: 0; }
@@ -884,10 +909,12 @@
       <h2>Štítky a ceny</h2>
       <div class="pole"><label>Formát štítku</label>
         <div class="chipy" id="nast-format" role="group" aria-label="Formát štítku">
-          <button data-format="role_100x50" aria-pressed="true">Role 100×50 mm</button>
+          <button data-format="role_100x50" aria-pressed="true">Zebra ZD230</button>
           <button data-format="a4_3x8" aria-pressed="false">Archy A4</button>
         </div>
+        <span class="napoveda" id="nast-format-napoveda"></span>
       </div>
+      <button class="tiche" id="nast-zkusebni-stitek">Vytisknout zkušební štítek</button>
       <div class="pole"><label for="nast-cena">Výchozí cena uskladnění (Kč)</label>
         <input id="nast-cena" type="number" inputmode="numeric" min="0" value="800"></div>
 
@@ -1167,41 +1194,60 @@
       Y: "wwnnwnnnn", Z: "nwwnwnnnn", "-": "nwnnnnwnw", "*": "nwnnwnwnn",
     };
 
-    function carkodSvg(text) {
+    // One printer dot on a 203 dpi head. The narrow module is pinned to a
+    // whole number of dots so that every bar edge lands on a dot boundary.
+    //
+    // This is the part that actually decided whether a scan worked. Before,
+    // the barcode was stretched to the label width, which made the narrow
+    // module about 5.1 dots — the head rounds that to 5 on one bar and 6 on
+    // the next, a ±20 % error on the element Code 39 measures everything
+    // against. Pinned to 3 dots there is nothing left to round.
+    const BOD_MM = 0.125;
+    const MODUL_ROLE = 3 * BOD_MM;  // 0.375 mm — Zebra ZD230, 203 dpi
+    const MODUL_A4 = 2 * BOD_MM;    // 0.25 mm — laser has dots to spare
+    const TICHA_ZONA = 11;          // modules; Code 39 needs >= 10 and >= 2.54 mm
+
+    function carkodSvg(text, modulMm, vyskaMm) {
       const cisty = String(text || "").toUpperCase().replace(/[^0-9A-Z-]/g, "");
       if (!cisty) return "";
       const obdelniky = [];
-      let x = 0;
+      let x = TICHA_ZONA;
       for (const znak of `*${cisty}*`) {
         const vzor = CODE39[znak];
         if (!vzor) continue;
         for (let i = 0; i < 9; i += 1) {
           const sirka = vzor[i] === "w" ? 3 : 1;
           if (i % 2 === 0) {
-            obdelniky.push(`<rect x="${x}" y="0" width="${sirka}" height="30"/>`);
+            obdelniky.push(`<rect x="${x}" y="0" width="${sirka}" height="100"/>`);
           }
           x += sirka;
         }
-        x += 1;
+        x += 1; // one narrow gap between characters
       }
-      return `<svg class="carkod" viewBox="0 0 ${x} 30" preserveAspectRatio="none"`
+      // Drop the gap trailing the stop character, add the far quiet zone.
+      const moduly = x - 1 + TICHA_ZONA;
+      const sirkaMm = (moduly * modulMm).toFixed(3);
+      return `<svg class="carkod" width="${sirkaMm}mm" height="${vyskaMm}mm"`
+        + ` viewBox="0 0 ${moduly} 100" preserveAspectRatio="none"`
         + ` role="img" aria-label="Čárový kód ${bezpecne(cisty)}">${obdelniky.join("")}</svg>`;
     }
 
     // --------------------------------------------------------------- labels
-    function stitekHtml(sada) {
+    function stitekHtml(sada, archy) {
       const n = stav.nastaveni || {};
       const hloubky = [sada.hloubka_lp, sada.hloubka_pp, sada.hloubka_lz, sada.hloubka_pz]
         .map((h) => (h ? String(h / 10).replace(".", ",") : "—")).join(" / ");
       const kusy = `${sada.pocet_kusu} ks`;
       const disky = sada.na_discich ? "na discích" : "bez disků";
+      // 10 mm of bar height on the roll, 6.5 mm on the smaller A4 label —
+      // both above the 6.35 mm Code 39 wants for a handheld scanner.
       return `<div class="stitek">
         <div class="s-hlava">
           <span>${bezpecne(n.nazev || "Pneusklad")}</span>
           <span>${bezpecne(n.telefon || "")}</span>
         </div>
         <div class="s-kod">${bezpecne(sada.kod)}</div>
-        ${carkodSvg(sada.kod)}
+        ${carkodSvg(sada.kod, archy ? MODUL_A4 : MODUL_ROLE, archy ? 6.5 : 10)}
         <div class="s-radky">
           <div><strong>${bezpecne(sada.jmeno)}</strong> · ${bezpecne(sada.telefon)}</div>
           <div>${bezpecne(sada.spz || "bez SPZ")} · ${bezpecne(sada.vozidlo || "")}</div>
@@ -1220,11 +1266,13 @@
       if (!sady.length) return;
       const format = (stav.nastaveni && stav.nastaveni.format_stitku) || "role_100x50";
       const archy = format === "a4_3x8";
+      // margin 0 on both: the roll label IS the page, and the A4 sheet is
+      // die-cut, so any print margin shifts every label off its backing.
       $("tisk-stranka").textContent = archy
         ? "@page { size: A4; margin: 0; }"
         : "@page { size: 100mm 50mm; margin: 0; }";
       $("tisk").className = archy ? "mriz" : "role";
-      $("tisk").innerHTML = sady.map(stitekHtml).join("");
+      $("tisk").innerHTML = sady.map((s) => stitekHtml(s, archy)).join("");
       window.print();
     }
 
@@ -2249,8 +2297,33 @@
       $("nast-obed-do").value = n.obed_do;
       $("nast-soubezne").value = String(n.soubezne_objednavky || 1);
       chipy($("nast-format"), "format", n.format_stitku);
+      vykresliFormatNapovedu(n.format_stitku);
       uplatniOpravneni();
     }
+
+    // What to set where. Browser print dialogs default to a margin and to
+    // "fit to page", and either one shifts a die-cut label off its backing —
+    // so the two settings that matter are spelled out rather than assumed.
+    function vykresliFormatNapovedu(format) {
+      $("nast-format-napoveda").textContent = format === "a4_3x8"
+        ? "Samolepící archy 70×37 mm, 3×8 na list. V tisku prohlížeče nastavte "
+          + "Okraje: žádné a Velikost: 100 %."
+        : "Role 100×50 mm, 203 dpi. V ovladači ZDesigner nastavte médium "
+          + "100×50 mm a typ Direct Thermal, v tisku prohlížeče Okraje: žádné "
+          + "a Velikost: 100 %.";
+    }
+
+    // A label with made-up content, so the shop can line up the roll and test
+    // the scanner without writing a real set into the warehouse first.
+    const ZKUSEBNI_SADA = {
+      kod: "25-0000", jmeno: "Zkušební štítek", telefon: "601 000 000",
+      spz: "1AB 2345", vozidlo: "Škoda Octavia", typ: "zimni",
+      rozmer: "205/55 R16", pocet_kusu: 4, na_discich: 1,
+      hloubka_lp: 62, hloubka_pp: 60, hloubka_lz: 58, hloubka_pz: 59,
+      pozice: "A1-03", datum_prijmu: Math.floor(Date.now() / 1000),
+    };
+
+    $("nast-zkusebni-stitek").addEventListener("click", () => tiskni([ZKUSEBNI_SADA]));
 
     // Permissions are applied with two body classes rather than a list of
     // element ids: buttons rendered later from templates are then covered by
@@ -2271,6 +2344,7 @@
       b.addEventListener("click", () => {
         stav.nastaveni.format_stitku = b.dataset.format;
         chipy($("nast-format"), "format", b.dataset.format);
+        vykresliFormatNapovedu(b.dataset.format);
       }));
 
     $("nast-ulozit").addEventListener("click", async () => {

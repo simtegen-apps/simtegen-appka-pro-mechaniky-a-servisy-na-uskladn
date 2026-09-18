@@ -285,17 +285,47 @@ export function bezDiakritiky(text) {
 // access to this shop. Everything else in the product keys off servis.id, so
 // a colleague's own (empty) account never owns any shop data — which is also
 // why /api/ucet/smazat stays correct without changes.
+//
+// Priority when both exist: the account's OWN shop wins over any invitation.
+// An invitation is an offer, not a claim on somebody else's warehouse.
 export const ROLE = ["spravce", "mechanik", "cteni"];
+
+// Does this account run a shop of its own? nastaveni_servisu deliberately does
+// not count: nactiNastaveni() creates that row on first read, so every account
+// has one and it proves nothing. Only records a person actually entered do.
+async function maVlastniData(env, uzivatelId) {
+  const radek = await env.DB.prepare(
+    "SELECT (EXISTS(SELECT 1 FROM sady WHERE uzivatel_id = ?) " +
+    "OR EXISTS(SELECT 1 FROM zakaznici WHERE uzivatel_id = ?) " +
+    "OR EXISTS(SELECT 1 FROM objednavky WHERE uzivatel_id = ?)) AS ma"
+  ).bind(uzivatelId, uzivatelId, uzivatelId).first();
+  return !!(radek && radek.ma);
+}
 
 export async function nactiKontext(env, uzivatel) {
   if (!uzivatel) return null;
+
   const clenstvi = await env.DB.prepare(
     "SELECT uzivatel_id, role FROM clenove WHERE email = ? ORDER BY id LIMIT 1"
   ).bind(uzivatel.email).first();
-  if (clenstvi) {
-    return { id: clenstvi.uzivatel_id, role: clenstvi.role, vlastni: false };
+
+  // No invitation, or one pointing back at this very account: own shop.
+  // Checking membership first keeps the ordinary case at a single query.
+  if (!clenstvi || clenstvi.uzivatel_id === uzivatel.id) {
+    return { id: uzivatel.id, role: "spravce", vlastni: true };
   }
-  return { id: uzivatel.id, role: "spravce", vlastni: true };
+
+  // An invitation must never shadow a shop that is already in use. Otherwise
+  // any správce could type a stranger's address into their team and take that
+  // person's own warehouse away from them at the next login — they would sign
+  // in and see somebody else's sets with no way back to their own. Own data
+  // therefore wins; the invitation only applies to an account that has not
+  // started a warehouse of its own.
+  if (await maVlastniData(env, uzivatel.id)) {
+    return { id: uzivatel.id, role: "spravce", vlastni: true };
+  }
+
+  return { id: clenstvi.uzivatel_id, role: clenstvi.role, vlastni: false };
 }
 
 export function smiPsat(servis) {
