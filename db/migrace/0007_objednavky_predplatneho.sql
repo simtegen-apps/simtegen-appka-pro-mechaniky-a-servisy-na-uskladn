@@ -7,6 +7,10 @@
 --
 -- stav: nova → fakturovana → zaplacena | zrusena
 --
+-- Objednávka patří PROVOZOVNĚ (uzivatel_id = data.servis.id), ne osobě,
+-- která ji odeslala — jinak by ji správce neviděl a kontrola „jedna
+-- rozpracovaná objednávka“ by se obešla objednáním z účtu kolegy.
+--
 -- NOT called "objednavky": in this product that name is taken by the tyre
 -- shop's booking calendar (migration 0002_pneusklad), which is a completely
 -- different thing the mechanic uses every day. Two meanings of the same word
@@ -23,7 +27,6 @@ CREATE TABLE objednavky_predplatneho (
     souhlas_zahajeni   INTEGER NOT NULL DEFAULT 0,
     souhlas_cas        INTEGER,
     stav               TEXT NOT NULL DEFAULT 'nova',
-    issue_cislo        INTEGER,
     vytvoreno          INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE INDEX idx_objednavky_predplatneho_uzivatel

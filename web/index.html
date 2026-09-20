@@ -87,6 +87,7 @@
     body:not(.spravce) .jen-spravce { display: none !important; }
     body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
     body:not(.bez-predplatneho) .bez-predplatneho-zprava { display: none !important; }
+    body.spravce .jen-mechanik-zprava { display: none !important; }
     html, body { height: 100%; }
     body {
       /* Deliberately one flat page tone: both the sticky header and the
@@ -1125,6 +1126,10 @@
           </div>
         </div>
 
+        <p class="hlaska varovani jen-mechanik-zprava">Předplatné objednává správce
+        účtu. Ceník vidíte, objednávku odešle kolega se správcovským oprávněním.</p>
+
+        <div class="jen-spravce stoh">
         <h2>Objednávka</h2>
         <div class="pole">
           <label for="pred-fakturace">Fakturační údaje</label>
@@ -1158,13 +1163,14 @@
         na fakturu, aplikace peníze nepřijímá.</p>
 
         <div id="pred-zprava" class="zprava" aria-live="polite"></div>
+        </div>
 
-        <h2 id="pred-historie-nadpis" hidden>Vaše objednávky</h2>
+        <h2 id="pred-historie-nadpis" hidden>Objednávky provozovny</h2>
         <div id="pred-historie" class="seznam"></div>
         <div class="dno"></div>
       </div>
 
-      <div class="dolni-akce" id="pred-akce" hidden>
+      <div class="dolni-akce jen-spravce" id="pred-akce" hidden>
         <button id="pred-objednat">Objednávka zavazující k platbě</button>
       </div>
     </section>
@@ -1227,16 +1233,21 @@
 
     /* Schválený ceník, opsaný a nic dopočítaného navíc: cena je měsíční,
        za celou provozovnu. Součet pod tlačítkem je prostý násobek měsíců —
-       objednávka zavazující k platbě musí ukázat celkovou částku. */
-    window.CENIK = { mesic: 129, mena: "Kč" };
-    const VARIANTY = [
-      { klic: "solo", nazev: "Sólo", mesic: 89, popis: "Pro jednoho mechanika." },
-      { klic: "zaklad", nazev: "Základ", mesic: 129, vychozi: true,
-        popis: "Do 2 mechaniků. Evidence uskladněných pneu s tiskem štítků na "
-             + "vlastní tiskárně, objednávkový kalendář s připomínkou pro "
-             + "zákazníky, přihlášení pro mechaniky." },
-      { klic: "tym", nazev: "Tým", mesic: 249, popis: "Pro větší tým." },
-    ];
+       objednávka zavazující k platbě musí ukázat celkovou částku.
+       Jediný zdroj cen ve stránce; server má tentýž seznam v
+       functions/api/objednavka.js a částku na objednávce určuje on. */
+    window.CENIK = {
+      mena: "Kč",
+      varianty: [
+        { klic: "solo", nazev: "Sólo", mesic: 89, popis: "Pro jednoho mechanika." },
+        { klic: "zaklad", nazev: "Základ", mesic: 129, vychozi: true,
+          popis: "Do 2 mechaniků. Evidence uskladněných pneu s tiskem štítků na "
+               + "vlastní tiskárně, objednávkový kalendář s připomínkou pro "
+               + "zákazníky, přihlášení pro mechaniky." },
+        { klic: "tym", nazev: "Tým", mesic: 249, popis: "Pro větší tým." },
+      ],
+    };
+    const VARIANTY = window.CENIK.varianty;
 
     const stav = {
       nastaveni: null,
@@ -2673,10 +2684,12 @@
       // Celková cena PŘED tlačítkem — prostý násobek, žádné slevy navíc.
       const celkem = v.mesic * stav.objednavka.mesice;
       $("pred-cena").textContent = `${celkem} ${window.CENIK.mena}`;
+      // Žádná věta o DPH: dokud provozovatel neuvede svůj daňový režim
+      // v podmínkách, odkazovat u zavazujícího tlačítka na dokument, který
+      // to neříká, je horší než mlčet.
       $("pred-cena-rozpis").textContent =
         `${v.nazev} · ${v.mesic} ${window.CENIK.mena}/měsíc × `
-        + `${mesicu(stav.objednavka.mesice)}. Cena je konečná za provozovnu; `
-        + "o DPH se dozvíte v obchodních podmínkách.";
+        + `${mesicu(stav.objednavka.mesice)} za celou provozovnu.`;
     }
 
     $("pred-delka").querySelectorAll("button").forEach((b) =>

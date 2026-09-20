@@ -1,4 +1,38 @@
-# Specifikace — build 4
+# Specifikace — Pneusklad
+
+## Co produkt dělá (platí napříč buildy)
+
+Mobilní webová appka „Pneusklad“ pro malé a mobilní pneuservisy: evidence
+uskladněných sad pneu (zákazník, SPZ, rozměr, hloubky dezénu 4 kol, pozice
+v regálu), tisk štítku na štítkovací tiskárnu nebo na A4 archy, objednávkový
+kalendář, který plní mechanik, a obrazovka „Připravit na zítra“ se seznamem
+kol a jejich pozic. K tomu sezónní přehled: kdo tu má kola a letos se ještě
+neobjednal (obvolávací seznam), které sady jsou pod 4 mm dezénu a kdo nemá
+zaplacené uskladnění. Postaveno na šablonové paměti (přihlášení e-mailovým
+odkazem, Cloudflare D1 v EU), jeden statický `web/index.html` s obrazovkami
+pro 390 px a Pages Functions bez závislostí.
+
+Jeden účet = jedna provozovna. Kolega se přihlásí vlastním e-mailem a řádek
+v `clenove` z jeho přihlášení udělá přístup do tohoto servisu; role jsou
+`spravce` / `mechanik` / `cteni`. Všechno ostatní se váže na `servis.id`,
+ne na přihlášenou osobu — to platí i pro předplatné a objednávky.
+
+Obrazovky: Dnes · Sklad · Zákazníci · Objednávky · Nastavení (spodní lišta),
+k tomu podobrazovky Nová sada (průvodce 5 kroků), Detail sady, Nová
+objednávka, Připravit kola, Sezónní přehled, Zákazník a Předplatné.
+
+**Placená hodnota:** platí se za uloženou evidenci, která je jediné místo,
+kde servis ví, čí kola kde leží — a která mu dvakrát ročně vydělá
+(obvolávací seznam, sady pod 4 mm k nabídce nových pneu, nezaplacené
+uskladnění). Druhý nákup přichází sám: fyzické uskladnění běží celý rok
+a přezouvací sezóna se opakuje každé jaro a podzim.
+
+**Build 3** postavil tohle jádro. **Build 4** (níže) přidal placení a nic
+z jádra nepřestavěl.
+
+---
+
+# Specifikace — build 4 (předplatné a objednávka)
 
 Do běžící appky Pneusklad se zapojí modul předplatného: nová tabulka `predplatne` (plati_do, poznamka) jako jediný zdroj pravdy o zaplaceném období, stav se počítá v middleware a vrací ho /api/ja i /api/nastaveni, produktové zápisy volají `vyzadujPredplatne` (402). V UI přibude obrazovka Předplatné dostupná z Nastavení i z varovného pruhu na Dnes, který se objeví 14 dní před koncem. Po vypršení přejde appka do režimu čtení — evidence zůstane viditelná, zápisy se zastaví; účet, export, smazání a přihlášení fungují vždy. Peníze aplikace neřeší, platbu označuje majitel mimo appku a v aplikaci nejsou žádné částky, jen „ceník sdělí provozovatel“.
 
@@ -93,11 +127,12 @@ níže je, v čem to specifikaci přepsalo, a proč.
    výpočet je násobek počtu měsíců, který zákon vyžaduje ukázat před
    zavazujícím tlačítkem.
 2. **Místo tlačítka s `mailto:` je skutečná objednávka.** `/api/objednavka`
-   uloží objednávku, pošle ji provozovateli i potvrzení zákazníkovi
-   (Resend, už deklarovaný) a zrcadlí číslo objednávky do evidence
-   provozovatele (GitHub — nově deklarovaný v manifestu, bez osobních údajů).
-   Tlačítko nese doslova „Objednávka zavazující k platbě“, spotřebitel má
-   samostatné zaškrtávátko souhlasu podle § 1837 písm. l.
+   uloží objednávku a pošle ji provozovateli i potvrzení zákazníkovi
+   (Resend, už dřív deklarovaný — **žádná nová externí služba**, jak
+   specifikace žádá). Tlačítko nese doslova „Objednávka zavazující
+   k platbě“, spotřebitel má samostatné zaškrtávátko souhlasu podle § 1837
+   písm. l. Objednávat smí jen `spravce` a objednávka patří provozovně
+   (`servis.id`), ne osobě, která ji odeslala.
 3. **Migrace se přečíslovaly na `0005`–`0007`.** Šablona je nese jako `0002`,
    `0004`, `0005`, jenže ta čísla v tomhle produktu už patří běžícím
    migracím `0002_pneusklad`, `0004_provoz_a_tym`. Migrace jsou append-only.
@@ -122,3 +157,18 @@ níže je, v čem to specifikaci přepsalo, a proč.
    zákazníka; manifest je deklaruje u entity `objednavky_predplatneho`
    a retenci váže na smazání účtu (daňové doklady vede provozovatel mimo
    aplikaci).
+
+## Co zbývá majiteli (blokuje spuštění placení)
+
+Generátor právních dokumentů (verze 2.0) vykresluje prázdné identifikační
+sloty červeně jako „(doplnit …)“ — dokument s nimi není zveřejnitelný.
+Stavitel je nevyplňuje, patří majiteli:
+
+`ico`, `dic`, `sidlo`, `zapis_or`, `odpovedna_osoba`, `zastup`,
+`ucinnost_od` a **`cena_dph`**.
+
+`cena_dph` blokuje placení nejvíc: dokud tam není „včetně DPH“ nebo „bez
+DPH, poskytovatel není plátcem DPH“, zákazník u tlačítka zavazujícího
+k platbě nezjistí, co částka znamená. Appka proto o DPH **mlčí** — raději
+nic než odkaz na dokument, který odpověď neobsahuje. Jakmile majitel slot
+vyplní, patří do rozpisu ceny u tlačítka jedna věta navíc.

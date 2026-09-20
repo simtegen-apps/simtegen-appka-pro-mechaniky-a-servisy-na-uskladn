@@ -78,7 +78,7 @@
     {
       "entita": "objednavky_predplatneho",
       "ucel": "objednávka předplatného z aplikace a doklad o souhlasu spotřebitele se zahájením služby před uplynutím lhůty pro odstoupení",
-      "pole": "odkaz na účet, délka předplatného v měsících, zvolená varianta a cena, fakturační údaje, příznak spotřebitele, souhlas se zahájením před uplynutím 14denní lhůty a čas jeho udělení, stav objednávky, číslo záznamu u provozovatele, čas vytvoření",
+      "pole": "odkaz na účet, délka předplatného v měsících, zvolená varianta a cena, fakturační údaje, příznak spotřebitele, souhlas se zahájením před uplynutím 14denní lhůty a čas jeho udělení, stav objednávky, čas vytvoření",
       "retence": "do smazání účtu zákazníkem; daňové doklady vede provozovatel mimo aplikaci po zákonnou dobu"
     }
   ],
@@ -94,12 +94,6 @@
       "ucel": "odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi",
       "domena": "api.resend.com",
       "dpa": "https://resend.com/legal/dpa"
-    },
-    {
-      "nazev": "GitHub",
-      "ucel": "zápis čísla a délky objednávky předplatného do evidence provozovatele, aby věděl, že má vystavit fakturu (bez fakturačních údajů a bez e-mailu zákazníka)",
-      "domena": "api.github.com",
-      "dpa": "https://github.com/customer-terms/github-data-protection-agreement"
     }
   ],
   "uloziste_v_prohlizeci": [],

@@ -9,19 +9,23 @@
 //
 // Money still never flows through the app: the order goes to the operator
 // by e-mail (billing details included) for the invoice, and the customer
-// gets a confirmation "in textual form" (the § 1837 l record). The GitHub
-// mirror carries only the order number and months — no account, no
-// billing data — so the firm's mailbox can nudge the owner to invoice.
+// gets a confirmation "in textual form" (the § 1837 l record). Resend is
+// the only outbound channel here, and the manifest has always declared it.
 //
-// GET → the signed-in customer's own orders.
+// GET → the orders of THIS SHOP (data.servis), not of the signed-in person.
+// One account is one shop, but a colleague invited through Tým signs in with
+// their own e-mail; keying orders on the person would hide a colleague's
+// order from the správce and let the "one open order at a time" check be
+// walked around by ordering as the second team member.
 //
 // The table is objednavky_predplatneho, not objednavky: in this product
 // "objednávky" is the tyre shop's booking calendar (migration 0002).
 //
 // Deliberately NOT behind vyzadujPredplatne: ordering is exactly what an
-// expired account is supposed to be able to do.
+// expired account is supposed to be able to do. It IS behind smiSpravovat —
+// an order binding the shop to pay is not a mechanic's call.
 
-import { json, ted } from "../../spolecne.js";
+import { json, odepriSpravu, smiSpravovat, ted } from "../../spolecne.js";
 
 const MAX_FAKTURACE = 600;
 
@@ -40,13 +44,14 @@ export async function onRequestGet(context) {
   const radky = await env.DB.prepare(
     "SELECT id, mesice, varianta, cena_czk, spotrebitel, souhlas_zahajeni, stav, vytvoreno " +
     "FROM objednavky_predplatneho WHERE uzivatel_id = ? ORDER BY id DESC LIMIT 20"
-  ).bind(data.uzivatel.id).all();
-  return json({ objednavky: radky.results });
+  ).bind(data.servis.id).all();
+  return json({ objednavky: radky.results, muze_objednat: smiSpravovat(data.servis) });
 }
 
 export async function onRequestPost(context) {
   const { env, data, request } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   let telo;
   try {
@@ -75,7 +80,7 @@ export async function onRequestPost(context) {
   const otevrena = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM objednavky_predplatneho " +
     "WHERE uzivatel_id = ? AND stav IN ('nova', 'fakturovana')"
-  ).bind(data.uzivatel.id).first();
+  ).bind(data.servis.id).first();
   if (otevrena && otevrena.n > 0) {
     return json({ chyba: "Máte už rozpracovanou objednávku — počkejte prosím na fakturu." }, 409);
   }
@@ -85,49 +90,14 @@ export async function onRequestPost(context) {
     "spotrebitel, souhlas_zahajeni, souhlas_cas) VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
     "RETURNING id, vytvoreno"
   ).bind(
-    data.uzivatel.id, mesice, varianta, cena,
+    data.servis.id, mesice, varianta, cena,
     fakturace, spotrebitel ? 1 : 0, souhlas ? 1 : 0, souhlas ? ted() : null,
   ).first();
 
-  const cislo = await zrcadliDoIssue(env, vlozeno.id, mesice, varianta);
-  if (cislo) {
-    await env.DB.prepare("UPDATE objednavky_predplatneho SET issue_cislo = ? WHERE id = ?")
-      .bind(cislo, vlozeno.id).run();
-  }
   const emaily = await posliEmaily(env, data.uzivatel.email, {
     id: vlozeno.id, mesice, varianta, cena, fakturace, spotrebitel, souhlas,
   });
-  return json({
-    id: vlozeno.id, stav: "nova", varianta, cena_czk: cena,
-    zrcadlo: Boolean(cislo), emaily,
-  });
-}
-
-async function zrcadliDoIssue(env, id, mesice, varianta) {
-  if (!env.GITHUB_ISSUES_TOKEN || !env.GITHUB_REPO) return null;
-  try {
-    const odpoved = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/issues`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.GITHUB_ISSUES_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "simtegen-objednavka",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: `Objednávka #${id}`,
-        body: `Předplatné na ${mesice} měs.${varianta ? ` (${varianta})` : ""}. ` +
-              "Fakturační údaje přišly e-mailem provozovateli. Po zaplacení: workflow Predplatne.",
-        labels: ["objednavka"],
-      }),
-    });
-    if (!odpoved.ok) return null;
-    const issue = await odpoved.json();
-    return issue.number || null;
-  } catch {
-    return null;
-  }
+  return json({ id: vlozeno.id, stav: "nova", varianta, cena_czk: cena, emaily });
 }
 
 async function posliEmaily(env, zakaznik, o) {
