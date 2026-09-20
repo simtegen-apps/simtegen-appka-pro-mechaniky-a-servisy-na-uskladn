@@ -10,14 +10,19 @@ import {
   cislo, casNaMinuty, json, minutyNaCas, nactiNastaveni, ocisti, odepriSpravu,
   smiSpravovat, ted, DEN,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 const FORMATY = ["role_100x50", "a4_3x8"];
 
-async function stav(env, uzivatel, servis) {
+async function stav(env, uzivatel, servis, predplatne) {
   const nastaveni = await nactiNastaveni(env, servis.id);
-  const { n } = await env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM sady WHERE uzivatel_id = ? AND stav = 'uskladneno'"
-  ).bind(servis.id).first();
+  // Two counts in one round trip: the subscription screen shows what the shop
+  // would stop being able to write into, and that number is the whole reason
+  // anybody renews.
+  const { n, zakazniku } = await env.DB.prepare(
+    "SELECT (SELECT COUNT(*) FROM sady WHERE uzivatel_id = ? AND stav = 'uskladneno') AS n, " +
+    "(SELECT COUNT(*) FROM zakaznici WHERE uzivatel_id = ?) AS zakazniku"
+  ).bind(servis.id, servis.id).first();
   const zbyva = nastaveni.zkusebni_do
     ? Math.max(0, Math.ceil((nastaveni.zkusebni_do - ted()) / DEN))
     : 0;
@@ -39,6 +44,10 @@ async function stav(env, uzivatel, servis) {
     limit_sad: nastaveni.plan === "zkusebni" ? nastaveni.limit_sad : null,
     zkusebni_zbyva_dnu: nastaveni.plan === "zkusebni" ? zbyva : null,
     uskladneno: n,
+    zakazniku,
+    // Carried here as well as on /api/ja so the frontend has one object to
+    // render from after any settings round-trip.
+    predplatne: predplatne || null,
     // Decides whether the walkthrough opens by itself on arrival.
     navod_viden: nastaveni.navod_viden ? 1 : 0,
   };
@@ -47,12 +56,14 @@ async function stav(env, uzivatel, servis) {
 export async function onRequestGet(context) {
   const { env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
-  return json(await stav(env, data.uzivatel, data.servis));
+  return json(await stav(env, data.uzivatel, data.servis, data.predplatne));
 }
 
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   let telo;
@@ -88,5 +99,8 @@ export async function onRequestPost(context) {
     data.servis.id,
   ).run();
 
-  return json({ stav: "ulozeno", nastaveni: await stav(env, data.uzivatel, data.servis) });
+  return json({
+    stav: "ulozeno",
+    nastaveni: await stav(env, data.uzivatel, data.servis, data.predplatne),
+  });
 }

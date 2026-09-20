@@ -14,10 +14,22 @@ s primární instancí v EU a hotová GDPR API. Pravidla:
   účtu jsou generické právě přes něj) a záznam v `data-manifest.json`
   (`ukladame`: entita, účel, pole, retence). CI shodí build, když něco
   z toho chybí.
-- **Zásady se nikdy nepíšou ručně.** `web/zasady.html` i
-  `ZAZNAM_O_ZPRACOVANI.md` generuje `python3 vykresli_zasady.py`
-  z manifestu; CI je porovnává se skutečností. Změna dat = změna manifestu
-  = přegenerovat.
+- **Zásady se nikdy nepíšou ručně.** Celý právní balík generuje
+  `python3 vykresli_zasady.py` z manifestu — **šest souborů**:
+  `web/zasady.html`, `web/podminky.html`,
+  `web/zpracovatelska-smlouva.html`, `web/odstoupeni-formular.html`,
+  `ZAZNAM_O_ZPRACOVANI.md` a `POSTUP_PRI_INCIDENTU.md`.
+  CI je porovnává se skutečností znak po znaku.
+
+  **Před každým commitem spusť:**
+
+  ```sh
+  python3 vykresli_zasady.py && python3 kontrola_manifestu.py
+  ```
+
+  Platí to i když jsi manifest nezměnil: generátor se obnovuje ze šablony
+  a CI chce čerstvý výstup. Krok „Kontrola manifestu proti kodu“ padá na
+  exit code 1 právě tehdy, když se tohle vynechá.
 - **Ven se volá jen to, co manifest deklaruje** (`sluzby_treti_strany`).
   Frontend nevolá ven vůbec — jen vlastní `/api/`.
 - **Nasazuje se výhradně merge do `main`.** Stavitel pushuje jen větve
@@ -89,3 +101,35 @@ zobrazení), a **přihlášení se nepočítá** — měří se cizí návštěv
 Tabulka `navstevy` nemá `uzivatel_id`, nenese žádný osobní údaj a je proto
 v manifestu vedena pod `agregaty`, ne pod `ukladame`: v exportu účtu není
 a smazání účtu se jí netýká. Záznamy starší 24 měsíců maže endpoint sám.
+## Jak zapsat platbu předplatného
+
+S penězi aplikace nepracuje: zákazník objedná v appce (`/api/objednavka`),
+provozovatel dostane objednávku e-mailem, vystaví fakturu a **po zaplacení**
+ručně zapíše zaplacené období. Aplikace pak jen čte `predplatne.plati_do`.
+
+```sh
+wrangler d1 execute <repo>-db --remote --command \
+  "INSERT INTO predplatne (uzivatel_id, plati_do, poznamka, zmeneno)
+   VALUES (<id>, unixepoch() + 365*24*3600, 'faktura 2026-014', unixepoch())
+   ON CONFLICT(uzivatel_id) DO UPDATE SET
+     plati_do = excluded.plati_do,
+     poznamka = excluded.poznamka,
+     zmeneno  = unixepoch();
+   INSERT INTO platby (uzivatel_id, mesice, poznamka)
+   VALUES (<id>, 12, 'faktura 2026-014');"
+```
+
+- `uzivatel_id` je účet **provozovny** (`SELECT id, email FROM uzivatele`),
+  ne pozvaného mechanika — předplatné patří servisu, ne osobě.
+- Při **obnovení** počítejte od dosavadního `plati_do`, ne od dneška, ať
+  zákazník nepřijde o zbytek zaplaceného období:
+  `plati_do = MAX(plati_do, unixepoch()) + 365*24*3600`.
+- `platby` je historie (kvůli otázce „přišel druhý nákup?“), `predplatne`
+  je aktuální konec období. Zapisujte obojí.
+- Stav objednávky se posouvá tamtéž:
+  `UPDATE objednavky_predplatneho SET stav = 'zaplacena' WHERE id = <č.>;`
+
+**Po prvním nasazení tohoto modulu** migrace `0005_predplatne.sql` převedla
+servisy, které dosud platily přes `nastaveni_servisu.plan`, a dala jim rok
+runwaye. Zkontrolujte `SELECT * FROM predplatne;` a upravte `plati_do`
+podle skutečné faktury.

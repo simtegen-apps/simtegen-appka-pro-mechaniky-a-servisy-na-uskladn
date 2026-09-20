@@ -7,7 +7,7 @@
   "subjekty_obsahu": "motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace",
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
-  "zkusebni_dni": 60,
+  "zkusebni_dni": 14,
   "ukladame": [
     {
       "entita": "uzivatele",
@@ -62,6 +62,24 @@
       "ucel": "přístup dalších pracovníků servisu do aplikace a jejich oprávnění",
       "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), čas vytvoření záznamu",
       "retence": "do odebrání pracovníka v aplikaci nebo do smazání účtu"
+    },
+    {
+      "entita": "predplatne",
+      "ucel": "evidence zaplaceného období předplatného",
+      "pole": "odkaz na účet, datum konce předplatného, poznámka k platbě, čas poslední změny",
+      "retence": "do smazání účtu zákazníkem"
+    },
+    {
+      "entita": "platby",
+      "ucel": "historie plateb předplatného, aby bylo vidět obnovení i ukončení",
+      "pole": "odkaz na účet, počet zaplacených měsíců, poznámka k platbě, čas zapsání",
+      "retence": "do smazání účtu zákazníkem"
+    },
+    {
+      "entita": "objednavky_predplatneho",
+      "ucel": "objednávka předplatného z aplikace a doklad o souhlasu spotřebitele se zahájením služby před uplynutím lhůty pro odstoupení",
+      "pole": "odkaz na účet, délka předplatného v měsících, zvolená varianta a cena, fakturační údaje, příznak spotřebitele, souhlas se zahájením před uplynutím 14denní lhůty a čas jeho udělení, stav objednávky, čas vytvoření",
+      "retence": "do smazání účtu zákazníkem; daňové doklady vede provozovatel mimo aplikaci po zákonnou dobu"
     }
   ],
   "agregaty": ["navstevy"],
@@ -75,7 +93,7 @@
     },
     {
       "nazev": "Resend",
-      "ucel": "odeslání přihlašovacího odkazu a odeslání seznamu přípravy na následující den na e-mail servisu",
+      "ucel": "odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi",
       "domena": "api.resend.com",
       "dpa": "https://resend.com/legal/dpa"
     }
