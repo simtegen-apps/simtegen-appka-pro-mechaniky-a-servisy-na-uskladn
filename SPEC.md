@@ -79,3 +79,46 @@ Na telefonu (~390 px) na náhledovém nasazení:
 10. web/zasady.html obsahuje řádek o entitě předplatné s retencí „do smazání účtu zákazníkem“.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě oproti této specifikaci změnilo
+
+Mezi schválením a stavbou dorazil ze šablony i **modul objednávky** a majitel
+schválil **ceník**. Obojí bylo součástí zadání stavby, takže se postavilo —
+níže je, v čem to specifikaci přepsalo, a proč.
+
+1. **V aplikaci jsou částky.** Specifikace psala „žádné částky, jen ceník
+   sdělí provozovatel“, protože cena tehdy schválená nebyla. Teď je: Sólo
+   89 Kč, Základ 129 Kč, Tým 249 Kč za měsíc a provozovnu, zkušební doba
+   14 dní. Jsou v `window.CENIK` a `VARIANTY` v `web/index.html`; jediný
+   výpočet je násobek počtu měsíců, který zákon vyžaduje ukázat před
+   zavazujícím tlačítkem.
+2. **Místo tlačítka s `mailto:` je skutečná objednávka.** `/api/objednavka`
+   uloží objednávku, pošle ji provozovateli i potvrzení zákazníkovi
+   (Resend, už deklarovaný) a zrcadlí číslo objednávky do evidence
+   provozovatele (GitHub — nově deklarovaný v manifestu, bez osobních údajů).
+   Tlačítko nese doslova „Objednávka zavazující k platbě“, spotřebitel má
+   samostatné zaškrtávátko souhlasu podle § 1837 písm. l.
+3. **Migrace se přečíslovaly na `0005`–`0007`.** Šablona je nese jako `0002`,
+   `0004`, `0005`, jenže ta čísla v tomhle produktu už patří běžícím
+   migracím `0002_pneusklad`, `0004_provoz_a_tym`. Migrace jsou append-only.
+4. **Tabulka objednávek předplatného se jmenuje `objednavky_predplatneho`.**
+   Šablonové jméno `objednavky` v tomhle produktu patří objednávkovému
+   kalendáři dílny — `CREATE TABLE objednavky` by na existující databázi
+   rovnou spadl.
+5. **Zkušební doba je 14 dní, ne 60.** Odpovídá schválenému ceníku
+   a obchodním podmínkám (`ZKUSEBNI_DNU`, `ZKUSEBNI_DNI`, `zkusebni_dni`
+   v manifestu). Servisy, které zkušebku začaly dřív, si podržely datum,
+   které dostaly: `stavPredplatneho` čte `nastaveni_servisu.zkusebni_do`,
+   když existuje, a teprve jinak počítá od založení účtu.
+6. **`web/index.html` nově linkuje `web/styl.css`.** Vyžaduje to nová
+   kontrola v `kontrola_manifestu.py`. Appka si nechává vlastní starší
+   vrstvu; srovnaná jsou jen místa, kde by se obě praly (odkazy, vjezd
+   obrazovek, seznam, textarea v poli, tištěný štítek) — viz blok
+   „Srovnání se styl.css“ v hlavičce stylu.
+7. **Přibyly tabulky `platby` a `objednavky_predplatneho`** (kromě
+   `predplatne`), obě v manifestu. `platby` je historie plateb — bez ní by
+   nešlo zodpovědět, jestli přišel druhý nákup, což je kill signál zadání.
+8. **Fakturační údaje v manifestu.** Objednávka ukládá fakturační údaje
+   zákazníka; manifest je deklaruje u entity `objednavky_predplatneho`
+   a retenci váže na smazání účtu (daňové doklady vede provozovatel mimo
+   aplikaci).

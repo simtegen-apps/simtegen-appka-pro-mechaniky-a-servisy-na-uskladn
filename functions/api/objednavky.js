@@ -11,6 +11,7 @@ import {
   epochZDataCasu, json, objednavkaProFrontend, odepriZapis, pripravObjednavku,
   smiPsat, ted, zacatekDne, zkontrolujKolizi, DEN, OBJEDNAVKY_SELECT,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 export async function onRequestGet(context) {
   const { request, env, data } = context;
@@ -34,6 +35,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;

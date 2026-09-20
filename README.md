@@ -36,3 +36,36 @@ produkce se zákazníky ty dva údaje vyžaduje (org secret + variable).
 Produkční URL: `https://<název-repa>.pages.dev`, preview:
 `https://<větev>.<název-repa>.pages.dev`. Postup při úniku dat:
 `POSTUP_PRI_INCIDENTU.md`.
+
+## Jak zapsat platbu předplatného
+
+S penězi aplikace nepracuje: zákazník objedná v appce (`/api/objednavka`),
+provozovatel dostane objednávku e-mailem, vystaví fakturu a **po zaplacení**
+ručně zapíše zaplacené období. Aplikace pak jen čte `predplatne.plati_do`.
+
+```sh
+wrangler d1 execute <repo>-db --remote --command \
+  "INSERT INTO predplatne (uzivatel_id, plati_do, poznamka, zmeneno)
+   VALUES (<id>, unixepoch() + 365*24*3600, 'faktura 2026-014', unixepoch())
+   ON CONFLICT(uzivatel_id) DO UPDATE SET
+     plati_do = excluded.plati_do,
+     poznamka = excluded.poznamka,
+     zmeneno  = unixepoch();
+   INSERT INTO platby (uzivatel_id, mesice, poznamka)
+   VALUES (<id>, 12, 'faktura 2026-014');"
+```
+
+- `uzivatel_id` je účet **provozovny** (`SELECT id, email FROM uzivatele`),
+  ne pozvaného mechanika — předplatné patří servisu, ne osobě.
+- Při **obnovení** počítejte od dosavadního `plati_do`, ne od dneška, ať
+  zákazník nepřijde o zbytek zaplaceného období:
+  `plati_do = MAX(plati_do, unixepoch()) + 365*24*3600`.
+- `platby` je historie (kvůli otázce „přišel druhý nákup?“), `predplatne`
+  je aktuální konec období. Zapisujte obojí.
+- Stav objednávky se posouvá tamtéž:
+  `UPDATE objednavky_predplatneho SET stav = 'zaplacena' WHERE id = <č.>;`
+
+**Po prvním nasazení tohoto modulu** migrace `0005_predplatne.sql` převedla
+servisy, které dosud platily přes `nastaveni_servisu.plan`, a dala jim rok
+runwaye. Zkontrolujte `SELECT * FROM predplatne;` a upravte `plati_do`
+podle skutečné faktury.
