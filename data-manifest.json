@@ -3,8 +3,11 @@
   "provozovatel": "SimteGen s.r.o.",
   "kontakt_email": "podpora@simtegen.cz",
   "obsah_zakaznika": "uklada_se",
+  "obsah_zakaznika_popis": "jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní",
+  "subjekty_obsahu": "motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace",
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
+  "zkusebni_dni": 60,
   "ukladame": [
     {
       "entita": "uzivatele",
@@ -61,6 +64,8 @@
       "retence": "do odebrání pracovníka v aplikaci nebo do smazání účtu"
     }
   ],
+  "agregaty": ["navstevy"],
+  "agregaty_popis": "Počet zobrazení veřejné úvodní stránky a počet odeslaných žádostí o přihlašovací odkaz, sečtený po dnech a podle značky zdroje odkazu (např. „fb“, „vizitka“). Neukládáme IP adresu, identifikátor prohlížeče ani cookie a nepoužíváme žádný externí měřicí nástroj, takže z čísel nejde poznat jednotlivého člověka — jde o zobrazení, ne o návštěvníky. Záznamy mažeme po 24 měsících.",
   "sluzby_treti_strany": [
     {
       "nazev": "Cloudflare",
@@ -83,5 +88,5 @@
       "trvani": "30 dní"
     }
   ],
-  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id."
+  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id. Vyjimka jsou agregaty: tabulka uvedena v poli agregaty smi byt bez uzivatel_id, ale nesmi nest zadny osobni udaj (kontrola to hlida) a nepatri do exportu ani do smazani uctu, protoze k zadnemu uctu nepatri."
 }

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d4d47">
   <title>Pneusklad — evidence uskladněných pneu</title>
+  <link rel="stylesheet" href="styl.css">
   <style>
     /* Mobile-first app shell: ~390 px is the design width, desktop only
        stretches it. Screens swap via .aktivni, animated on transform/opacity
@@ -35,6 +36,27 @@
     /* Several panels are toggled with the hidden attribute, and a class that
        sets display would otherwise out-specify the UA rule. */
     [hidden] { display: none !important; }
+
+    /* --- Srovnání se styl.css -------------------------------------------
+       Appka vznikla dřív než sdílený návrhový systém a drží si vlastní,
+       záměrně světlou paletu (tokeny výš). styl.css je nad ní linkovaný,
+       protože je to společný základ všech produktů — srovnávají se jen
+       místa, kde obě vrstvy používají stejné jméno třídy pro jinou věc
+       a appka svoji verzi nedopisuje do konce. Žádná nová barva ani
+       rozměr: každý řádek jen vrací appce to, co měla. */
+    .obrazovka { animation: none; }
+    .obrazovka.aktivni { gap: 0.85rem; }
+    .seznam { background: none; border: 0; border-radius: 0; overflow: visible; }
+    .prazdno { display: block; }
+    /* .stitek je v appce vytištěný štítek na pneumatiky, ne textový odznak. */
+    .stitek {
+      font-size: inherit; font-weight: inherit;
+      letter-spacing: normal; text-transform: none;
+    }
+    .pole input:focus, .pole select:focus, .pole textarea:focus {
+      border-color: var(--akcent); box-shadow: 0 0 0 3px var(--akcent-jemny);
+    }
+    a { color: var(--akcent); }
     /* Role gating. Two switches on <body> so that buttons rendered later from
        a template are covered without anyone remembering to gate them. */
     body.jen-cteni .jen-zapis { display: none !important; }
@@ -158,6 +180,7 @@
 
     .zprava { min-height: 1.4rem; font-size: 0.92rem; color: var(--inkoust-2); }
     .zprava.chyba { color: var(--chyba); font-weight: 600; }
+    .zprava.uspech { color: var(--uspech); font-weight: 600; }
     .karta {
       background: var(--plocha); border: 1px solid var(--okraj);
       border-radius: var(--r-l); padding: 1rem 1.05rem; box-shadow: var(--stin-1);
@@ -237,9 +260,27 @@
     .lista button[aria-current="page"] { color: var(--akcent); background: var(--akcent-jemny); }
 
     footer { text-align: center; padding: 0.45rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
-      font-size: 0.75rem; background: var(--plocha); }
+      font-size: 0.75rem; background: var(--plocha); color: var(--inkoust-3);
+      line-height: 1.9; }
     body.prihlasen footer { padding-top: 0; background: rgba(255,255,255,.94); }
-    footer a { color: var(--inkoust-3); text-decoration: none; }
+    /* Čtyři právní odkazy se na 390 px nevejdou na jeden řádek; zalomí se
+       a každý zůstane samostatným dotykovým cílem. */
+    footer a { color: var(--inkoust-3); text-decoration: none;
+      display: inline-block; padding: 0.15rem 0.1rem; }
+
+    /* Úvodní obrazovka je zároveň veřejná stránka produktu — kdo ji vidí,
+       účet ještě nemá. Zůstává to obrazovka, ne webová stránka: karty,
+       jedno číslo největší a pole s tlačítkem dole v dosahu palce. Tady
+       je jen rozložení, barvy a velikosti jsou tokeny appky. */
+    #obrazovka-prihlaseni h2 { font-size: 0.98rem; margin: 0 0 0.15rem; }
+    .uvod-castka {
+      display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap;
+      margin: 0.2rem 0 0.6rem;
+    }
+    .uvod-castka .cislo {
+      font-size: 1.95rem; font-weight: 700; line-height: 1;
+      color: var(--akcent); font-variant-numeric: tabular-nums;
+    }
 
     /* Tiles on the home screen: the two reports the subscription renews for.
        The soft disc bleeding out of the corner is what stops them looking
@@ -514,18 +555,56 @@
       <p>Načítání…</p>
     </section>
 
+    <!-- Úvod pro cizí návštěvníky i přihlašovací obrazovka v jednom. ID se
+         nemění, takže boot i návrat po odhlášení fungují beze změny. -->
     <section id="obrazovka-prihlaseni" class="obrazovka">
       <div class="znak" aria-hidden="true">◎</div>
-      <h1>Pneusklad</h1>
-      <p>Evidence uskladněných pneu, štítky a objednávky pro váš pneuservis.
-      Zadejte svůj e-mail — pošleme vám jednorázový přihlašovací odkaz.
-      Žádné heslo nepotřebujete.</p>
-      <div class="pole">
-        <label for="email">E-mail provozovny</label>
-        <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="servis@email.cz">
+      <h1>Pneusklad — evidence uskladněných pneu s tiskem štítků</h1>
+      <p>Pro malé a mobilní pneuservisy, kde všechno dělá jeden nebo dva lidi.
+      V telefonu, bez instalace, bez papírového sešitu.</p>
+
+      <div class="karta">
+        <h2>Kód na štítku, pozice v regálu</h2>
+        <p class="maly">Příjem sady za minutu a štítek z vaší štítkovací
+        tiskárny nebo z archu A4. Kola pak najdete podle kódu, SPZ, jména
+        i telefonu — a víte, ve které polici leží.</p>
       </div>
-      <button id="poslat-odkaz">Poslat přihlašovací odkaz</button>
-      <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
+      <div class="karta">
+        <h2>Ráno víte, co sundat</h2>
+        <p class="maly">Objednávky zapisuje mechanik, jak volají zákazníci.
+        Seznam „Připravit na zítra“ vypíše kola i s pozicemi a pošle si ho
+        na e-mail provozovny.</p>
+      </div>
+      <div class="karta">
+        <h2>Sezóna, která vydělá</h2>
+        <p class="maly">Dvakrát ročně z evidence vypadne, kdo tu má kola
+        a letos se ještě neobjednal, které sady jsou pod 4 mm dezénu
+        a kdo nemá zaplacené uskladnění. To je důvod, proč se appka
+        vyplatí i druhou sezónu.</p>
+      </div>
+
+      <div class="karta" id="uvod-cena" hidden>
+        <p class="tisene">Kolik to stojí</p>
+        <p class="uvod-castka">
+          <span class="cislo" id="uvod-cena-od"></span>
+          <span class="maly">měsíčně za celou provozovnu</span>
+        </p>
+        <div class="radky" id="uvod-cenik"></div>
+      </div>
+      <p class="maly" id="uvod-zkusebni"></p>
+      <p class="napoveda">Data jsou v databázi v Evropské unii. Kdykoli si je
+      stáhnete nebo smažete přímo v aplikaci.</p>
+
+      <div class="dolni-akce">
+        <div class="pole">
+          <label for="email">E-mail provozovny</label>
+          <input id="email" type="email" autocomplete="email" inputmode="email"
+                 enterkeyhint="send" placeholder="servis@email.cz">
+        </div>
+        <button id="poslat-odkaz">Začít zdarma</button>
+        <p class="napoveda">Pošleme vám přihlašovací odkaz. Heslo nepotřebujete.</p>
+        <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
+      </div>
     </section>
 
     <!-- ------------------------------- Dnes ------------------------------- -->
@@ -989,7 +1068,12 @@
       <span class="glyf" aria-hidden="true">⚙</span>Nastavení</button>
   </nav>
 
-  <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
+  <footer>
+    <a href="zasady.html">Zásady zpracování údajů</a> ·
+    <a href="podminky.html">Obchodní podmínky</a> ·
+    <a href="zpracovatelska-smlouva.html">Zpracovatelská smlouva</a> ·
+    <a href="odstoupeni-formular.html">Odstoupení od smlouvy</a>
+  </footer>
 
   <div class="navod" id="navod" hidden role="dialog" aria-modal="true"
        aria-labelledby="navod-titulek">
@@ -1025,6 +1109,24 @@
 
     const HLAVNI = ["obrazovka-dnes", "obrazovka-sklad", "obrazovka-zakaznici",
                     "obrazovka-objednavky", "obrazovka-nastaveni"];
+
+    /* Schválený ceník, opsaný a nic dopočítaného navíc: cena je měsíční
+       a platí za celou provozovnu, ne za mechanika. Jediné místo v appce,
+       kde je částka — úvodní obrazovka si ji odtud bere, aby v HTML
+       neležela číslice, kterou by někdo zapomněl srovnat s ceníkem.
+       Platba zatím běží mimo aplikaci (po zkušebním období se ozveme),
+       takže tady není žádný výpočet ani objednávkové tlačítko. */
+    window.CENIK = {
+      mena: "Kč",
+      varianty: [
+        { klic: "solo", nazev: "Sólo", mesic: 89, popis: "jeden mechanik" },
+        { klic: "zaklad", nazev: "Základ", mesic: 129, popis: "do 2 mechaniků" },
+        { klic: "tym", nazev: "Tým", mesic: 249, popis: "větší tým" },
+      ],
+    };
+    // Drží se se ZKUSEBNI_DNU ve spolecne.js a se zkusebni_dni v manifestu,
+    // ze kterého se generují obchodní podmínky. Mění se všechna tři najednou.
+    const ZKUSEBNI_DNI = 60;
 
     const stav = {
       nastaveni: null,
@@ -2598,17 +2700,68 @@
     });
     $("nast-navod").addEventListener("click", () => ukazNavod());
 
+    // -------------------------------------------------------- Úvodní obrazovka
+    // Veřejná stránka produktu i přihlášení v jednom. Cena se vykresluje
+    // z window.CENIK; když by ceník chyběl, karta se nevykreslí vůbec —
+    // prázdný rám s nadpisem „Kolik to stojí“ je horší než nic.
+    function vykresliUvod() {
+      $("uvod-zkusebni").textContent =
+        `Prvních ${ZKUSEBNI_DNI} dní zdarma, bez karty. Po zkušebním období `
+        + "se vám ozveme; nic se nestrhává automaticky.";
+      const cenik = window.CENIK || {};
+      const varianty = cenik.varianty || [];
+      const karta = $("uvod-cena");
+      if (!varianty.length) {
+        karta.hidden = true;
+        return;
+      }
+      const mena = cenik.mena || "Kč";
+      $("uvod-cena-od").textContent =
+        `${Math.min(...varianty.map((v) => v.mesic))} ${mena}`;
+      $("uvod-cenik").textContent = "";
+      varianty.forEach((v) => {
+        const radek = document.createElement("div");
+        const klic = document.createElement("span");
+        klic.className = "klic";
+        klic.textContent = `${v.nazev} · ${v.popis}`;
+        const hodnota = document.createElement("span");
+        hodnota.className = "hodnota";
+        hodnota.textContent = `${v.mesic} ${mena}`;
+        radek.append(klic, hodnota);
+        $("uvod-cenik").appendChild(radek);
+      });
+      karta.hidden = false;
+    }
+
+    // Anonymní čárka: den, stránka a značka zdroje z ?z= v odkazu. Nic víc
+    // se neodesílá a odpověď nikoho nezajímá — počítadlo nesmí zdržet ani
+    // rozbít stránku, takže se chyba polyká a uživatel o něm neví.
+    function zapisNavstevu(stranka) {
+      const zdroj = new URLSearchParams(location.search).get("z") || "";
+      fetch("/api/navsteva", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stranka, zdroj }),
+      }).catch(() => {});
+    }
+
     // ------------------------------------------------------------- Login
     $("poslat-odkaz").addEventListener("click", async () => {
       const el = $("prihlaseni-zprava");
       el.className = "zprava";
       el.textContent = "Odesílám…";
-      const { ok, data } = await api("/api/prihlaseni", "POST", { email: $("email").value });
+      const { ok, data } = await api("/api/prihlaseni", "POST", { email: $("email").value })
+        .catch(() => ({ ok: false, data: {} }));
       if (!ok) {
         el.className = "zprava chyba";
-        el.textContent = data.chyba || "Něco se nepovedlo. Zkuste to prosím znovu.";
+        el.textContent = data.chyba
+          || "Nepodařilo se odeslat. Zkontrolujte připojení a zkuste to prosím znovu.";
         return;
       }
+      // Druhá půlka nálevky: kolik lidí z těch, co úvod viděli, o odkaz
+      // opravdu požádalo. Bez toho „nikdo nepřišel“ a „přišli a odešli“
+      // vypadají v číslech stejně.
+      zapisNavstevu("uvod-odeslano");
       if (data.odkaz) {
         // Development deployments hand the link back instead of e-mailing it.
         el.innerHTML = "";
@@ -2618,7 +2771,13 @@
         el.appendChild(a);
         return;
       }
+      el.className = "zprava uspech";
       el.textContent = "Hotovo — přihlašovací odkaz najdete v e-mailu.";
+    });
+
+    // Na telefonu je klávesa „Odeslat“ blíž než tlačítko pod polem.
+    $("email").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("poslat-odkaz").click();
     });
 
     // ------------------------------------------------------------- Bootstrap
@@ -2633,7 +2792,9 @@
         const { data } = await api("/api/ja", "GET");
         if (!data.prihlasen) {
           document.body.classList.remove("prihlasen");
+          vykresliUvod();
           ukaz("obrazovka-prihlaseni");
+          zapisNavstevu("uvod");
           return;
         }
         document.body.classList.add("prihlasen");
@@ -2646,7 +2807,10 @@
         // screen, so the tour describes something the shop can already see.
         if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();
       } catch {
+        // Server neodpověděl: úvod je pořád to nejlepší, co můžeme ukázat —
+        // je celý ze statického HTML a nic z něj na odpovědi nezávisí.
         document.body.classList.remove("prihlasen");
+        vykresliUvod();
         ukaz("obrazovka-prihlaseni");
       }
     }

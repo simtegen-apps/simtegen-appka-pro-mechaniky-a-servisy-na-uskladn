@@ -461,7 +461,10 @@ export function cislo(hodnota, vychozi = 0) {
 export async function tabulkySUzivatelem(env) {
   // Every app table carries uzivatel_id (CI enforces it), so export and
   // deletion can be generic: introspect instead of maintaining a list that
-  // would drift the first time a builder adds a table.
+  // would drift the first time a builder adds a table. Tables declared in
+  // the manifest under `agregaty` deliberately have no uzivatel_id — they
+  // hold anonymous counters that belong to no account — and fall out here
+  // on their own, which is exactly what the policy promises.
   const tabulky = await env.DB.prepare(
     "SELECT name FROM sqlite_master WHERE type = 'table' " +
     "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf%' " +

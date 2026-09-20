@@ -76,3 +76,62 @@ Na náhledovém nasazení, telefon ~390 px:
 9. `web/zasady.html` obsahuje sekci „Co počítáme anonymně" s retencí 24 měsíců a větou, že nejde o osobní údaje; `git diff` na generovaných souborech neukazuje nic jiného.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě oproti této specifikaci změnilo
+
+Specifikace vznikla nad jiným snímkem repozitáře, než na kterém se stavělo
+(psala o předplatném, ceníku a migracích 0005–0007, které v této větvi
+nejsou). Postavilo se to, co specifikace chce — veřejná úvodní obrazovka
+a anonymní počítadlo —, ale usazené do skutečného stavu kódu. Níže je,
+v čem a proč.
+
+1. **Migrace je `db/migrace/0006_navstevy.sql`, ne `0008`.** Poslední
+   migrace v této větvi je `0004_provoz_a_tym.sql`, takže 0006 je volné
+   (a je to jméno, které nese i šablona). Migrace jsou append-only,
+   přečíslovat je nešlo.
+2. **`agregaty` je seznam jmen tabulek, ne objektů.** Šablona se mezitím
+   obnovila a `kontrola_manifestu.py` už agregáty umí sám: tabulka uvedená
+   v `agregaty` smí být bez `uzivatel_id`, ale kontrola jí zakáže jakýkoli
+   sloupec, který vypadá jako osobní údaj. Držíme se toho tvaru, aby
+   příští obnova šablony nešla proti manifestu. Text do zásad nese nový
+   klíč `agregaty_popis`.
+3. **Do generátoru přibyl jen aditivní blok.** `vykresli_zasady.py` nově
+   vykresluje sekci „Co počítáme anonymně“ v zásadách a `A.5` v záznamu
+   o zpracování, obojí jen když manifest nějaký agregát deklaruje. Žádná
+   existující věta se nezměnila.
+4. **Zkušební doba je 60 dní, ne 14.** V této větvi je `ZKUSEBNI_DNU = 60`
+   (`spolecne.js`) a appka se podle toho chová. Do manifestu se proto
+   doplnilo `zkusebni_dni: 60` — jinak by obchodní podmínky vykreslily
+   šablonových 30 a slibovaly něco jiného, než kód dělá. Úvodní obrazovka
+   bere číslo z konstanty `ZKUSEBNI_DNI` v `index.html`; mění se všechna
+   tři místa najednou.
+5. **`window.CENIK` v této větvi neexistoval — zavedl se.** Nese schválené
+   ceny 89 / 129 / 249 Kč měsíčně za celou provozovnu. Protože v této
+   větvi není modul předplatného ani objednávkové tlačítko, úvod cenu jen
+   ukazuje a říká pravdu: „Po zkušebním období se vám ozveme; nic se
+   nestrhává automaticky.“ Žádná částka se v HTML neopakuje, vykresluje
+   se z ceníku.
+6. **`web/index.html` nově linkuje `web/styl.css`.** Vyžaduje to obnovená
+   kontrola (`_zkontroluj_design`). Appka si nechává vlastní starší
+   vrstvu; srovnaná jsou jen místa, kde by se obě praly — `.obrazovka`,
+   `.seznam`, `.prazdno`, `.stitek` (v appce je to vytištěný štítek, ne
+   textový odznak), fokus pole a barva odkazů. Viz blok „Srovnání se
+   styl.css“ v hlavičce stylu.
+7. **Patička nese čtyři právní odkazy.** Generátor 2.0 vyrábí šest
+   dokumentů místo jednoho; zásady, podmínky, zpracovatelská smlouva
+   a formulář pro odstoupení patří do patičky, kterou vidí i nepřihlášený
+   návštěvník.
+8. **Doplněno `obsah_zakaznika_popis` a `subjekty_obsahu`** do manifestu,
+   aby zpracovatelská smlouva popisovala pneuservis, a ne obecný obsah.
+   Identifikační sloty (`ico`, `dic`, `sidlo`, `zapis_or`, `ucinnost_od`,
+   `odpovedna_osoba`) zůstávají prázdné — patří majiteli.
+
+## Co zbývá majiteli (blokuje zveřejnění úvodní stránky)
+
+Úvodní obrazovka je veřejná nabídka placené služby s cenou. Dokud jsou
+v generovaných dokumentech červené sloty „(doplnit …)“, nabízí služba cenu
+bez identifikace prodávajícího. Před spuštěním náboru je potřeba vyplnit
+v manifestu `ico`, `sidlo`, `dic` (nebo „nejsme plátci DPH“), `zapis_or`,
+`ucinnost_od` a `odpovedna_osoba` a znovu spustit `python3
+vykresli_zasady.py`. Appka o DPH mlčí, dokud to majitel nerozhodne —
+raději nic než věta, kterou dokument nepotvrdí.

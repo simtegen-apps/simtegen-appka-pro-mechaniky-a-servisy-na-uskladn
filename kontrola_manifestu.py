@@ -40,6 +40,12 @@ ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
 # so they are the only ones allowed to live without a uzivatel_id column.
 ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 
+# Column names that make a table personal data. An aggregate table (manifest
+# `agregaty`) may live without uzivatel_id only if none of these appear —
+# a "counter" with an e-mail column is a customer table in disguise.
+OSOBNI_SLOUPCE = ("email", "e_mail", "ip", "adresa", "jmeno", "prijmeni", "telefon",
+                  "uzivatel", "token", "agent", "cookie", "poznamka", "text")
+
 # Outbound-request markers beyond fetch(), which gets domain-aware handling.
 SITOVE_VZORY = (
     "XMLHttpRequest",
@@ -113,19 +119,38 @@ def _zkontroluj_uloziste(manifest: dict) -> list[str]:
 
 
 def _zkontroluj_zasady(manifest: dict) -> list[str]:
+    """The whole legal pack is generated from the manifest and drifts the
+    same way: policy, terms, DPA, withdrawal form, record of processing,
+    incident procedure. A hand-edited file fails here on purpose — the
+    19. 9. 2026 review landed in the generator, not in the files."""
     import vykresli_zasady as generator
 
     chyby: list[str] = []
-    zasady = WEB / "zasady.html"
-    if not zasady.exists() or zasady.read_text(encoding="utf-8") != \
-            generator.vykresli_zasady(manifest):
-        chyby.append("web/zasady.html neodpovídá manifestu — spusť "
-                     "`python3 vykresli_zasady.py` (needituj ho ručně).")
-    if not ZAZNAM.exists() or ZAZNAM.read_text(encoding="utf-8") != \
-            generator.vykresli_zaznam(manifest):
-        chyby.append("ZAZNAM_O_ZPRACOVANI.md neodpovídá manifestu — spusť "
-                     "`python3 vykresli_zasady.py`.")
+    for path, render in generator.VYSTUPY:
+        if not path.exists() or path.read_text(encoding="utf-8") != render(manifest):
+            chyby.append(f"{path.as_posix()} neodpovídá manifestu — spusť "
+                         "`python3 vykresli_zasady.py` (needituj ho ručně).")
     return chyby
+
+
+def _sloupce(create_stmt: str) -> list[str]:
+    """Column names of one CREATE TABLE: comment lines dropped, the body
+    between the outer parentheses split on commas, first token of each part
+    (constraint lines start with PRIMARY/UNIQUE/FOREIGN and fall out)."""
+    text = "\n".join(line for line in create_stmt.splitlines()
+                     if not line.strip().startswith("--"))
+    if "(" not in text:
+        return []
+    body = text[text.index("(") + 1:text.rfind(")")]
+    names = []
+    for part in body.split(","):
+        words = part.strip().split()
+        if not words:
+            continue
+        token = words[0].strip('"`').lower()
+        if token not in ("primary", "unique", "foreign", "check", "constraint"):
+            names.append(token)
+    return names
 
 
 def _zkontroluj_tabulky(manifest: dict) -> list[str]:
@@ -142,15 +167,50 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
             tabulky.add(nazev)
             if nazev in ZAKLADNI_TABULKY:
                 continue
-            if "uzivatel_id" not in zapis:
+            if nazev in (manifest.get("agregaty") or []):
+                # Aggregates: allowed without uzivatel_id, forbidden to carry
+                # anything that looks like a person.
+                osobni = [s for s in OSOBNI_SLOUPCE
+                          if any(name.startswith(s) or f"_{s}" in name for name in _sloupce(zapis))]
+                if osobni:
+                    chyby.append(f"{path}: agregační tabulka {nazev} má osobní sloupce "
+                                 f"({', '.join(osobni)}) — agregát smí nést jen čísla.")
+                continue
+            if "uzivatel_id" not in _sloupce(zapis):
                 chyby.append(f"{path}: tabulka {nazev} nemá sloupec uzivatel_id "
                              "— export a smazání účtu by ji minuly.")
             if nazev not in deklarovane:
                 chyby.append(f"{path}: tabulka {nazev} není deklarovaná "
                              "v manifestu (ukladame).")
+    for agregat in manifest.get("agregaty") or []:
+        if agregat not in tabulky:
+            chyby.append(f"manifest deklaruje agregát {agregat}, ale žádná migrace "
+                         "takovou tabulku nezakládá.")
     for entita in sorted(deklarovane - tabulky):
         chyby.append(f"manifest deklaruje entitu {entita}, ale žádná migrace "
                      "takovou tabulku nezakládá.")
+    return chyby
+
+
+def _zkontroluj_design() -> list[str]:
+    """The cheap, deterministic part of the design bar: every deployed page
+    uses the shared design system and is a mobile page. The taste part is
+    the reviewer's; this stops the "web form with its own CSS" failure mode
+    before a model ever looks at it."""
+    chyby: list[str] = []
+    for path in sorted(WEB.glob("*.html")):
+        if path.name in ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
+                         "odstoupeni-formular.html"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if 'href="styl.css"' not in text:
+            chyby.append(f"{path}: nepoužívá návrhový systém web/styl.css (viz DESIGN.md).")
+        if 'name="viewport"' not in text:
+            chyby.append(f"{path}: chybí <meta name=\"viewport\"> — není to mobilní stránka.")
+        if '<link rel="stylesheet" href="http' in text or "@import" in text:
+            chyby.append(f"{path}: externí styl/písmo — produkty jsou bez závislostí.")
+    if not (WEB / "styl.css").exists():
+        chyby.append("web/styl.css chybí — návrhový systém je součást každého produktu.")
     return chyby
 
 
@@ -161,7 +221,8 @@ def main() -> int:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
     chyby = (_zkontroluj_sit(manifest) + _zkontroluj_uloziste(manifest)
-             + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest))
+             + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest)
+             + _zkontroluj_design())
     if chyby:
         print("Kód se rozešel s data-manifest.json:")
         for chyba in chyby:
