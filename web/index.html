@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d4d47">
   <title>Pneusklad — evidence uskladněných pneu</title>
+  <!-- Sdílený návrhový systém SimteGenu (DESIGN.md). Tahle appka si nese
+       vlastní, starší vrstvu se stejnými názvy tříd, a protože je níž
+       v pořadí, vyhrává všude, kde obě vrstvy nastavují totéž. Srovnání
+       těch několika míst, kde by se praly, je v bloku „Srovnání se
+       styl.css“ hned na začátku stylu. -->
+  <link rel="stylesheet" href="styl.css">
   <style>
     /* Mobile-first app shell: ~390 px is the design width, desktop only
        stretches it. Screens swap via .aktivni, animated on transform/opacity
@@ -32,14 +38,56 @@
       --pruzina: cubic-bezier(.2,.8,.3,1);
     }
     * { box-sizing: border-box; }
+
+    /* --- Srovnání se styl.css -------------------------------------------
+       Návrhový systém a tahle appka sdílejí jména tříd, ale ne vždy hodnoty.
+       Tam, kde styl.css nastavuje vlastnost, kterou appka nemá, by jeho
+       hodnota prosákla — a v tmavém režimu, který appka nepodporuje, by
+       prosákla i jeho tmavá paleta. Tady se sjednocují jen ta místa; nic
+       víc, ať je vidět, co přesně se srovnává. */
+    a { color: var(--akcent); }
+    :focus-visible { outline: 2px solid var(--akcent); outline-offset: 2px; }
+    /* Obrazovky se přepínají transition, ne animací — jinak by fill-mode
+       both přebil vjezdový stav. */
+    .obrazovka { animation: none; }
+    .obrazovka.aktivni { gap: 0.85rem; }
+    /* Seznam je tady průhledná stopa karet s mezerami, ne jedna ohraničená
+       bílá krabice. */
+    .seznam { background: none; border: 0; border-radius: 0; overflow: visible; }
+    .prazdno { display: block; }
+    /* Kostra se bere ze styl.css včetně animace, jen v tónech téhle appky —
+       jinak by v tmavém režimu prohlížeče probleskla tmavě na světlém. */
+    .kostra {
+      background-image: linear-gradient(90deg,
+        var(--plocha-2) 25%, var(--plocha) 50%, var(--plocha-2) 75%);
+    }
+    .pole label { font-size: 0.88rem; font-weight: 600; }
+    .pole .napoveda { font-size: 0.75rem; color: var(--inkoust-3); }
+    .pole textarea {
+      min-height: 4.5rem; padding: 0.6rem 0.9rem;
+      border: 1px solid var(--okraj-2); border-radius: var(--r-m);
+      background: var(--plocha); color: var(--inkoust);
+    }
+    /* Štítek jde do termální tiskárny — verzálky a zmenšené písmo z
+       návrhového systému by se na 100×50 mm nevešly. */
+    .stitek {
+      font-size: initial; font-weight: normal;
+      text-transform: none; letter-spacing: normal;
+    }
+
     /* Several panels are toggled with the hidden attribute, and a class that
        sets display would otherwise out-specify the UA rule. */
     [hidden] { display: none !important; }
     /* Role gating. Two switches on <body> so that buttons rendered later from
-       a template are covered without anyone remembering to gate them. */
+       a template are covered without anyone remembering to gate them.
+       The subscription uses the same trick and the same .jen-zapis hook:
+       an expired account is, in the app, a read-only account. */
     body.jen-cteni .jen-zapis { display: none !important; }
+    body.bez-predplatneho .jen-zapis { display: none !important; }
     body:not(.spravce) .jen-spravce { display: none !important; }
     body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
+    body:not(.bez-predplatneho) .bez-predplatneho-zprava { display: none !important; }
+    body.spravce .jen-mechanik-zprava { display: none !important; }
     html, body { height: 100%; }
     body {
       /* Deliberately one flat page tone: both the sticky header and the
@@ -237,9 +285,13 @@
     .lista button[aria-current="page"] { color: var(--akcent); background: var(--akcent-jemny); }
 
     footer { text-align: center; padding: 0.45rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
-      font-size: 0.75rem; background: var(--plocha); }
+      font-size: 0.75rem; background: var(--plocha); color: var(--inkoust-3);
+      line-height: 1.9; }
     body.prihlasen footer { padding-top: 0; background: rgba(255,255,255,.94); }
-    footer a { color: var(--inkoust-3); text-decoration: none; }
+    /* Čtyři právní odkazy se na 390 px nevejdou na řádek; zalomí se a každý
+       zůstane samostatným dotykovým cílem. */
+    footer a { color: var(--inkoust-3); text-decoration: none;
+      display: inline-block; padding: 0.15rem 0.1rem; }
 
     /* Tiles on the home screen: the two reports the subscription renews for.
        The soft disc bleeding out of the corner is what stops them looking
@@ -302,6 +354,7 @@
       font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2rem;
       font-size: 1.02rem;
     }
+    .polozka .sipka { font-size: 1.3rem; color: var(--inkoust-3); align-self: center; }
     .polozka .misto { font-size: 1.06rem; letter-spacing: 0.01em; }
     .polozka .pozn { font-weight: 400; color: var(--inkoust-2); }
 
@@ -389,6 +442,35 @@
     }
     .vyber input[type=checkbox] { margin: 0; }
     .vyber label { min-height: 44px; display: flex; align-items: center; font-weight: 500; }
+    .vyber.stoji { align-items: flex-start; }
+    .vyber.stoji label { min-height: auto; padding: 0.55rem 0; font-size: 0.88rem; font-weight: 500; }
+
+    /* ---------------- Předplatné ----------------
+       Stav účtu je jedno číslo — kolik dní zbývá — a to je na téhle
+       obrazovce ta největší věc. Pruh na Dnes je tatáž .hlaska, jen
+       klikací, aby se ze stavu dalo jedním klepnutím dojít sem. */
+    .pruh {
+      width: 100%; text-align: left; box-shadow: none;
+      min-height: 44px; font-weight: 600;
+    }
+    .pruh:active { transform: scale(0.995); box-shadow: none; }
+    /* Drží se krátké (počet dní, „Skončilo“) — datum jde na řádek pod ním,
+       aby na 390 px nikdy nevzniklo vodorovné přetečení. */
+    .velke-cislo {
+      font-size: 2.6rem; font-weight: 700; line-height: 1.05; color: var(--akcent);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
+    }
+    .velke-cislo.hori { color: var(--pozor); }
+    .velke-cislo.stop { color: var(--chyba); }
+    .cena-radek {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 0.5rem; padding-top: 0.35rem;
+    }
+    .cena-radek .castka {
+      font-size: 1.5rem; font-weight: 700; color: var(--inkoust);
+      font-variant-numeric: tabular-nums;
+    }
 
     .prazdno {
       padding: 1.5rem 1rem; text-align: center; color: var(--inkoust-2); font-size: 0.92rem;
@@ -533,6 +615,10 @@
       <div class="hlavicka">
         <h1 id="dnes-titulek">Dnes</h1>
       </div>
+      <!-- Vykresluje se jen když je co říct: do 14 dnů před koncem, nebo po
+           něm. Dokud stav není znám, zůstává skrytý — připomínka předplatného
+           nesmí stát v cestě ranní práci. -->
+      <button id="pruh-predplatne" class="hlaska pruh" hidden></button>
       <div class="pole">
         <label for="hledani-dnes" class="tisene">Najít sadu</label>
         <input id="hledani-dnes" type="search" enterkeyhint="search" autocomplete="off"
@@ -885,12 +971,23 @@
         <div class="radky">
           <div><span class="klic">Přihlášen</span><span class="hodnota" id="ucet-email"></span></div>
           <div><span class="klic">Oprávnění</span><span class="hodnota" id="nast-role"></span></div>
-          <div><span class="klic">Tarif</span><span class="hodnota" id="nast-plan"></span></div>
           <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno"></span></div>
         </div>
       </div>
+      <!-- Tarif byl dřív jen řádek s textem. Teď je to cesta na obrazovku,
+           kde se dá předplatné i objednat — proto celý klikací řádek. -->
+      <button class="polozka radkova" id="nast-predplatne">
+        <span class="rostouci">
+          <span class="radek1"><span class="jmeno"><strong>Předplatné</strong></span></span>
+          <span class="detail" id="nast-plan">—</span>
+        </span>
+        <span class="sipka" aria-hidden="true">›</span>
+      </button>
       <p class="hlaska varovani jen-cteni-zprava">Máte přístup jen pro čtení.
       Zapisovat sady a objednávky může mechanik nebo správce.</p>
+      <p class="hlaska chyba bez-predplatneho-zprava">Předplatné skončilo, appka je
+      v režimu čtení: evidenci i pozice ve skladu vidíte dál a data můžete kdykoli
+      stáhnout, ale zapisovat nové sady a objednávky nejde. Obnovit ho můžete níže.</p>
 
       <h2>Návod</h2>
       <p class="maly">Krátké provedení appkou — co se kde dělá a jak to funguje.
@@ -937,7 +1034,7 @@
         <input id="nast-soubezne" type="number" inputmode="numeric" min="1" max="20" value="1">
         <span class="napoveda">Při překročení vás appka upozorní, že máte plno.</span></div>
 
-      <button id="nast-ulozit">Uložit nastavení</button>
+      <button class="jen-zapis" id="nast-ulozit">Uložit nastavení</button>
       <div id="nast-zprava" class="zprava" aria-live="polite"></div>
 
       <div id="nast-tym-blok">
@@ -963,8 +1060,8 @@
       <h2>Ukázková data</h2>
       <p class="maly">Naplní účet vymyšlenými zákazníky a sadami, abyste si appku
       mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
-      <button class="tiche" id="nast-ukazka-naplnit">Naplnit ukázkovými daty</button>
-      <button class="tiche" id="nast-ukazka-smazat">Smazat ukázková data</button>
+      <button class="tiche jen-zapis" id="nast-ukazka-naplnit">Naplnit ukázkovými daty</button>
+      <button class="tiche jen-zapis" id="nast-ukazka-smazat">Smazat ukázková data</button>
       </div>
 
       <h2>Vaše data</h2>
@@ -973,6 +1070,109 @@
       <button class="varovne" id="smazat-ucet">Smazat účet a všechna data</button>
       <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
       <div class="dno"></div>
+    </section>
+
+    <!-- --------------------------- Předplatné ---------------------------- -->
+    <section id="obrazovka-predplatne" class="obrazovka">
+      <div class="hlavicka">
+        <button class="zpet" data-zpet aria-label="Zpět">‹</button>
+        <h1>Předplatné</h1>
+      </div>
+
+      <div id="pred-kostra" class="stoh" hidden aria-hidden="true">
+        <div class="kostra" style="height: 7rem"></div>
+        <div class="kostra" style="height: 5rem"></div>
+        <div class="kostra" style="height: 9rem"></div>
+      </div>
+
+      <div id="pred-prazdno" class="prazdno" hidden>
+        Stav předplatného se nepodařilo zjistit. Zkontrolujte prosím připojení.
+        <button class="tiche plna-sirka" id="pred-znovu">Zkusit znovu</button>
+      </div>
+
+      <div id="pred-obsah" class="stoh" hidden>
+        <div class="karta" id="pred-karta">
+          <p class="tisene">Stav účtu</p>
+          <div class="velke-cislo" id="pred-cislo">—</div>
+          <p class="maly" id="pred-podtitulek"></p>
+          <div class="odsazene-nad-male"><span class="znacka" id="pred-znacka">—</span></div>
+          <p class="maly odsazene-nad-male" id="pred-veta"></p>
+        </div>
+
+        <div class="karta">
+          <div class="radky">
+            <div><span class="klic">Uskladněné sady</span>
+              <span class="hodnota" id="pred-sad">—</span></div>
+            <div><span class="klic">Zákazníci v evidenci</span>
+              <span class="hodnota" id="pred-zakazniku">—</span></div>
+          </div>
+        </div>
+
+        <h2>Ceník</h2>
+        <p class="maly">Cena je za celou provozovnu, ne za mechanika.
+        Ve zkušebním období neplatíte nic.</p>
+        <div class="pole">
+          <label>Varianta</label>
+          <div class="chipy" id="pred-varianty" role="group" aria-label="Varianta předplatného"></div>
+          <span class="napoveda" id="pred-varianta-popis"></span>
+        </div>
+        <div class="pole">
+          <label>Délka předplatného</label>
+          <div class="chipy" id="pred-delka" role="group" aria-label="Délka předplatného">
+            <button data-mesice="1" aria-pressed="false">1 měsíc</button>
+            <button data-mesice="3" aria-pressed="false">3 měsíce</button>
+            <button data-mesice="6" aria-pressed="true">6 měsíců</button>
+            <button data-mesice="12" aria-pressed="false">12 měsíců</button>
+          </div>
+        </div>
+
+        <p class="hlaska varovani jen-mechanik-zprava">Předplatné objednává správce
+        účtu. Ceník vidíte, objednávku odešle kolega se správcovským oprávněním.</p>
+
+        <div class="jen-spravce stoh">
+        <h2>Objednávka</h2>
+        <div class="pole">
+          <label for="pred-fakturace">Fakturační údaje</label>
+          <textarea id="pred-fakturace" rows="4"
+            placeholder="Název nebo jméno, adresa, IČO a DIČ (máte-li)"></textarea>
+          <span class="napoveda">Podle nich vám provozovatel vystaví fakturu.</span>
+        </div>
+        <div class="vyber">
+          <input type="checkbox" id="pred-spotrebitel">
+          <label for="pred-spotrebitel">Objednávám jako spotřebitel (ne na firmu)</label>
+        </div>
+        <!-- Jen pro spotřebitele a záměrně samostatně: § 1837 písm. l)
+             vyžaduje výslovný souhlas, ne odvozený z odeslání objednávky. -->
+        <div class="vyber stoji" id="pred-souhlas-blok" hidden>
+          <input type="checkbox" id="pred-souhlas">
+          <label for="pred-souhlas">Žádám, aby placená služba začala hned, před uplynutím
+          14denní lhůty pro odstoupení. Beru na vědomí, že po jejím úplném poskytnutí
+          právo odstoupit nemám (§ 1837 písm. l) občanského zákoníku).</label>
+        </div>
+
+        <div class="karta">
+          <div class="cena-radek">
+            <span class="klic">Celkem k úhradě</span>
+            <span class="castka" id="pred-cena">—</span>
+          </div>
+          <p class="maly" id="pred-cena-rozpis"></p>
+        </div>
+        <p class="maly">Odesláním objednávky souhlasíte s
+        <a href="podminky.html">obchodními podmínkami</a> a berete na vědomí
+        <a href="zasady.html">zásady zpracování údajů</a>. Platí se převodem
+        na fakturu, aplikace peníze nepřijímá.</p>
+
+        <div id="pred-zprava" class="zprava" aria-live="polite"></div>
+        </div>
+
+        <h2 id="pred-historie-nadpis" hidden>Objednávky provozovny</h2>
+        <div id="pred-historie" class="seznam"></div>
+        <div class="dno"></div>
+      </div>
+
+      <div class="dolni-akce jen-spravce" id="pred-akce" hidden>
+        <button id="pred-objednat">Objednávka zavazující k platbě</button>
+      </div>
     </section>
   </main>
 
@@ -989,7 +1189,12 @@
       <span class="glyf" aria-hidden="true">⚙</span>Nastavení</button>
   </nav>
 
-  <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
+  <footer>
+    <a href="zasady.html">Zásady zpracování údajů</a> ·
+    <a href="podminky.html">Obchodní podmínky</a> ·
+    <a href="zpracovatelska-smlouva.html">Zpracovatelská smlouva</a> ·
+    <a href="odstoupeni-formular.html">Odstoupení od smlouvy</a>
+  </footer>
 
   <div class="navod" id="navod" hidden role="dialog" aria-modal="true"
        aria-labelledby="navod-titulek">
@@ -1026,8 +1231,28 @@
     const HLAVNI = ["obrazovka-dnes", "obrazovka-sklad", "obrazovka-zakaznici",
                     "obrazovka-objednavky", "obrazovka-nastaveni"];
 
+    /* Schválený ceník, opsaný a nic dopočítaného navíc: cena je měsíční,
+       za celou provozovnu. Součet pod tlačítkem je prostý násobek měsíců —
+       objednávka zavazující k platbě musí ukázat celkovou částku.
+       Jediný zdroj cen ve stránce; server má tentýž seznam v
+       functions/api/objednavka.js a částku na objednávce určuje on. */
+    window.CENIK = {
+      mena: "Kč",
+      varianty: [
+        { klic: "solo", nazev: "Sólo", mesic: 89, popis: "Pro jednoho mechanika." },
+        { klic: "zaklad", nazev: "Základ", mesic: 129, vychozi: true,
+          popis: "Do 2 mechaniků. Evidence uskladněných pneu s tiskem štítků na "
+               + "vlastní tiskárně, objednávkový kalendář s připomínkou pro "
+               + "zákazníky, přihlášení pro mechaniky." },
+        { klic: "tym", nazev: "Tým", mesic: 249, popis: "Pro větší tým." },
+      ],
+    };
+    const VARIANTY = window.CENIK.varianty;
+
     const stav = {
       nastaveni: null,
+      predplatne: null,
+      objednavka: { varianta: "zaklad", mesice: 6 },
       sada: null,
       zakaznik: null,
       pohyby: [],
@@ -1123,7 +1348,15 @@
         headers: telo ? { "Content-Type": "application/json" } : undefined,
         body: telo ? JSON.stringify(telo) : undefined,
       });
-      return { ok: odpoved.ok, data: await odpoved.json().catch(() => ({})) };
+      const data = await odpoved.json().catch(() => ({}));
+      // 402 = předplatné skončilo. Server o tom ví dřív než stránka (mohlo
+      // vypršet s appkou otevřenou), tak se stav rovnou srovná a produktová
+      // tlačítka zmizí. Hlášku zobrazí volající místo, jako každou jinou.
+      if (odpoved.status === 402 && data.predplatne) {
+        stav.predplatne = data.predplatne;
+        vykresliPredplatne();
+      }
+      return { ok: odpoved.ok, data };
     }
 
     // ----------------------------------------------------------- navigation
@@ -2281,9 +2514,6 @@
       if (!n) return;
       $("ucet-email").textContent = n.email;
       $("nast-role").textContent = NAZVY_ROLI[n.role] || n.role;
-      $("nast-plan").textContent = n.plan === "zkusebni"
-        ? `Zkušební období — zbývá ${n.zkusebni_zbyva_dnu} dní`
-        : "Předplatné";
       $("nast-uskladneno").textContent = n.limit_sad
         ? `${n.uskladneno} z ${n.limit_sad} sad`
         : `${n.uskladneno} sad`;
@@ -2299,6 +2529,8 @@
       chipy($("nast-format"), "format", n.format_stitku);
       vykresliFormatNapovedu(n.format_stitku);
       uplatniOpravneni();
+      if (n.predplatne) stav.predplatne = n.predplatne;
+      vykresliPredplatne();
     }
 
     // What to set where. Browser print dialogs default to a margin and to
@@ -2339,6 +2571,207 @@
     function muzePsat() {
       return !stav.nastaveni || stav.nastaveni.role !== "cteni";
     }
+
+    // --------------------------------------------------------- Subscription
+    // Jeden render pro tři místa: pruh na Dnes, řádek v Nastavení a celá
+    // obrazovka Předplatné. Volá se po každé odpovědi, která stav nese
+    // (/api/ja, /api/nastaveni) i po 402 — tak se nemůžou rozejít.
+    const PRED_VETY = {
+      zkusebni: "Zkušební období běží. Zapisovat můžete jako obvykle; "
+        + "předplatné si objednejte, než doba vyprší.",
+      aktivni: "Předplatné je aktivní. Appka funguje bez omezení.",
+      vyprselo: "Předplatné skončilo. Evidenci máte dál k nahlédnutí i k "
+        + "vyhledávání, ale nové sady a objednávky zapsat nejde. "
+        + "Po obnovení se vše vrátí — data zůstávají vaše.",
+    };
+
+    function mesicu(n) {
+      if (n === 1) return "1 měsíc";
+      if (n >= 2 && n <= 4) return `${n} měsíce`;
+      return `${n} měsíců`;
+    }
+
+    function dnu(n) {
+      return n === 1 ? "1 den" : (n >= 2 && n <= 4 ? `${n} dny` : `${n} dní`);
+    }
+
+    function vykresliPredplatne() {
+      const p = stav.predplatne;
+      const vyprselo = !!p && p.stav === "vyprselo";
+      document.body.classList.toggle("bez-predplatneho", vyprselo);
+
+      // --- pruh na Dnes: jen když je co říct ---
+      const pruh = $("pruh-predplatne");
+      const konci = !!p && p.stav !== "vyprselo" && p.dni_zbyva <= 14;
+      pruh.hidden = !p || (!vyprselo && !konci);
+      if (!pruh.hidden) {
+        pruh.className = vyprselo ? "hlaska pruh chyba" : "hlaska pruh varovani";
+        pruh.textContent = vyprselo
+          ? "Předplatné skončilo — appka je v režimu čtení. Klepněte pro obnovení."
+          : `${p.stav === "zkusebni" ? "Zkušební období" : "Předplatné"} končí za `
+            + `${dnu(p.dni_zbyva)}. Klepněte pro objednání.`;
+      }
+
+      // --- řádek v Nastavení ---
+      const radek = $("nast-plan");
+      if (!p) {
+        radek.textContent = "—";
+      } else if (p.stav === "aktivni") {
+        radek.textContent = `Aktivní do ${datumCesky(p.plati_do)}`;
+      } else if (p.stav === "zkusebni") {
+        radek.textContent = `Zkušební období — zbývá ${dnu(p.dni_zbyva)}`;
+      } else {
+        radek.textContent = `Skončilo ${datumCesky(p.plati_do || p.zkusebni_do)}`;
+      }
+
+      // --- obrazovka ---
+      $("pred-kostra").hidden = true;
+      $("pred-prazdno").hidden = !!p;
+      $("pred-obsah").hidden = !p;
+      $("pred-akce").hidden = !p;
+      if (!p) return;
+
+      // Největší věc na obrazovce je počet dní. Datum je pod ním na vlastním
+      // řádku — dlouhý řetězec ve 2,6 rem by se na 390 px nevešel.
+      const cislo = $("pred-cislo");
+      const znacka = $("pred-znacka");
+      const podtitulek = $("pred-podtitulek");
+      if (p.stav === "aktivni") {
+        cislo.textContent = dnu(p.dni_zbyva);
+        cislo.className = p.dni_zbyva <= 14 ? "velke-cislo hori" : "velke-cislo";
+        podtitulek.textContent = `Zaplaceno do ${datumCesky(p.plati_do)}`;
+        znacka.textContent = "Aktivní";
+        znacka.className = "znacka uspech";
+      } else if (p.stav === "zkusebni") {
+        cislo.textContent = dnu(p.dni_zbyva);
+        cislo.className = p.dni_zbyva <= 14 ? "velke-cislo hori" : "velke-cislo";
+        podtitulek.textContent = `Zkušební období do ${datumCesky(p.zkusebni_do)}`;
+        znacka.textContent = "Zkušební období";
+        znacka.className = "znacka pozor";
+      } else {
+        cislo.textContent = "Skončilo";
+        cislo.className = "velke-cislo stop";
+        podtitulek.textContent = datumCesky(p.plati_do || p.zkusebni_do);
+        znacka.textContent = "Režim čtení";
+        znacka.className = "znacka vydano";
+      }
+      $("pred-veta").textContent = PRED_VETY[p.stav] || "";
+
+      const n = stav.nastaveni;
+      $("pred-sad").textContent = n ? String(n.uskladneno) : "—";
+      $("pred-zakazniku").textContent = n && n.zakazniku != null
+        ? String(n.zakazniku) : "—";
+
+      vykresliCenik();
+    }
+
+    function vykresliCenik() {
+      const vybrana = stav.objednavka.varianta;
+      $("pred-varianty").innerHTML = VARIANTY.map((v) => `
+        <button data-varianta="${v.klic}" aria-pressed="${v.klic === vybrana}">
+          ${bezpecne(v.nazev)} · ${v.mesic} ${bezpecne(window.CENIK.mena)}/měs.
+        </button>`).join("");
+      $("pred-varianty").querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () => {
+          stav.objednavka.varianta = b.dataset.varianta;
+          vykresliCenik();
+        }));
+
+      const v = VARIANTY.find((x) => x.klic === vybrana) || VARIANTY[0];
+      $("pred-varianta-popis").textContent = v.popis;
+      chipy($("pred-delka"), "mesice", String(stav.objednavka.mesice));
+
+      // Celková cena PŘED tlačítkem — prostý násobek, žádné slevy navíc.
+      const celkem = v.mesic * stav.objednavka.mesice;
+      $("pred-cena").textContent = `${celkem} ${window.CENIK.mena}`;
+      // Žádná věta o DPH: dokud provozovatel neuvede svůj daňový režim
+      // v podmínkách, odkazovat u zavazujícího tlačítka na dokument, který
+      // to neříká, je horší než mlčet.
+      $("pred-cena-rozpis").textContent =
+        `${v.nazev} · ${v.mesic} ${window.CENIK.mena}/měsíc × `
+        + `${mesicu(stav.objednavka.mesice)} za celou provozovnu.`;
+    }
+
+    $("pred-delka").querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        stav.objednavka.mesice = Number(b.dataset.mesice);
+        vykresliCenik();
+      }));
+
+    // Souhlas podle § 1837 l dává smysl jen spotřebiteli — firmě se
+    // 14denní lhůta netýká, tak se jí ani nenabízí.
+    $("pred-spotrebitel").addEventListener("change", () => {
+      const jeSpotrebitel = $("pred-spotrebitel").checked;
+      $("pred-souhlas-blok").hidden = !jeSpotrebitel;
+      if (!jeSpotrebitel) $("pred-souhlas").checked = false;
+    });
+
+    async function otevriPredplatne() {
+      jdi("obrazovka-predplatne");
+      zprava("pred-zprava", "");
+      if (!stav.predplatne) {
+        $("pred-kostra").hidden = false;
+        $("pred-prazdno").hidden = true;
+        $("pred-obsah").hidden = true;
+        $("pred-akce").hidden = true;
+        await nactiUcet();
+      }
+      vykresliPredplatne();
+      nactiObjednavkyPredplatneho();
+    }
+
+    async function nactiObjednavkyPredplatneho() {
+      const { ok, data } = await api("/api/objednavka", "GET");
+      const seznam = $("pred-historie");
+      const objednavky = (ok && data.objednavky) || [];
+      $("pred-historie-nadpis").hidden = objednavky.length === 0;
+      const STAVY = {
+        nova: "Přijata, čeká na fakturu", fakturovana: "Vystavena faktura",
+        zaplacena: "Zaplaceno", zrusena: "Zrušena",
+      };
+      seznam.innerHTML = objednavky.map((o) => `
+        <div class="polozka radkova tlumena">
+          <span class="rostouci">
+            <span class="radek1"><span class="jmeno">Objednávka č. ${o.id}</span></span>
+            <span class="detail">${bezpecne(o.varianta || "")} · ${mesicu(o.mesice)}
+            · ${bezpecne(STAVY[o.stav] || o.stav)}</span>
+          </span>
+          <span class="cas">${o.cena_czk ? `${o.cena_czk} ${bezpecne(window.CENIK.mena)}` : ""}</span>
+        </div>`).join("");
+    }
+
+    $("pred-objednat").addEventListener("click", async () => {
+      const tlacitko = $("pred-objednat");
+      const fakturace = $("pred-fakturace").value.trim();
+      const spotrebitel = $("pred-spotrebitel").checked;
+      if (fakturace.length < 3) {
+        return zprava("pred-zprava",
+          "Vyplňte prosím fakturační údaje — bez nich nelze vystavit fakturu.", true);
+      }
+      const v = VARIANTY.find((x) => x.klic === stav.objednavka.varianta) || VARIANTY[0];
+      tlacitko.disabled = true;
+      zprava("pred-zprava", "Odesíláme objednávku…");
+      // Posílá se jen klíč varianty — částku určuje server podle téhož
+      // schváleného ceníku, aby cena na objednávce nepocházela z prohlížeče.
+      const { ok, data } = await api("/api/objednavka", "POST", {
+        mesice: stav.objednavka.mesice,
+        varianta: v.klic,
+        fakturace,
+        spotrebitel,
+        souhlas_zahajeni: spotrebitel && $("pred-souhlas").checked,
+      });
+      tlacitko.disabled = false;
+      if (!ok) return zprava("pred-zprava", data.chyba || "Objednávku se nepodařilo odeslat.", true);
+      zprava("pred-zprava",
+        `Objednávka č. ${data.id} je u nás. Fakturu vám pošleme e-mailem; `
+        + "po zaplacení se zaplacené období objeví tady.");
+      $("pred-fakturace").value = "";
+      nactiObjednavkyPredplatneho();
+    });
+
+    $("pred-znovu").addEventListener("click", otevriPredplatne);
+    $("nast-predplatne").addEventListener("click", otevriPredplatne);
+    $("pruh-predplatne").addEventListener("click", otevriPredplatne);
 
     $("nast-format").querySelectorAll("button").forEach((b) =>
       b.addEventListener("click", () => {
@@ -2624,7 +3057,10 @@
     // ------------------------------------------------------------- Bootstrap
     async function nactiUcet() {
       const { ok, data } = await api("/api/nastaveni", "GET");
-      if (ok) stav.nastaveni = data;
+      if (ok) {
+        stav.nastaveni = data;
+        if (data.predplatne) stav.predplatne = data.predplatne;
+      }
       return ok;
     }
 
@@ -2637,6 +3073,10 @@
           return;
         }
         document.body.classList.add("prihlasen");
+        // Předplatné jede s /api/ja, takže režim čtení platí od prvního
+        // vykreslení a ne až po dotazu na nastavení.
+        if (data.predplatne) stav.predplatne = data.predplatne;
+        vykresliPredplatne();
         await nactiUcet();
         vykresliNastaveni();
         history.replaceState({ obrazovka: "obrazovka-dnes" }, "");

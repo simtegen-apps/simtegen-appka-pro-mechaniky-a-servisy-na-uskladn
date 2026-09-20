@@ -11,6 +11,7 @@ import {
   denACas, epochZDataCasu, json, nactiNastaveni, objednavkaProFrontend, ocisti,
   ted, zacatekDne, DEN, OBJEDNAVKY_SELECT,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 const NAZVY_UKONU = {
   prezuti: "přezutí",
@@ -47,6 +48,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
 
   let telo;
   try {
