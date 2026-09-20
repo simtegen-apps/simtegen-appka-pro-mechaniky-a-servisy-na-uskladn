@@ -60,6 +60,25 @@ wrangler d1 execute <repo>-db --remote --command \
    FROM navstevy WHERE den >= date('now', '-30 days') GROUP BY zdroj"
 ```
 
+**Nejdřív ověřte, že se vůbec zapisuje.** Endpoint je schválně bez
+přihlášení (počítají se cizí návštěvníci) a frontend jeho odpověď
+návštěvníkovi neukazuje, takže tiché odmítnutí by se poznalo až na
+prázdné tabulce. Na náhledu se to ověří dvěma příkazy:
+
+```sh
+curl -si -X POST https://<větev>.<repo>.pages.dev/api/navsteva \
+  -H 'Content-Type: application/json' -d '{"stranka":"uvod","zdroj":"test"}'
+# čekáme: HTTP/2 200 a {"stav":"ok"} — ne 401, ne 404, ne 405
+
+wrangler d1 execute <repo>-db-nahled --remote --command \
+  "SELECT * FROM navstevy WHERE zdroj = 'test'"
+# čekáme: jeden řádek, pocet = 1
+```
+
+Když endpoint vrátí něco jiného než 200, je to v konzoli prohlížeče
+(`Návštěva se nezapsala, stav …`) — jediné místo, kde to jde poznat bez
+přístupu do databáze.
+
 `zdroj` je značka z odkazu: `https://…/?z=fb` zapíše `fb`. Používejte ji,
 když produkt někam sdílíte — jinak se nedá poznat, který kanál servisy
 přivádí, a to je podle složky kandidáta jediná otevřená otázka.

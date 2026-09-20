@@ -260,11 +260,8 @@
     .lista button[aria-current="page"] { color: var(--akcent); background: var(--akcent-jemny); }
 
     footer { text-align: center; padding: 0.45rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
-      font-size: 0.75rem; background: var(--plocha); color: var(--inkoust-3);
-      line-height: 1.9; }
+      font-size: 0.75rem; background: var(--plocha); }
     body.prihlasen footer { padding-top: 0; background: rgba(255,255,255,.94); }
-    /* Čtyři právní odkazy se na 390 px nevejdou na jeden řádek; zalomí se
-       a každý zůstane samostatným dotykovým cílem. */
     footer a { color: var(--inkoust-3); text-decoration: none;
       display: inline-block; padding: 0.15rem 0.1rem; }
 
@@ -1068,12 +1065,7 @@
       <span class="glyf" aria-hidden="true">⚙</span>Nastavení</button>
   </nav>
 
-  <footer>
-    <a href="zasady.html">Zásady zpracování údajů</a> ·
-    <a href="podminky.html">Obchodní podmínky</a> ·
-    <a href="zpracovatelska-smlouva.html">Zpracovatelská smlouva</a> ·
-    <a href="odstoupeni-formular.html">Odstoupení od smlouvy</a>
-  </footer>
+  <footer><a href="zasady.html">Zásady zpracování údajů</a></footer>
 
   <div class="navod" id="navod" hidden role="dialog" aria-modal="true"
        aria-labelledby="navod-titulek">
@@ -1114,18 +1106,27 @@
        a platí za celou provozovnu, ne za mechanika. Jediné místo v appce,
        kde je částka — úvodní obrazovka si ji odtud bere, aby v HTML
        neležela číslice, kterou by někdo zapomněl srovnat s ceníkem.
-       Platba zatím běží mimo aplikaci (po zkušebním období se ozveme),
-       takže tady není žádný výpočet ani objednávkové tlačítko. */
+       Platba běží mimo aplikaci (po zkušebním období se ozveme), takže
+       tady není žádný výpočet ani objednávkové tlačítko.
+
+       zverejnit = false znamená, že úvodní obrazovka cenu NEUKÁŽE. Je to
+       záměrná pojistka, ne nedodělek: veřejná nabídka placené služby musí
+       vedle ceny nést, kdo ji nabízí — obchodní firmu, IČO a sídlo
+       provozovatele. Ty v tomhle repozitáři zatím nikde nejsou a stavitel
+       je vyplnit nesmí, patří majiteli. Jakmile budou v data-manifest.json
+       (ico, sidlo, dic nebo „nejsme plátci DPH") a zásady se přegenerují,
+       přepne se tenhle jeden řádek na true a karta s cenou se objeví. */
     window.CENIK = {
       mena: "Kč",
+      zverejnit: false,
       varianty: [
         { klic: "solo", nazev: "Sólo", mesic: 89, popis: "jeden mechanik" },
         { klic: "zaklad", nazev: "Základ", mesic: 129, popis: "do 2 mechaniků" },
         { klic: "tym", nazev: "Tým", mesic: 249, popis: "větší tým" },
       ],
     };
-    // Drží se se ZKUSEBNI_DNU ve spolecne.js a se zkusebni_dni v manifestu,
-    // ze kterého se generují obchodní podmínky. Mění se všechna tři najednou.
+    // Drží se se ZKUSEBNI_DNU ve spolecne.js a se zkusebni_dni v manifestu.
+    // Mění se obě místa najednou, jinak úvod slibuje něco jiného, než appka dělá.
     const ZKUSEBNI_DNI = 60;
 
     const stav = {
@@ -2702,15 +2703,19 @@
 
     // -------------------------------------------------------- Úvodní obrazovka
     // Veřejná stránka produktu i přihlášení v jednom. Cena se vykresluje
-    // z window.CENIK; když by ceník chyběl, karta se nevykreslí vůbec —
-    // prázdný rám s nadpisem „Kolik to stojí“ je horší než nic.
+    // z window.CENIK, a jen když je schválená ke zveřejnění; dokud není,
+    // úvod cenu nezmiňuje a slíbí jen to, co appka umí — po zkušebním
+    // období se ozveme. Prázdný rám s nadpisem „Kolik to stojí“ je horší
+    // než nic, takže se karta v tom případě nevykreslí vůbec.
     function vykresliUvod() {
+      const cenik = window.CENIK || {};
+      const varianty = (cenik.zverejnit && cenik.varianty) || [];
+      const karta = $("uvod-cena");
       $("uvod-zkusebni").textContent =
         `Prvních ${ZKUSEBNI_DNI} dní zdarma, bez karty. Po zkušebním období `
-        + "se vám ozveme; nic se nestrhává automaticky.";
-      const cenik = window.CENIK || {};
-      const varianty = cenik.varianty || [];
-      const karta = $("uvod-cena");
+        + (varianty.length
+          ? "se vám ozveme; nic se nestrhává automaticky."
+          : "se vám ozveme s cenou; nic se nestrhává automaticky.");
       if (!varianty.length) {
         karta.hidden = true;
         return;
@@ -2734,15 +2739,19 @@
     }
 
     // Anonymní čárka: den, stránka a značka zdroje z ?z= v odkazu. Nic víc
-    // se neodesílá a odpověď nikoho nezajímá — počítadlo nesmí zdržet ani
-    // rozbít stránku, takže se chyba polyká a uživatel o něm neví.
+    // se neodesílá. Návštěvníkovi se nikdy nic neukáže — počítadlo nesmí
+    // zdržet ani rozbít stránku —, ale odmítnutí se vypíše do konzole:
+    // tiché počítadlo, které nepočítá, je horší než žádné, a tohle je
+    // jediné místo, kde to jde poznat bez přístupu do databáze.
     function zapisNavstevu(stranka) {
       const zdroj = new URLSearchParams(location.search).get("z") || "";
       fetch("/api/navsteva", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stranka, zdroj }),
-      }).catch(() => {});
+      }).then((o) => {
+        if (!o.ok) console.warn("Návštěva se nezapsala, stav", o.status, stranka);
+      }).catch((e) => console.warn("Návštěva se nezapsala:", e));
     }
 
     // ------------------------------------------------------------- Login
@@ -2809,9 +2818,12 @@
       } catch {
         // Server neodpověděl: úvod je pořád to nejlepší, co můžeme ukázat —
         // je celý ze statického HTML a nic z něj na odpovědi nezávisí.
+        // Čárka se zkusí zapsat i tady: /api/ja může selhat a /api/navsteva
+        // projít, a návštěvník, který úvod viděl, patří do čísel.
         document.body.classList.remove("prihlasen");
         vykresliUvod();
         ukaz("obrazovka-prihlaseni");
+        zapisNavstevu("uvod");
       }
     }
 
