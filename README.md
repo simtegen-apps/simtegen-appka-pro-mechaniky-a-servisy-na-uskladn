@@ -49,6 +49,58 @@ Produkční URL: `https://<název-repa>.pages.dev`, preview:
 `https://<větev>.<název-repa>.pages.dev`. Postup při úniku dat:
 `POSTUP_PRI_INCIDENTU.md`.
 
+## Kolik lidí přišlo na úvodní stránku
+
+Úvodní obrazovka je zároveň veřejná stránka produktu a počítá si dvě čísla:
+`uvod` (někdo ji otevřel nepřihlášený) a `uvod-odeslano` (zadal e-mail
+a požádal o přihlašovací odkaz). Podíl druhého k prvnímu je nálevka —
+bez něj vypadá „nikdo nepřišel“ a „přišli a odešli“ v číslech stejně,
+přitom každé z toho se řeší jinak.
+
+```sh
+wrangler d1 execute <repo>-db --remote --command \
+  "SELECT den, stranka, zdroj, pocet FROM navstevy ORDER BY den DESC, stranka"
+```
+
+Součet za poslední měsíc i s poměrem:
+
+```sh
+wrangler d1 execute <repo>-db --remote --command \
+  "SELECT zdroj, \
+     SUM(CASE WHEN stranka = 'uvod' THEN pocet ELSE 0 END) AS zobrazeni, \
+     SUM(CASE WHEN stranka = 'uvod-odeslano' THEN pocet ELSE 0 END) AS odeslano \
+   FROM navstevy WHERE den >= date('now', '-30 days') GROUP BY zdroj"
+```
+
+**Nejdřív ověřte, že se vůbec zapisuje.** Endpoint je schválně bez
+přihlášení (počítají se cizí návštěvníci) a frontend jeho odpověď
+návštěvníkovi neukazuje, takže tiché odmítnutí by se poznalo až na
+prázdné tabulce. Na náhledu se to ověří dvěma příkazy:
+
+```sh
+curl -si -X POST https://<větev>.<repo>.pages.dev/api/navsteva \
+  -H 'Content-Type: application/json' -d '{"stranka":"uvod","zdroj":"test"}'
+# čekáme: HTTP/2 200 a {"stav":"ok"} — ne 401, ne 404, ne 405
+
+wrangler d1 execute <repo>-db-nahled --remote --command \
+  "SELECT * FROM navstevy WHERE zdroj = 'test'"
+# čekáme: jeden řádek, pocet = 1
+```
+
+Když endpoint vrátí něco jiného než 200, je to v konzoli prohlížeče
+(`Návštěva se nezapsala, stav …`) — jediné místo, kde to jde poznat bez
+přístupu do databáze.
+
+`zdroj` je značka z odkazu: `https://…/?z=fb` zapíše `fb`. Používejte ji,
+když produkt někam sdílíte — jinak se nedá poznat, který kanál servisy
+přivádí, a to je podle složky kandidáta jediná otevřená otázka.
+
+Dvě věci, ať se čísla nečtou špatně: **jsou to zobrazení, ne lidé**
+(žádné cookies, takže jeden servis, který stránku otevře pětkrát, je pět
+zobrazení), a **přihlášení se nepočítá** — měří se cizí návštěvníci.
+Tabulka `navstevy` nemá `uzivatel_id`, nenese žádný osobní údaj a je proto
+v manifestu vedena pod `agregaty`, ne pod `ukladame`: v exportu účtu není
+a smazání účtu se jí netýká. Záznamy starší 24 měsíců maže endpoint sám.
 ## Jak zapsat platbu předplatného
 
 S penězi aplikace nepracuje: zákazník objedná v appce (`/api/objednavka`),

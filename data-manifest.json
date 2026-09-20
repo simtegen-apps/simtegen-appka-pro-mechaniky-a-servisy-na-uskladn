@@ -82,6 +82,8 @@
       "retence": "do smazání účtu zákazníkem; daňové doklady vede provozovatel mimo aplikaci po zákonnou dobu"
     }
   ],
+  "agregaty": ["navstevy"],
+  "agregaty_popis": "Počet zobrazení veřejné úvodní stránky a počet odeslaných žádostí o přihlašovací odkaz, sečtený po dnech a podle značky zdroje odkazu (např. „fb“, „vizitka“). Neukládáme IP adresu, identifikátor prohlížeče ani cookie a nepoužíváme žádný externí měřicí nástroj, takže z čísel nejde poznat jednotlivého člověka — jde o zobrazení, ne o návštěvníky. Záznamy mažeme po 24 měsících.",
   "sluzby_treti_strany": [
     {
       "nazev": "Cloudflare",
@@ -104,5 +106,5 @@
       "trvani": "30 dní"
     }
   ],
-  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id."
+  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id. Vyjimka jsou agregaty: tabulka uvedena v poli agregaty smi byt bez uzivatel_id, ale nesmi nest zadny osobni udaj (kontrola to hlida) a nepatri do exportu ani do smazani uctu, protoze k zadnemu uctu nepatri."
 }
