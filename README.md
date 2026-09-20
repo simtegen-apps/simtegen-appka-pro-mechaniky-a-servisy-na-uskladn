@@ -14,10 +14,22 @@ s primární instancí v EU a hotová GDPR API. Pravidla:
   účtu jsou generické právě přes něj) a záznam v `data-manifest.json`
   (`ukladame`: entita, účel, pole, retence). CI shodí build, když něco
   z toho chybí.
-- **Zásady se nikdy nepíšou ručně.** `web/zasady.html` i
-  `ZAZNAM_O_ZPRACOVANI.md` generuje `python3 vykresli_zasady.py`
-  z manifestu; CI je porovnává se skutečností. Změna dat = změna manifestu
-  = přegenerovat.
+- **Zásady se nikdy nepíšou ručně.** Celý právní balík generuje
+  `python3 vykresli_zasady.py` z manifestu — **šest souborů**:
+  `web/zasady.html`, `web/podminky.html`,
+  `web/zpracovatelska-smlouva.html`, `web/odstoupeni-formular.html`,
+  `ZAZNAM_O_ZPRACOVANI.md` a `POSTUP_PRI_INCIDENTU.md`.
+  CI je porovnává se skutečností znak po znaku.
+
+  **Před každým commitem spusť:**
+
+  ```sh
+  python3 vykresli_zasady.py && python3 kontrola_manifestu.py
+  ```
+
+  Platí to i když jsi manifest nezměnil: generátor se obnovuje ze šablony
+  a CI chce čerstvý výstup. Krok „Kontrola manifestu proti kodu“ padá na
+  exit code 1 právě tehdy, když se tohle vynechá.
 - **Ven se volá jen to, co manifest deklaruje** (`sluzby_treti_strany`).
   Frontend nevolá ven vůbec — jen vlastní `/api/`.
 - **Nasazuje se výhradně merge do `main`.** Stavitel pushuje jen větve
