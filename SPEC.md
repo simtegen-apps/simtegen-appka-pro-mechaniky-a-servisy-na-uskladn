@@ -1,66 +1,80 @@
-# Specifikace — build 3
+# Specifikace — build 7
 
-Mobilní webová appka „Pneusklad" pro malé a mobilní pneuservisy: evidence uskladněných sad pneu (zákazník, SPZ, rozměr, hloubky dezénu 4 kol, pozice v regálu), tisk štítku na štítkovací tiskárnu nebo na A4 archy, objednávkový kalendář, který plní mechanik, a obrazovka „Připravit na zítra" se seznamem kol a jejich pozic. K tomu sezónní přehled: kdo tu má kola a letos se ještě neobjednal (obvolávací seznam), které sady jsou pod 4 mm dezénu a kdo nemá zaplacené uskladnění. Postaveno na šablonové paměti (přihlášení e-mailovým odkazem, Cloudflare D1 v EU), jeden statický web/index.html s obrazovkami pro 390 px a Pages Functions bez závislostí.
+Appka Pneusklad už stojí (sklad sad, tisk štítků na Zebru i archy A4, objednávkový kalendář, „Připravit kola“ s e-mailem, sezónní přehled, tým, export a smazání účtu) — chybí jediná věc, bez které nejde naplnit kontrakt „3 platící servisy do 3 měsíců“: produkt neumí vzít peníze. Po 60 dnech zkušebního režimu appka řekne „napište nám na podporu“ (spolecne.js:172) a nikdo nenapíše, přitom vygenerované obchodní podmínky nákupní tok podrobně slibují (web/podminky.html:47-82: ceník v aplikaci, tlačítko „Objednávka zavazující k platbě“, celková cena před stiskem, platba na fakturu, zaplacené období u účtu, omezený režim, samostatný souhlas podle § 1837 písm. l). Build 6 postaví přesně tento tok — obrazovku Předplatné, objednávku sezóny nebo roku, pruh s upomínkou na Dnes, omezený režim — bez platební brány (platí se na fakturu, kterou vystaví člověk) a bez admin rozhraní; k tomu jako menší věc připomínku, která opravdu zazvoní: .ics do kalendáře v telefonu.
 
 ## Placená hodnota (proč přijde druhý nákup)
-Platí se za uloženou evidenci, která je jediné místo, kde servis ví, čí kola kde leží — a která mu dvakrát ročně vydělá (obvolávací seznam neobjednaných majitelů skladovaných kol, sady pod 4 mm k nabídce nových pneu, nezaplacené uskladnění); druhý nákup přichází sám, protože evidence 150–300 sad se ručně nikam nepřepisuje, fyzické uskladnění běží celý rok a přezouvací sezóna se opakuje každé jaro a podzim — předplatné se obnovuje, dokud servis skladuje, a tarif roste s počtem sad.
+Platí se za uloženou evidenci, ve které servis ví, čí kola leží ve které polici, kdo má zaplaceno a koho má před sezónou obvolat — a druhý nákup přijde sám, protože kola fyzicky leží v regálu dál: 30 dní před koncem zaplaceného období appka na obrazovce Dnes napíše „Předplatné končí 30. 4., v regálu máte 38 sad“ a hned vedle je tlačítko, kterým si servis koupí další sezónu.
+
+## Design (obrazovky, navigace, stavy)
+Skládá se ze stávajícího návrhového systému web/styl.css a tříd, které appka už nese (.karta, .radky, .chipy, .pole, .vyber, .dolni-akce, .zprava, .kostra, .dlazdice .cislo, .hlaska). Žádná nová barva, písmo, velikost ani obrázek.
+
+OBRAZOVKY (a největší věc na každé)
+1) Úvod (#obrazovka-prihlaseni, existuje) — největší věc: h1 a pod ním „89 Kč“. Mění se jen zdroj čísla: ceník i délka zkušebního období přicházejí z /api/ja (jedna pravda ve spolecne.js), window.CENIK a konstanta ZKUSEBNI_DNI z HTML mizí. Prázdný: bez ceníku se karta ceny nevykreslí vůbec, věta o zkušebním období zůstává mimo ni. Načítání: #obrazovka-nacitani drží scénu, úvod se nevykreslí napůl. Chyba: .zprava.chyba pod tlačítkem, česky, bez kódů. Úspěch: .zprava.uspech o odeslaném přihlašovacím odkazu.
+2) Dnes (existuje) — největší věc zůstávají dvě dlaždice s čísly (Připravit na zítra, Sezónní výzva). Nad ně přijde pruh stavu (.karta pozor), a jen když je co říct: „Zkušební období končí za 12 dní. V regálu máte 38 sad.“ / „Předplatné končí 30. 4. 2027.“ / při prošlém období .hlaska chyba „Účet je v omezeném režimu — data vidíte a stáhnete, zapisovat jde po zaplacení.“ V pruhu tlačítko „Objednat předplatné“. Prázdný stav: není co oznámit = pruh se nevykreslí (ne prázdný rám). Načítání: dlaždice drží „—“ jako dnes. Chyba: #dnes-zprava.
+3) Předplatné (#obrazovka-predplatne, NOVÁ, s tlačítkem .zpet) — největší věc: stav účtu jako číslo ve stylu .dlazdice .cislo („zbývá 12 dní“ / „zaplaceno do 30. 4. 2027“). Pod tím .chipy varianta (Sólo 89 / Základ 129 / Tým 249 Kč měsíčně za provozovnu), .chipy období (Sezóna 6 měsíců / Celý rok 12 měsíců), karta součtu („534 Kč — Sólo, 6 měsíců, od 1. 11. 2026 do 30. 4. 2027“), fakturační pole (Název, IČO, DIČ nepovinně, Adresa, E-mail pro fakturu) a .vyber se samostatným souhlasem podle § 1837 písm. l) s poučením pod ním. V .dolni-akce v dosahu palce tlačítko „Objednávka zavazující k platbě“ a pod ním p.maly „Zaplatíte na fakturu, kterou vám pošleme e-mailem.“ Na konci seznam objednávek (číslo, období, částka, Čeká na zaplacení / Zaplaceno) s možností zrušit nezaplacenou. Prázdný: „Zatím jste si nic neobjednali.“ v místě seznamu. Načítání: .kostra na stavové kartě a na seznamu. Chyba: .zprava.chyba pod tlačítkem („Doplňte prosím IČO.“, „Máte objednávku, která čeká na zaplacení.“). Úspěch: .zprava.uspech „Objednávka 26-001 přijata. Fakturu pošleme na servis@email.cz.“ a nový řádek v seznamu.
+4) Nastavení (existuje) — řádek „Tarif“ se stává klepatelným a vede na Předplatné; v omezeném režimu nahoře .hlaska varovani s tím, co jde a co nejde. Ostatní stavy beze změny.
+5) Příprava (existuje) — vedle „Poslat si seznam e-mailem“ druhé tiché tlačítko „Připomínka do kalendáře“: stáhne .ics s událostí v 18:00 den před vybraným dnem, s VALARM na čas události a s kódy sad i pozicemi v popisu. Bez objednávek je tlačítko skryté (prázdný stav obrazovky zůstává jako dnes), chyba se hlásí v #pripr-zprava.
+
+NAVIGACE (max 3 klepnutí k hlavní hodnotě) — spodní lišta zůstává beze změny (Dnes, Sklad, Zákazníci, Objednávky, Nastavení). Předplatné do lišty nepřidáváme: vede na něj pruh na Dnes (1 klepnutí) nebo Nastavení → Tarif (2 klepnutí). Hlavní hodnota je nedotčená: Dnes → „+ Nová sada“ → hotovo = 2 klepnutí, tisk štítku z téže obrazovky.
+
+OMEZENÝ REŽIM — body.omezeno recykluje existující pravidlo „body.jen-cteni .jen-zapis { display: none }“, takže zapisovací tlačítka zmizí na všech obrazovkách jediným přepínačem a nikde nezůstane tlačítko, které skončí chybou. Výdej sady, označení zaplaceného uskladnění a úpravy zůstávají povolené — kola jsou majetek motoristy a nesmí být rukojmí nezaplacené faktury.
 
 ## Plán
-1. Manifest a zásady: vyplnit `produkt` a `kontakt_email`, přidat 5 entit do `ukladame` (nastaveni_servisu, zakaznici, sady, pohyby, objednavky) s retencí, rozšířit `ucel` u Resendu na „přihlašovací odkaz a odeslání seznamu přípravy na zítra". Spustit `python3 vykresli_zasady.py`, commitnout `web/zasady.html` + `ZAZNAM_O_ZPRACOVANI.md`, ověřit `kontrola_manifestu.py`.
-2. Migrace `db/migrace/0002_pneusklad.sql` — 5 tabulek, každá se sloupcem `uzivatel_id` ve stejném `;`-příkazu jako CREATE TABLE (jinak spadne CI), časy jako unix INTEGER.
-3. Sdílené helpery do `spolecne.js`: `dnesniPolnoc()`, `zacatekDne()`, `novyKodSady()` (čítač `posledni_cislo` v nastaveni_servisu, batch UPDATE+SELECT), `nactiNastaveni()` (vytvoří výchozí řádek), `uklid()` (retence, voláno z overeni.js jako u odkazů a relací), `hlidacLimitu()` (zkušební strop 40 sad → 403).
-4. API sklad: `functions/api/sady.js` (GET seznam + hledání `?q=` v kódu/SPZ/jméně/telefonu, POST nová sada → vrací kód), `functions/api/sady/[id].js` (GET detail se zákazníkem a pohyby, POST úprava + akce vydat/presunout/zaplaceno, každá zapíše řádek do `pohyby`).
-5. API zákazníci: `functions/api/zakaznici.js` (GET `?q=` našeptávač, POST nový, POST smazat).
-6. API objednávky: `functions/api/objednavky.js` (GET `?od=&do=`, POST nová), `functions/api/objednavky/[id].js` (POST hotovo/zruseno/pripraveno).
-7. API příprava a přehled: `functions/api/priprava.js` (GET zítřejší objednávky spojené se sadami a pozicemi; POST pošli seznam e-mailem na adresu účtu přes už deklarovaný Resend), `functions/api/prehled.js` (počty, sady bez objednávky v sezóně, sady pod 4 mm, nezaplacené).
-8. API nastavení: `functions/api/nastaveni.js` (GET/POST — údaje servisu na štítek, formát štítku, výchozí cena, stav zkušebního období).
-9. Frontend skelet: do `web/index.html` obrazovky Dnes / Hledat / Nová sada / Detail sady / Objednávky / Nová objednávka / Připravit na zítra / Sezónní přehled / Nastavení podle šablonového patternu `.obrazovka`+`.aktivni`, dolní lišta se 4 ikonami, spodní akční tlačítko v dosahu palce, zpět přes `history.pushState` (žádný router, žádné závislosti).
-10. Frontend toky: průvodce novou sadou ve 4 krocích (zákazník → vozidlo a pneu → hloubky dezénu velkými dotykovými čísly → pozice a cena, zapisuje se až na konci), hledání s debounce 250 ms a přátelské k USB/BT čtečce, detail sady s akcemi, kalendář po dnech, checklist přípravy, přehled, nastavení. Barvy a komponenty výhradně z tokenů šablony (`--akcent #10504b`, `.karta`, `.zprava`, tlačítka min 48 px).
-11. Frontend štítek: `vykresliCode39()` do inline SVG (~40 řádků čistého JS, žádná knihovna), skrytý tiskový blok, injektovaný `@page { size: 100mm 50mm }` pro roli termální tiskárny a `size: A4` pro mřížku 3×8 (70×37 mm) samolepících archů, `window.print()`; tlačítko na detailu sady i na konci průvodce, „Tisknout vybrané" pro dávku.
-12. Demo data: v Nastavení „Naplnit ukázkovými daty" (12 sad, 6 zákazníků, 4 objednávky, 2 z nich na zítra) a „Smazat ukázková data", deterministicky na serveru — demo u zákazníka nula nesmí začínat prázdnou obrazovkou.
-13. Kontrola a nasazení: `python3 kontrola_manifestu.py`, ruční průchod na telefonu podle sekce validation, push do `build/pneusklad-v1`, kontrola náhledu, pak merge do main.
-14. Po demu (mimo v1, v tomto pořadí): platební brána s deklarací v manifestu → veřejný objednávkový odkaz pro motoristy → sdílený účet pro druhého mechanika → připomínky motoristům.
+1. db/migrace/0007_predplatne.sql — tabulka `predplatne` (0006 je poslední, migrace jsou append-only): id, uzivatel_id REFERENCES uzivatele ON DELETE CASCADE, cislo, varianta, mesicu, cena_mesic, cena_celkem, stav (nova|zaplacena|zrusena), souhlas_plneni, fakt_nazev/fakt_ico/fakt_dic/fakt_adresa/fakt_email jako snímek objednávky, plati_od, plati_do, vytvoreno, zaplaceno, UNIQUE(uzivatel_id, cislo), index (uzivatel_id, plati_do). uzivatel_id je uvnitř téhož CREATE TABLE (žádné ALTER), takže export i smazání účtu tabulku berou generikou. Žádný nový sloupec jinde: „zaplaceno do“ se dopočítává jako MAX(plati_do) u řádků stav='zaplacena', aby nemohlo odjet od skutečnosti.
+2. spolecne.js — CENIK (měna + schválené varianty 89/129/249 Kč měsíčně za provozovnu), OBDOBI = [{sezona, 6}, {rok, 12}], DPH_POPIS = "" (zrcadlí klíč manifestu), noveCisloObjednavky() ve tvaru RR-NNN po servisech, stavPredplatneho(env, id) → {stav: partner|placeno|zkusebni|omezeno, placene_do, varianta, zkusebni_do, zbyva_dnu}; zkontrolujLimit() přepsaná nad tímto stavem (placeno a partner bez limitu, zkusebni 40 sad jako dnes, omezeno česká věta s odkazem na obrazovku Předplatné). nastaveni_servisu.plan zůstává a dostává jediný nový význam: ruční hodnota 'partner' = účet bez limitů a bez upomínek (zákazník nula, ukázky).
+3. functions/api/ja.js — k `prihlasen` přidat cenik, obdobi, zkusebni_dni a dph_popis, aby úvodní obrazovka ani appka neměly vlastní číslici. Boot už na /api/ja čeká, žádný nový požadavek nevzniká.
+4. functions/api/predplatne.js — GET (stav, dopočítané „placeno do“, počet sad v regálu, fakturační údaje předplněné z poslední objednávky, seznam objednávek) a POST (jen role spravce; validace varianty, měsíců, IČO na 8 číslic a e-mailu; cena VŽDY ze serveru, nikdy z klienta; druhá nezaplacená objednávka odmítnuta 409; plati_od = max(dnes, placene_do) a bez zaškrtnutého souhlasu +14 dní podle podmínek; plati_do = plati_od + mesicu; zápis a dva e-maily přes Resend — potvrzení zákazníkovi se vším, co podmínky žádají, a kopie na podpora@simtegen.cz, ze které člověk vystaví fakturu; bez RESEND_API_KEY vrátit náhled jako to dělá priprava.js). Je-li DPH_POPIS prázdný, POST vrací 409 s českou větou a tlačítko je v UI zamčené.
+5. functions/api/predplatne/[id].js — DELETE zruší vlastní objednávku ve stavu nova (stav='zrusena'), nic jiného.
+6. Omezený režim na serveru — zkontrolujLimit() zapojit i do functions/api/objednavky.js (POST) a functions/api/zakaznici.js (POST); sady.js ji už volá. Výdej, přesun, označení zaplaceno a úpravy záměrně nechat volné.
+7. web/index.html — nová obrazovka Předplatné a pruh stavu na Dnes podle sekce design, body.omezeno, klepatelný řádek Tarif, generátor .ics (čistá funkce, text/calendar blob, CRLF, UID z účtu a dne, VALARM) a zrušení window.CENIK i ZKUSEBNI_DNI ve prospěch dat z /api/ja.
+8. data-manifest.json — entita predplatne (účel „objednávka a evidence zaplaceného období předplatného“, pole včetně fakturačních údajů, retence „do smazání účtu zákazníkem“ s větou, že vystavená faktura je účetní doklad a zůstává v účetnictví SimteGenu po zákonnou dobu mimo aplikaci), rozšířený účel Resendu o potvrzení objednávky a kopii na podporu, nový klíč dph_popis.
+9. python3 vykresli_zasady.py — přegenerovat všech šest dokumentů a v nich NIC neopravovat ručně (past z buildu 5); zkontrolovat git diff: smí přibýt jen řádek o predplatne a nový účel Resendu.
+10. README.md — sekce „Jak se platí“: jak označit objednávku zaplacenou (UPDATE predplatne SET stav='zaplacena', zaplaceno=unixepoch() WHERE uzivatel_id=? AND cislo=?), jak dát účtu plan='partner', jak vypsat nezaplacené objednávky.
+11. SPEC.md — sekce build 6 ve stejné struktuře jako build 5.
+12. python3 kontrola_manifestu.py musí projít; pak ruční průchod podle sekce „Jak ověřit“ na telefonu.
 
 ## Soubory
-- db/migrace/0002_pneusklad.sql
-- functions/api/sady.js
-- functions/api/sady/[id].js
-- functions/api/zakaznici.js
-- functions/api/objednavky.js
-- functions/api/objednavky/[id].js
-- functions/api/priprava.js
-- functions/api/prehled.js
-- functions/api/nastaveni.js
-- data-manifest.json
+- db/migrace/0007_predplatne.sql
+- functions/api/predplatne.js
+- functions/api/predplatne/[id].js
 - spolecne.js
+- functions/api/ja.js
+- functions/api/nastaveni.js
+- functions/api/objednavky.js
+- functions/api/zakaznici.js
 - web/index.html
-- web/zasady.html (generováno — vykresli_zasady.py)
-- ZAZNAM_O_ZPRACOVANI.md (generováno — vykresli_zasady.py)
-- functions/api/overeni.js (jen přidání volání uklid())
+- data-manifest.json
+- web/zasady.html
+- web/podminky.html
+- web/zpracovatelska-smlouva.html
+- web/odstoupeni-formular.html
+- ZAZNAM_O_ZPRACOVANI.md
+- POSTUP_PRI_INCIDENTU.md
+- README.md
+- SPEC.md
 
 ## Rizika
-1. Štítkovací tiskárna: web nemá přístup k USB termální tiskárně bez ovladače. Tiskneme přes systémovou tiskárnu (`window.print()` + `@page`), A4 archy jsou fallback. Před demem otestovat na konkrétní tiskárně zákazníka nula, jinak demo vést na A4.
-2. `@page size` v mobilním prohlížeči je nespolehlivé — tisk předvádět na notebooku v servisu, telefon je pro evidenci, hledání a přípravu.
-3. CI branka je řádková: `kontrola_manifestu.py` hledá `fetch(`+`http` po řádcích a `uzivatel_id` ve stejném `;`-příkazu jako `CREATE TABLE`. Nová migrace i nový fetch na Resend musí tvar respektovat.
-4. Žádný plánovač: Pages Functions neumí cron a do `.github/` se nesahá, takže připomínka je „při otevření appky + e-mail na tapnutí", ne push. Automatický e-mail v 18:00 by znamenal Worker s cronem — mimo v1.
-5. Data motoristů: servis je správce, SimteGen zpracovatel. Sbírá se jen jméno, telefon (povinný kvůli obvolávání) a volitelný e-mail. Zpracovatelská smlouva se zákazníkem nula je úkol mimo kód.
-6. V1 nemá platební bránu, takže demo samo neprokáže ochotu platit. Zkušební období má proto konec (60 dní) a strop (40 sad), aby rozhovor o ceně přišel dřív než po roce zdarma.
-7. Kanál je nedoložený (slabina ze složky analytika) — kde další malé pneuservisy oslovit. U předvedení se zákazníka nula na to výslovně zeptat.
-8. Datový model je jednodušší než u konkurence (vozidlo je součástí sady, ne vlastní tabulka; jeden účet = jeden servis bez rolí). Je to záměr kvůli rychlosti a jednoduchosti, ale u servisu s více provozovnami to nestačí — takový zákazník není cílová skupina.
+1. Bez jedné věty o DPH se nesmí prodávat. Obchodní podmínky slibují konečnou cenu před stiskem tlačítka; DPH_POPIS je prázdný, dokud ho majitel nedoplní (manifest + spolecne.js, jeden řádek na dvou místech). Do té doby je objednávkové tlačítko zamčené českou větou a POST vrací 409 — všechno ostatní na obrazovce funguje a jde předvést. Totéž platí pro IČO a sídlo na faktuře: fakturu vystavuje člověk mimo appku, ale bez identifikace prodávajícího není co poslat. Tohle je jediná věc, kterou plán potřebuje od majitele.
+2. Označení zaplacení je ruční. Žádné admin rozhraní, jen SQL v README — u prvních 15 zákazníků je to správná volba, ale zapomenutá objednávka znamená, že servis zaplatil a appka ho pustí do omezeného režimu. Proto kopie každé objednávky e-mailem na podporu a hotový dotaz na nezaplacené objednávky v README; nad ~15 zákazníků je admin obrazovka první věc, která se musí postavit.
+3. Spotřebitel vs. podnikatel. Živnostník, který IČO nezadá, je právně spotřebitel s 14denním odstoupením. Proto je IČO povinné pole a souhlas podle § 1837 písm. l) samostatné zaškrtnutí, které bez zaškrtnutí posune začátek placeného období o 14 dní — přesně jak to říkají vygenerované podmínky. Texty přesto patří před prvním ostrým prodejem právníkovi.
+4. Účetnictví vs. smazání účtu. Řádek predplatne se smazáním účtu zmizí, vystavená faktura ne — je účetní doklad a žije v účetnictví mimo aplikaci. Musí to být napsané v zásadách, jinak to vypadá jako díra v tom, co produkt slibuje.
+5. Přesun ceníku do /api/ja se dotýká běžící úvodní obrazovky a přihlašovacího toku. Ověřit odhlášeně i přihlášeně a hlavně to, že při chybě /api/ja úvod pořád naběhne — build 5 na téhle větvi už jednou stál.
+6. Omezený režim nesmí zablokovat výdej kol. Stačí přehlédnout jeden handler a servis nevydá motoristovi jeho majetek. Ověřuje se bodem 6 validace.
+7. „Čeká na zaplacení“ nesmí vypadat jako „zaplaceno“. Dokud objednávku někdo neoznačí, stav účtu se nemění; obrazovka to musí říkat jasně, jinak servis skončí v omezeném režimu s přesvědčením, že má zaplaceno.
+8. Automatická večerní připomínka pořád není. Pages Functions nemají cron (viz komentář v functions/api/priprava.js), takže .ics do kalendáře v telefonu je nejlepší, co jde bez cizí služby. Skutečná push připomínka znamená externí spouštěč (cizí cron nebo samostatný Worker) a je to rozhodnutí majitele, ne stavitele — patří do dalšího buildu.
+9. Build se dotýká generátoru právních dokumentů jen přes manifest. Jakákoliv ruční úprava vygenerovaných souborů shodí CI a tiše přepíše zásady zákazníkovi; generátor se spouští, neopravuje.
 
 ## Jak ověřit
-Na telefonu (~390 px) na náhledovém nasazení `https://build-pneusklad-v1.<repo>.pages.dev`:
-1. Otevřít web, zadat e-mail, přihlásit se odkazem (na náhledu vývojový režim vrátí odkaz v odpovědi) → skončit na obrazovce Dnes.
-2. Nastavení → „Naplnit ukázkovými daty". Dnes ukazuje dnešní objednávky a dlaždici „Připravit na zítra (2)".
-3. + Nová sada: projít 4 kroky, hloubky dezénu zadat prstem, uložit → appka vrátí kód ve tvaru `25-NNNN`.
-4. Tapnout Tisk štítku → v tiskovém náhledu je kód, čárový kód, SPZ, hloubky a pozice; ve formátu A4 je štítek 70×37 mm v mřížce 3×8.
-5. Do Hledat napsat SPZ nové sady, pak jen část telefonu → sada se najde a je vidět její pozice v regálu.
-6. Na detailu sady Objednat přezutí na zítřejší datum → „Připravit na zítra" nabídne o jednu položku víc, s pozicí. Odkliknout „připraveno", počet klesne.
-7. Tapnout „Poslat si seznam e-mailem" → přijde e-mail se zítřejší přípravou (na náhledu bez RESEND_API_KEY se místo odeslání zobrazí náhled textu).
-8. Sezónní přehled: sada bez objednávky je v obvolávacím seznamu (tap na telefon volá), sada pod 4 mm je v seznamu „nabídnout nové pneu", nezaplacené uskladnění je vidět s částkou.
-9. Na detailu sady Vydat → sada zmizí z aktivního skladu, ale zůstane v historii pohybů s datem výdeje.
-10. Nastavení → Export dat stáhne `moje-data.json` obsahující sady, zakaznici, objednavky, pohyby a nastaveni_servisu.
-11. Nastavení → Smazat účet na testovacím účtu → `/api/ja` hlásí odhlášeno a opětovné přihlášení začíná s prázdným skladem.
-12. Lokálně `python3 kontrola_manifestu.py` vypíše „Manifest souhlasí s kódem, zásadami i datovým modelem."
+Na náhledovém nasazení, na telefonu v šířce ~390 px:
+1. Odhlášeně otevřít / → úvod ukazuje „89 Kč“ jako největší číslo a „Prvních 60 dní zdarma, bez karty.“; čísla jdou ze serveru, v HTML žádná číslice neleží. Přihlásit se odkazem z odpovědi.
+2. Dnes → žádný pruh stavu (nový účet má 60 dní). V D1 zkrátit zkusebni_do na 10 dní dopředu → po načtení se nahoře objeví pruh „Zkušební období končí za 10 dní“ s tlačítkem.
+3. Klepnout na tlačítko → obrazovka Předplatné na jedno klepnutí. Vybrat Sólo + Sezóna → karta součtu ukazuje 534 Kč a období od–do. Odeslat bez IČO → česká chyba pod polem a nic se nezapsalo.
+4. Doplnit fakturační údaje, zaškrtnout souhlas a stisknout „Objednávka zavazující k platbě“ → úspěch s číslem objednávky, řádek „Čeká na zaplacení“ v seznamu, ve vývojovém režimu náhled obou e-mailů (zákazníkovi i na podporu). Druhý pokus → 409 „Máte objednávku, která čeká na zaplacení.“
+5. wrangler d1 execute: UPDATE predplatne SET stav='zaplacena', zaplaceno=unixepoch() … → po načtení stav „Zaplaceno do …“, pruh na Dnes zmizel, Nastavení ukazuje tarif Sólo a žádný limit sad; uložení 41. sady projde.
+6. UPDATE predplatne SET plati_do=unixepoch()-1 … → appka v omezeném režimu: zapisovací tlačítka zmizela, POST /api/sady, /api/objednavky i /api/zakaznici vrací českou větu s odkazem na Předplatné, ALE výdej sady, označení zaplaceného uskladnění a „Stáhnout moje data“ fungují.
+7. Příprava → vybrat den → „Připomínka do kalendáře“ → telefon nabídne přidat událost v 18:00 předchozího dne, v popisu kódy sad a pozice v regálu; v čase události notifikace zazvoní.
+8. GET /api/ucet/export → v moje-data.json je tabulka predplatne i s objednávkami. Smazat testovací účet → řádky zmizely.
+9. Lokálně python3 vykresli_zasady.py && python3 kontrola_manifestu.py → „Manifest souhlasí s kódem, zásadami i datovým modelem.“ a git diff generovaných dokumentů ukazuje jen entitu predplatne a nový účel Resendu.
+10. Zkouška „zákazník nula“: účtu nastavit plan='partner' → žádný pruh, žádný limit, appka o peníze nežádá.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
