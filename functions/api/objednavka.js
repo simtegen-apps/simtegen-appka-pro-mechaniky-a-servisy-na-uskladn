@@ -26,17 +26,9 @@
 // an order binding the shop to pay is not a mechanic's call.
 
 import { json, odepriSpravu, smiSpravovat, ted } from "../../spolecne.js";
+import { variantaPodleKlice } from "../../cenik.js";
 
 const MAX_FAKTURACE = 600;
-
-// Schválený ceník, měsíčně za provozovnu. Je tady a ne jen ve stránce
-// schválně: cena na objednávce zavazující k platbě nesmí být to, co pošle
-// prohlížeč. Frontend posílá jen klíč varianty, částku dopočítá server.
-const VARIANTY = {
-  solo: { nazev: "Sólo", mesic: 89 },
-  zaklad: { nazev: "Základ", mesic: 129 },
-  tym: { nazev: "Tým", mesic: 249 },
-};
 
 export async function onRequestGet(context) {
   const { env, data } = context;
@@ -63,7 +55,9 @@ export async function onRequestPost(context) {
   if (!Number.isInteger(mesice) || mesice < 1 || mesice > 24) {
     return json({ chyba: "Zvolte délku předplatného 1–24 měsíců." }, 422);
   }
-  const vybrana = VARIANTY[String((telo && telo.varianta) || "").trim()];
+  // Částku určuje server z téhož schváleného ceníku, který vidí zákazník
+  // (cenik.js → /api/ja). Z prohlížeče smí přijít jen klíč varianty.
+  const vybrana = variantaPodleKlice(telo && telo.varianta);
   if (!vybrana) return json({ chyba: "Zvolte prosím variantu předplatného." }, 422);
   const varianta = vybrana.nazev;
   const cena = vybrana.mesic * mesice;

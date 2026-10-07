@@ -8,6 +8,7 @@
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
   "zkusebni_dni": 14,
+  "cena_dph": "",
   "ukladame": [
     {
       "entita": "uzivatele",
