@@ -10,6 +10,7 @@ import {
   bezDiakritiky, cislo, json, nactiNastaveni, novyKodSady, ocisti, odepriZapis,
   smiPsat, sqlBezDiakritiky, ted, zkontrolujLimit, SADY_SELECT, TYPY_PNEU,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 const STAVY = ["uskladneno", "vydano", "vse"];
 
@@ -65,6 +66,10 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  // Subscription before role: a shop whose period ran out should read that,
+  // not "požádejte správce o vyšší oprávnění".
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;

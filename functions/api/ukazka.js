@@ -14,6 +14,7 @@ import {
   cislo, denACas, json, nactiNastaveni, odepriSpravu, smiSpravovat, ted,
   zacatekDne, DEN,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 const ZAKAZNICI = [
   { jmeno: "Jana Dvořáková", telefon: "601 000 101", email: "" },
@@ -93,6 +94,8 @@ async function smazUkazku(env, uzivatelId) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   let telo;

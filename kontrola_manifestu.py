@@ -113,18 +113,17 @@ def _zkontroluj_uloziste(manifest: dict) -> list[str]:
 
 
 def _zkontroluj_zasady(manifest: dict) -> list[str]:
+    """The whole legal pack is generated from the manifest and drifts the
+    same way: policy, terms, DPA, withdrawal form, record of processing,
+    incident procedure. A hand-edited file fails here on purpose — the
+    19. 9. 2026 review landed in the generator, not in the files."""
     import vykresli_zasady as generator
 
     chyby: list[str] = []
-    zasady = WEB / "zasady.html"
-    if not zasady.exists() or zasady.read_text(encoding="utf-8") != \
-            generator.vykresli_zasady(manifest):
-        chyby.append("web/zasady.html neodpovídá manifestu — spusť "
-                     "`python3 vykresli_zasady.py` (needituj ho ručně).")
-    if not ZAZNAM.exists() or ZAZNAM.read_text(encoding="utf-8") != \
-            generator.vykresli_zaznam(manifest):
-        chyby.append("ZAZNAM_O_ZPRACOVANI.md neodpovídá manifestu — spusť "
-                     "`python3 vykresli_zasady.py`.")
+    for path, render in generator.VYSTUPY:
+        if not path.exists() or path.read_text(encoding="utf-8") != render(manifest):
+            chyby.append(f"{path.as_posix()} neodpovídá manifestu — spusť "
+                         "`python3 vykresli_zasady.py` (needituj ho ručně).")
     return chyby
 
 
@@ -154,6 +153,28 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
     return chyby
 
 
+def _zkontroluj_design() -> list[str]:
+    """The cheap, deterministic part of the design bar: every deployed page
+    uses the shared design system and is a mobile page. The taste part is
+    the reviewer's; this stops the "web form with its own CSS" failure mode
+    before a model ever looks at it."""
+    chyby: list[str] = []
+    for path in sorted(WEB.glob("*.html")):
+        if path.name in ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
+                         "odstoupeni-formular.html"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if 'href="styl.css"' not in text:
+            chyby.append(f"{path}: nepoužívá návrhový systém web/styl.css (viz DESIGN.md).")
+        if 'name="viewport"' not in text:
+            chyby.append(f"{path}: chybí <meta name=\"viewport\"> — není to mobilní stránka.")
+        if '<link rel="stylesheet" href="http' in text or "@import" in text:
+            chyby.append(f"{path}: externí styl/písmo — produkty jsou bez závislostí.")
+    if not (WEB / "styl.css").exists():
+        chyby.append("web/styl.css chybí — návrhový systém je součást každého produktu.")
+    return chyby
+
+
 def main() -> int:
     if not MANIFEST.exists():
         print("CHYBA: chybí data-manifest.json.")
@@ -161,7 +182,8 @@ def main() -> int:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
     chyby = (_zkontroluj_sit(manifest) + _zkontroluj_uloziste(manifest)
-             + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest))
+             + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest)
+             + _zkontroluj_design())
     if chyby:
         print("Kód se rozešel s data-manifest.json:")
         for chyba in chyby:

@@ -8,6 +8,7 @@
 import {
   cislo, json, ocisti, odepriZapis, smiPsat, ted, SADY_SELECT, TYPY_PNEU,
 } from "../../../spolecne.js";
+import { vyzadujPredplatne } from "../../../predplatne.js";
 
 function hloubka(hodnota) {
   const n = Number(String(hodnota == null ? "" : hodnota).replace(",", "."));
@@ -40,6 +41,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data, params } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;

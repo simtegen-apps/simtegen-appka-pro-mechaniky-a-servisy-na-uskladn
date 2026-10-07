@@ -3,3 +3,14 @@
 wrangler.toml
 .wrangler/
 __pycache__/
+
+# Modul předplatného ze šablony se do pracovní kopie sype po každém commitu
+# znovu, jenže čísla 0002 a 0004 v tomhle produktu už patří migracím běžícím
+# v produkci (0002_pneusklad, 0004_provoz_a_tym) a tabulka `objednavky` je
+# tu objednávkový kalendář dílny, ne objednávky předplatného. Produkt má
+# vlastní přečíslované kopie 0005_predplatne, 0006_platby
+# a 0007_objednavky_predplatneho. Kdyby se šablonové soubory commitly,
+# `wrangler d1 migrations apply` spadne na druhém `CREATE TABLE predplatne`.
+db/migrace/0002_predplatne.sql
+db/migrace/0004_platby.sql
+db/migrace/0005_objednavky.sql

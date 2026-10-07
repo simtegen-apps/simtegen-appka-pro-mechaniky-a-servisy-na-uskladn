@@ -132,7 +132,11 @@ export function denACas(ts) {
   };
 }
 
-export const ZKUSEBNI_DNU = 60;
+// Matches ZKUSEBNI_DNI in predplatne.js and zkusebni_dni in the manifest,
+// which is what the terms of service promise. Shops created before this was
+// shortened keep the zkusebni_do they were given — the column is written
+// once, on first read.
+export const ZKUSEBNI_DNU = 14;
 export const ZKUSEBNI_LIMIT_SAD = 40;
 export const RETENCE_ARCHIV = 730 * DEN; // 24 months, matches the manifest
 
@@ -167,10 +171,12 @@ export async function novyKodSady(env, uzivatelId) {
 export async function zkontrolujLimit(env, uzivatelId, nastaveni) {
   // Returns a Czech sentence to refuse with, or null. Only the trial is
   // capped — a paying shop is never told it may not store a customer's wheels.
+  //
+  // A trial that has RUN OUT is no longer handled here: that is the
+  // subscription's job (vyzadujPredplatne → 402), and two different refusals
+  // for one situation is how a customer ends up reading two different stories
+  // about why the app will not take their wheels.
   if (nastaveni.plan !== "zkusebni") return null;
-  if (nastaveni.zkusebni_do && nastaveni.zkusebni_do < ted()) {
-    return "Zkušební období skončilo. Napište nám na podporu a předplatné vám rádi nastavíme.";
-  }
   const { n } = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM sady WHERE uzivatel_id = ? AND stav = 'uskladneno'"
   ).bind(uzivatelId).first();

@@ -14,6 +14,7 @@
 import {
   bezDiakritiky, json, ocisti, odepriZapis, smiPsat, sqlBezDiakritiky,
 } from "../../spolecne.js";
+import { vyzadujPredplatne } from "../../predplatne.js";
 
 const VYBER =
   "SELECT z.id, z.jmeno, z.telefon, z.email, z.poznamka, " +
@@ -53,6 +54,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;

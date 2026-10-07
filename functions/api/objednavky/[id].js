@@ -11,12 +11,15 @@ import {
   json, objednavkaProFrontend, ocisti, odepriZapis, pripravObjednavku, smiPsat,
   zkontrolujKolizi, OBJEDNAVKY_SELECT,
 } from "../../../spolecne.js";
+import { vyzadujPredplatne } from "../../../predplatne.js";
 
 const STAVY = ["planovano", "hotovo", "zruseno"];
 
 export async function onRequestPost(context) {
   const { request, env, data, params } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  const stop = vyzadujPredplatne(context);
+  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;
