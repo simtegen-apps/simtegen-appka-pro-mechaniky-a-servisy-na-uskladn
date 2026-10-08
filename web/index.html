@@ -21,6 +21,16 @@
       .lista-dole { bottom: calc(58px + env(safe-area-inset-bottom)); }
     }
 
+    /* Tři akce (uskladnit / uložit / smazat) se do jednoho řádku na 390 px
+       nevejdou a tlačítko se samo nezúží pod šířku svého textu — flexový
+       prvek má automatické minimum. Tady se proto zalamuje do druhého
+       řádku a minimum se vypíná, aby nic nevyčnívalo ze stránky. */
+    .lista-dole { flex-wrap: wrap; }
+    .lista-dole .tlacitko { flex: 1 1 9rem; min-width: 0; }
+    @media (min-width: 768px) {
+      .lista-dole .tlacitko { flex: 0 1 auto; min-width: min(18rem, 100%); }
+    }
+
     .hlavicka .zpet { flex-shrink: 0; }
     .hlavicka .stitek { white-space: nowrap; }
 
