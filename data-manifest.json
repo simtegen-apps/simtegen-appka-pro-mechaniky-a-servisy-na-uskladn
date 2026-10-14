@@ -8,6 +8,7 @@
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
   "zkusebni_dni": 14,
+  "cena_dph": "",
   "ukladame": [
     {
       "entita": "uzivatele",
@@ -94,6 +95,12 @@
       "ucel": "odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi",
       "domena": "api.resend.com",
       "dpa": "https://resend.com/legal/dpa"
+    },
+    {
+      "nazev": "GitHub",
+      "ucel": "předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá",
+      "domena": "api.github.com",
+      "dpa": "https://github.com/customer-terms/github-data-protection-agreement"
     }
   ],
   "uloziste_v_prohlizeci": [],

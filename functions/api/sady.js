@@ -14,6 +14,28 @@ import { vyzadujPredplatne } from "../../predplatne.js";
 
 const STAVY = ["uskladneno", "vydano", "vse"];
 
+// Čtyři hotové dotazy místo jednoho skládaného z kousků. Vypadá to
+// ukecaněji, ale SQL je tím pádem zapsaný text — nic se do něj za běhu
+// nelepí, takže se do něj ani nedá nic propašovat. Hodnoty jdou výhradně
+// do .bind() a pořadí vazeb kopíruje pořadí otazníků: účet, [stav],
+// [šestkrát hledaný výraz].
+//
+// Diakritika se srovnává na obou stranách, takže „sim“ najde Šimona a „Š“
+// taky. Telefon a značku servis píše, jak mu přijde pod ruku („601 000 101“,
+// „1AB 2345“), ale hledá je bez mezer — proto obě podoby.
+const SADY_HLEDANI =
+  `(${sqlBezDiakritiky("s.kod")} LIKE ? OR ${sqlBezDiakritiky("s.spz")} LIKE ? ` +
+  `OR REPLACE(${sqlBezDiakritiky("s.spz")}, ' ', '') LIKE ? ` +
+  `OR ${sqlBezDiakritiky("z.jmeno")} LIKE ? ` +
+  `OR REPLACE(z.telefon, ' ', '') LIKE ? OR ${sqlBezDiakritiky("s.pozice")} LIKE ?)`;
+const SADY_RAZENI = "ORDER BY s.stav, s.datum_prijmu DESC LIMIT 60";
+const SADY_VSE = `${SADY_SELECT} WHERE s.uzivatel_id = ? ${SADY_RAZENI}`;
+const SADY_STAV = `${SADY_SELECT} WHERE s.uzivatel_id = ? AND s.stav = ? ${SADY_RAZENI}`;
+const SADY_VSE_HLEDANI =
+  `${SADY_SELECT} WHERE s.uzivatel_id = ? AND ${SADY_HLEDANI} ${SADY_RAZENI}`;
+const SADY_STAV_HLEDANI =
+  `${SADY_SELECT} WHERE s.uzivatel_id = ? AND s.stav = ? AND ${SADY_HLEDANI} ${SADY_RAZENI}`;
+
 function hloubka(hodnota) {
   // The mechanic types millimetres ("5,5"), the column holds tenths.
   const n = Number(String(hodnota == null ? "" : hodnota).replace(",", "."));
@@ -29,32 +51,25 @@ export async function onRequestGet(context) {
   const q = ocisti(parametry.get("q"), 60);
   const stav = STAVY.includes(parametry.get("stav")) ? parametry.get("stav") : "uskladneno";
 
-  const podminky = ["s.uzivatel_id = ?"];
+  const vsechny = stav === "vse";
   const vazby = [data.servis.id];
-  if (stav !== "vse") {
-    podminky.push("s.stav = ?");
-    vazby.push(stav);
-  }
+  if (!vsechny) vazby.push(stav);
   if (q) {
-    // Diacritics folded on both sides, so "sim" finds Šimon and "Š" does too.
     const vzor = `%${bezDiakritiky(q)}%`;
-    // Phone numbers and plates are stored the way the mechanic wrote them
-    // ("601 000 101", "1AB 2345") but searched the way he types them into a
-    // phone keypad — without the spaces. Both forms have to match.
     const bezMezer = `%${bezDiakritiky(q).replace(/\s/g, "")}%`;
-    podminky.push(
-      `(${sqlBezDiakritiky("s.kod")} LIKE ? OR ${sqlBezDiakritiky("s.spz")} LIKE ? ` +
-      `OR REPLACE(${sqlBezDiakritiky("s.spz")}, ' ', '') LIKE ? ` +
-      `OR ${sqlBezDiakritiky("z.jmeno")} LIKE ? ` +
-      `OR REPLACE(z.telefon, ' ', '') LIKE ? OR ${sqlBezDiakritiky("s.pozice")} LIKE ?)`
-    );
     vazby.push(vzor, vzor, bezMezer, vzor, bezMezer, vzor);
   }
 
-  const nalezene = await env.DB.prepare(
-    `${SADY_SELECT} WHERE ${podminky.join(" AND ")} ` +
-    "ORDER BY s.stav, s.datum_prijmu DESC LIMIT 60"
-  ).bind(...vazby).all();
+  let nalezene;
+  if (q && !vsechny) {
+    nalezene = await env.DB.prepare(SADY_STAV_HLEDANI).bind(...vazby).all();
+  } else if (q) {
+    nalezene = await env.DB.prepare(SADY_VSE_HLEDANI).bind(...vazby).all();
+  } else if (!vsechny) {
+    nalezene = await env.DB.prepare(SADY_STAV).bind(...vazby).all();
+  } else {
+    nalezene = await env.DB.prepare(SADY_VSE).bind(...vazby).all();
+  }
 
   const celkem = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM sady WHERE uzivatel_id = ? AND stav = 'uskladneno'"

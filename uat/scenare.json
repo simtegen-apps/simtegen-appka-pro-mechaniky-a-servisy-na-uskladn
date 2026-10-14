@@ -1,0 +1,183 @@
+{
+  "popis": "Akceptační scénáře Pneuskladu podle schválené specifikace. Běží proti skutečnému API (wrangler pages dev + lokální D1 z migrací) se dvěma čerstvými účty A a B. Texty nesou značku UAT, aby se poznalo, že účet B nikdy nedostane, co zapsal účet A.",
+  "scenare": [
+    {
+      "nazev": "Uskladnění sady a její dohledání ve skladu",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Alfa",
+            "telefon": "601000111",
+            "spz": "UAT1234",
+            "vozidlo": "UAT-vozidlo-Alfa",
+            "typ": "zimni",
+            "rozmer": "205/55 R16",
+            "pocet_kusu": 4,
+            "na_discich": true,
+            "pozice": "UATREGAL-01",
+            "cena_skladovani": 800,
+            "hloubka_lp": 62,
+            "hloubka_pp": 60,
+            "hloubka_lz": 58,
+            "hloubka_pz": 59
+          },
+          "ocekavam": 200,
+          "uloz": { "sada_id": "sada.id", "kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady/{sada_id}",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-motorista-Alfa", "UATREGAL-01", "{kod}"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=vse&q=UATREGAL",
+          "ocekavam": 200,
+          "obsahuje": ["{kod}"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=vse&q=UAT1234",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-motorista-Alfa"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady/{sada_id}",
+          "ocekavam": 404,
+          "neobsahuje": ["UAT-motorista-Alfa"]
+        }
+      ]
+    },
+    {
+      "nazev": "Objednávka do kalendáře a příprava kol na ten den",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky",
+          "telo": {
+            "jmeno_bez_zakaznika": "UAT-prujezd-Alfa",
+            "den": "2030-03-05",
+            "cely_den": true,
+            "ukon": "prezuti",
+            "na_discich": true,
+            "delka_min": 45,
+            "poznamka": "UAT-poznamka-Alfa"
+          },
+          "ocekavam": 200,
+          "uloz": { "objednavka_id": "objednavka.id" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/priprava?den=2030-03-05",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-prujezd-Alfa"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky/{objednavka_id}",
+          "telo": { "akce": "pripraveno", "pripraveno": true },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/objednavky?od=2030-03-05&do=2030-03-05",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-prujezd-Alfa"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/priprava?den=2030-03-05",
+          "ocekavam": 200,
+          "neobsahuje": ["UAT-prujezd-Alfa"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/objednavky/{objednavka_id}",
+          "telo": { "akce": "zruseno" },
+          "ocekavam": 404
+        }
+      ]
+    },
+    {
+      "nazev": "Objednávka předplatného, odmítnutí druhé a její zrušení",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavka",
+          "telo": {
+            "mesice": 6,
+            "varianta": "zaklad",
+            "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno",
+            "spotrebitel": false,
+            "souhlas_zahajeni": false
+          },
+          "ocekavam": 200,
+          "uloz": { "predplatne_id": "id" },
+          "obsahuje": ["774", "Základ"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavka",
+          "telo": {
+            "mesice": 6,
+            "varianta": "zaklad",
+            "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno"
+          },
+          "ocekavam": 409
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/objednavka",
+          "ocekavam": 200,
+          "obsahuje": ["nova", "774"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavka/{predplatne_id}",
+          "telo": { "akce": "zrusit" },
+          "ocekavam": 200,
+          "obsahuje": ["zrusena"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavka",
+          "telo": {
+            "mesice": 12,
+            "varianta": "solo",
+            "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno"
+          },
+          "ocekavam": 200,
+          "obsahuje": ["1068"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/objednavka/{predplatne_id}",
+          "telo": { "akce": "zrusit" },
+          "ocekavam": 404
+        }
+      ]
+    },
+    {
+      "nazev": "Ceník a zkušební doba jdou ze serveru i nepřihlášenému",
+      "kroky": [
+        {
+          "jako": "nikdo",
+          "pozadavek": "GET /api/ja",
+          "ocekavam": 200,
+          "obsahuje": ["cenik", "zkusebni_dni", "89", "129", "249"],
+          "neobsahuje": ["email"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/ja",
+          "ocekavam": 200,
+          "obsahuje": ["predplatne", "zkusebni"]
+        }
+      ]
+    }
+  ]
+}

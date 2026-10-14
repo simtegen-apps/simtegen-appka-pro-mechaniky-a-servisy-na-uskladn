@@ -49,6 +49,16 @@ Produkční URL: `https://<název-repa>.pages.dev`, preview:
 `https://<větev>.<název-repa>.pages.dev`. Postup při úniku dat:
 `POSTUP_PRI_INCIDENTU.md`.
 
+## Připomínka „nachystat kola“
+
+Pages Functions nemají cron, takže appka sama večer nic neodešle. Místo toho
+si mechanik na obrazovce **Připravit kola** vytvoří připomínku do kalendáře
+v telefonu (`.ics` se soubor stáhne, událost je v 18:00 den PŘEDEM a má
+upozornění; v popisu jsou kódy sad a místa v regálu). Soubor vzniká
+v prohlížeči z dat, která už jsou na obrazovce — nic se nikam neposílá
+a žádná další služba v manifestu nepřibyla. Druhá cesta zůstává: tlačítko
+„Poslat si seznam e-mailem“ (Resend, deklarovaný).
+
 ## Jak zapsat platbu předplatného
 
 S penězi aplikace nepracuje: zákazník objedná v appce (`/api/objednavka`),
@@ -76,6 +86,25 @@ wrangler d1 execute <repo>-db --remote --command \
   je aktuální konec období. Zapisujte obojí.
 - Stav objednávky se posouvá tamtéž:
   `UPDATE objednavky_predplatneho SET stav = 'zaplacena' WHERE id = <č.>;`
+
+Co čeká na zaplacení (dokud je objednávka ve stavu `nova`, servis si další
+objednat nemůže — další objednávku si proto může sám zrušit v aplikaci):
+
+```sh
+wrangler d1 execute <repo>-db --remote --command \
+  "SELECT o.id, o.vytvoreno, o.mesice, o.varianta, o.cena_czk, o.fakturace, u.email
+   FROM objednavky_predplatneho o JOIN uzivatele u ON u.id = o.uzivatel_id
+   WHERE o.stav IN ('nova', 'fakturovana') ORDER BY o.id"
+```
+
+**Ceník je na jednom místě: `cenik.js`** v kořeni repa. Server z něj počítá
+částku na objednávce a stránka si ho bere přes `/api/ja`, takže v HTML
+neleží žádná číslice. Změna ceny = změna jednoho souboru.
+
+Jakmile majitel doplní daňový režim do `data-manifest.json` (klíč
+`cena_dph`, např. „bez DPH, poskytovatel není plátcem DPH“), přepište
+stejnou větu do `CENA_DPH` v `cenik.js` a přegenerujte zásady — appka ji
+pak ukáže u částky. Dokud je slot prázdný, appka o DPH mlčí.
 
 **Po prvním nasazení tohoto modulu** migrace `0005_predplatne.sql` převedla
 servisy, které dosud platily přes `nastaveni_servisu.plan`, a dala jim rok

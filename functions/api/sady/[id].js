@@ -41,8 +41,6 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env, data, params } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
-  const stop = vyzadujPredplatne(context);
-  if (stop) return stop;
   if (!smiPsat(data.servis)) return odepriZapis();
 
   let telo;
@@ -57,6 +55,16 @@ export async function onRequestPost(context) {
   if (!sada) return json({ chyba: "Sada nebyla nalezena." }, 404);
   const akce = ocisti(telo.akce, 20);
   const nyni = ted();
+
+  // Vypršelé předplatné zastavuje zápisy, ale NE vydání kol a NE zápis, že
+  // zákazník uskladnění zaplatil. Servis fyzicky drží cizí majetek: kdyby mu
+  // appka nedovolila sadu vydat, držela by kola motoristy jako rukojmí naší
+  // nezaplacené faktury. Totéž u „zaplaceno“ — jsou to peníze servisu, které
+  // s naším předplatným nemají nic společného.
+  if (akce !== "vydat" && akce !== "zaplaceno") {
+    const stop = vyzadujPredplatne(context);
+    if (stop) return stop;
+  }
 
   if (akce === "vydat") {
     if (sada.stav === "vydano") {
