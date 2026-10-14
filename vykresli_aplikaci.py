@@ -140,7 +140,189 @@ OFFLINE = """<!doctype html>
 """
 
 
-# ── Inputs ────────────────────────────────────────────────────────────
+# ── Google Play: store listing and Data safety ────────────────────────
+#
+# The listing and the Data safety form are claims to Google about the data
+# — the same claims the privacy policy makes, so they come from the same
+# manifest and CI holds them to it. Each `ukladame` entry says which Google
+# data type it is (`play_typy`) and why it is collected (`play_ucely`); the
+# keys below are the only allowed values. Labels: the Czech Play Console
+# wording as best known, the English name in brackets is the exact one.
+
+PLAY_TYPY = {
+    "email": ("Osobní údaje", "E-mailová adresa", "Personal info", "Email address"),
+    "jmeno": ("Osobní údaje", "Jméno", "Personal info", "Name"),
+    "adresa": ("Osobní údaje", "Adresa", "Personal info", "Address"),
+    "telefon": ("Osobní údaje", "Telefonní číslo", "Personal info", "Phone number"),
+    "id_uzivatele": ("Osobní údaje", "ID uživatelů", "Personal info", "User IDs"),
+    "osobni_jine": ("Osobní údaje", "Jiné informace", "Personal info", "Other info"),
+    "platebni_udaje": ("Finanční údaje", "Platební údaje uživatele", "Financial info", "User payment info"),
+    "historie_nakupu": ("Finanční údaje", "Historie nákupů", "Financial info", "Purchase history"),
+    "financni_jine": ("Finanční údaje", "Jiné finanční údaje", "Financial info", "Other financial info"),
+    "zpravy": ("Zprávy", "Jiné zprávy v aplikaci", "Messages", "Other in-app messages"),
+    "obsah_uzivatele": ("Aktivita v aplikaci", "Jiný obsah vytvořený uživatelem", "App activity",
+                        "Other user-generated content"),
+    "akce_v_aplikaci": ("Aktivita v aplikaci", "Interakce s aplikací", "App activity", "App interactions"),
+    "hledani": ("Aktivita v aplikaci", "Historie vyhledávání v aplikaci", "App activity", "In-app search history"),
+    "fotky": ("Fotky a videa", "Fotky", "Photos and videos", "Photos"),
+    "soubory": ("Soubory a dokumenty", "Soubory a dokumenty", "Files and docs", "Files and docs"),
+    "kalendar": ("Kalendář", "Události v kalendáři", "Calendar", "Calendar events"),
+    "kontakty": ("Kontakty", "Kontakty", "Contacts", "Contacts"),
+    "poloha_priblizna": ("Poloha", "Přibližná poloha", "Location", "Approximate location"),
+    "poloha_presna": ("Poloha", "Přesná poloha", "Location", "Precise location"),
+    "diagnostika": ("Informace o aplikaci a výkonu", "Diagnostika", "App info and performance", "Diagnostics"),
+    "pady": ("Informace o aplikaci a výkonu", "Protokoly o selhání", "App info and performance", "Crash logs"),
+}
+PLAY_UCELY = {
+    "funkce": ("Funkce aplikace", "App functionality"),
+    "ucet": ("Správa účtu", "Account management"),
+    "komunikace": ("Komunikace vývojáře", "Developer communications"),
+    "analytika": ("Analýza", "Analytics"),
+    "bezpecnost": ("Prevence podvodů, zabezpečení a dodržování předpisů", "Fraud prevention, security, and compliance"),
+    "personalizace": ("Personalizace", "Personalization"),
+    "marketing": ("Reklama nebo marketing", "Advertising or marketing"),
+}
+PLAY_KATEGORIE = {
+    "BUSINESS": "Firmy", "PRODUCTIVITY": "Produktivita", "TOOLS": "Nástroje", "FINANCE": "Finance",
+    "EDUCATION": "Vzdělávání", "LIFESTYLE": "Životní styl", "HOUSE_AND_HOME": "Dům a domácnost",
+    "FOOD_AND_DRINK": "Jídlo a pití", "HEALTH_AND_FITNESS": "Zdraví a fitness", "SHOPPING": "Nakupování",
+    "AUTO_AND_VEHICLES": "Auta a vozidla", "TRAVEL_AND_LOCAL": "Cestování a místní informace",
+    "SPORTS": "Sport", "PARENTING": "Rodičovství", "EVENTS": "Události", "COMMUNICATION": "Komunikace",
+    "BOOKS_AND_REFERENCE": "Knihy a referenční materiály", "ENTERTAINMENT": "Zábava",
+}
+# Mandatory "Nahlásit chybu" is in every product: the text the customer
+# writes and the technical facts the form attaches, both optional.
+HLASENI_PLAY = {"entita": "hlášení chyb (tlačítko Nahlásit chybu)",
+                "play_typy": ["zpravy", "diagnostika"], "play_ucely": ["funkce", "komunikace"],
+                "play_volitelne": True}
+PLAY = Path("play")
+
+
+def _polozky_play(manifest: dict) -> list[dict]:
+    return [u for u in manifest.get("ukladame") or [] if isinstance(u, dict)] + [HLASENI_PLAY]
+
+
+def _bezpecnost_dat(manifest: dict) -> dict:
+    typy: dict[str, dict] = {}
+    for polozka in _polozky_play(manifest):
+        for klic in polozka.get("play_typy") or []:
+            t = typy.setdefault(klic, {"ucely": [], "zdroje": [], "volitelne": True})
+            for ucel in polozka.get("play_ucely") or []:
+                if ucel not in t["ucely"]:
+                    t["ucely"].append(ucel)
+            t["zdroje"].append(str(polozka.get("entita")))
+            # Required as soon as one place needs it (an account needs its e-mail).
+            t["volitelne"] = t["volitelne"] and bool(polozka.get("play_volitelne"))
+    poradi = list(PLAY_TYPY)
+    return {
+        "sbira": bool(typy),
+        # Cloudflare, Resend, GitHub process data FOR us — service providers,
+        # which Google's form explicitly does not count as sharing.
+        "sdili": False,
+        "sifrovano_pri_prenosu": True,
+        "lze_smazat": True,
+        "typy": [{"klic": k, "kategorie": PLAY_TYPY[k][2], "typ": PLAY_TYPY[k][3],
+                  "ucely": [PLAY_UCELY[u][1] for u in typy[k]["ucely"]],
+                  "volitelne": typy[k]["volitelne"], "zdroje": typy[k]["zdroje"]}
+                 for k in sorted(typy, key=poradi.index)],
+    }
+
+
+def _zaznam(manifest: dict) -> dict:
+    a = manifest["aplikace"]
+    ucty = any(u.get("entita") == "uzivatele" for u in manifest.get("ukladame") or [] if isinstance(u, dict))
+    return {
+        "jazyk": "cs-CZ",
+        "nazev": str(a.get("nazev") or ""),
+        "kratky_popis": str(a.get("popis") or ""),
+        "dlouhy_popis": str(a.get("dlouhy_popis") or ""),
+        "kategorie": str(a.get("kategorie") or ""),
+        "kontakt_email": str(a.get("kontakt_email") or manifest.get("kontakt_email") or ""),
+        # Paths, not URLs: the product's address is known to the release
+        # workflow (custom domain or <repo>.pages.dev), not to the repo.
+        "zasady_cesta": "/zasady.html",
+        "ucty": ucty,
+        "smazani_uctu_cesta": "/zasady.html" if ucty else None,
+        "bezpecnost_dat": _bezpecnost_dat(manifest),
+    }
+
+
+def _tahak(manifest: dict, zaznam: dict) -> str:
+    """The Data safety form and the rest of "App content", answered in the
+    order Play Console asks — the owner clicks it through once per app
+    (Google offers no API for these declarations)."""
+    b = zaznam["bezpecnost_dat"]
+    kat = zaznam["kategorie"]
+    r = [
+        "# Google Play — co vyplnit v Play Console",
+        "",
+        "GENEROVANÝ SOUBOR z data-manifest.json (`python vykresli_aplikaci.py`) — needituj ručně.",
+        "Kde je `<adresa>`, doplň adresu produktu (vlastní doména, nebo `<repo>.pages.dev`).",
+        "",
+        "## 1. Hlavní záznam v obchodě (Main store listing)",
+        "",
+        "Workflow Vydání ho nahrává sám, jakmile má servisní účet. Ručně jen poprvé, nebo bez něj:",
+        "",
+        f"- **Název aplikace:** {zaznam['nazev']}",
+        f"- **Krátký popis:** {zaznam['kratky_popis']}",
+        f"- **Kategorie:** {PLAY_KATEGORIE.get(kat, kat)} (`{kat}`) — v Play Console: Nastavení obchodu",
+        f"- **Kontaktní e-mail:** {zaznam['kontakt_email']}",
+        "- **Web:** `<adresa>`",
+        "- **Úplný popis:**",
+        "",
+        "```",
+        zaznam["dlouhy_popis"],
+        "```",
+        "",
+        "## 2. Zásady ochrany soukromí (Privacy policy)",
+        "",
+        f"`<adresa>{zaznam['zasady_cesta']}`",
+        "",
+        "## 3. Bezpečnost údajů (Data safety)",
+        "",
+        f"1. *Shromažďuje nebo sdílí aplikace některý z požadovaných typů uživatelských údajů?* "
+        f"**{'Ano' if b['sbira'] else 'Ne'}**",
+        "2. *Jsou všechny shromážděné údaje šifrovány při přenosu?* **Ano** (jen HTTPS)",
+        "3. *Poskytujete uživatelům způsob, jak požádat o smazání údajů?* **Ano** — "
+        + ("v aplikaci Účet → Smazat účet a všechna data; popis na webu." if zaznam["ucty"]
+           else f"e-mailem na {zaznam['kontakt_email']}."),
+    ]
+    if zaznam["ucty"]:
+        r.append(f"4. *Umožňuje aplikace vytvořit účet?* **Ano** (e-mailem). Odkaz na smazání účtu: "
+                 f"`<adresa>{zaznam['smazani_uctu_cesta']}`")
+    r += [
+        "",
+        "**Sdílení: u žádného typu Ne.** Cloudflare (hosting, databáze), Resend (e-maily) a GitHub "
+        "(evidence hlášení, šifrovaně) zpracovávají údaje pro nás — Google je za sdílení nepočítá.",
+        "**Zpracování dočasné (ephemeral): Ne** — údaje se ukládají.",
+        "",
+        "| Kategorie | Typ údajů | Shromažďováno | Povinné? | Účely | Odkud (manifest) |",
+        "|---|---|---|---|---|---|",
+    ]
+    for t in b["typy"]:
+        cz = PLAY_TYPY[t["klic"]]
+        ucely = ", ".join(f"{PLAY_UCELY[k][0]} ({PLAY_UCELY[k][1]})" for k in PLAY_UCELY
+                          if PLAY_UCELY[k][1] in t["ucely"])
+        r.append(f"| {cz[0]} ({cz[2]}) | {cz[1]} ({cz[3]}) | Ano | "
+                 f"{'volitelné' if t['volitelne'] else 'povinné'} | {ucely} | {', '.join(t['zdroje'])} |")
+    r += [
+        "",
+        "## 4. Obsah aplikace — ostatní prohlášení (App content)",
+        "",
+        "- **Reklamy:** Ne, aplikace neobsahuje reklamy.",
+        "- **Cílová skupina:** 18 let a více.",
+        "- **Hodnocení obsahu (dotazník IARC):** kategorie Nástroje / Produktivita; na otázky o násilí, "
+        "sexu, vulgaritách, drogách, hazardu a sdílení polohy odpověz Ne. Uživatelé spolu "
+        "v aplikaci nekomunikují.",
+        "- **Zpravodajská aplikace / vládní aplikace / finanční funkce / zdraví:** Ne.",
+    ]
+    if zaznam["ucty"]:
+        r += [
+            "- **Přístup k aplikaci:** část funkcí vyžaduje přihlášení. Interní testování to nepotřebuje; "
+            "před vydáním do produkce Google chce přístup pro kontrolu — přihlášení odkazem e-mailem "
+            "kontrolor sám nedokončí, takže to vyřešíme demo účtem.",
+        ]
+    return "\n".join(r) + "\n"
 
 def _barvy(styl: str, produkt: str = "") -> dict[str, str]:
     """Light-theme colours for the app. Design v2: the product's colour
@@ -334,11 +516,14 @@ def _texty(manifest: dict, barvy: dict[str, str]) -> dict[Path, str]:
         "target": {"namespace": "android_app", "package_name": a["balicek"],
                    "sha256_cert_fingerprints": [str(o).upper() for o in a.get("otisky") or []]},
     }]
+    zaznam = _zaznam(manifest)
     return {
         WEB / "manifest.webmanifest": json.dumps(web_manifest, ensure_ascii=False, indent=2) + "\n",
         WEB / ".well-known" / "assetlinks.json": json.dumps(odkazy, indent=2) + "\n",
         WEB / "sw.js": SW,
         WEB / "offline.html": OFFLINE.format(nazev=nazev, barva=barvy["akcent"]),
+        PLAY / "zaznam.json": json.dumps(zaznam, ensure_ascii=False, indent=2) + "\n",
+        PLAY / "BEZPECNOST_DAT.md": _tahak(manifest, zaznam),
     }
 
 
@@ -372,6 +557,30 @@ def _chyby_konfigurace(manifest: dict) -> list[str]:
     for otisk in a.get("otisky") or []:
         if not OTISK_VZOR.match(str(otisk).upper()):
             chyby.append(f"aplikace.otisky: „{str(otisk)[:40]}“ není SHA-256 otisk (32 párů hex oddělených dvojtečkou).")
+    dlouhy = str(a.get("dlouhy_popis") or "").strip()
+    if not 80 <= len(dlouhy) <= 4000:
+        chyby.append("aplikace.dlouhy_popis musí mít 80–4000 znaků (úplný popis v Google Play: co aplikace "
+                     "dělá, pro koho, co stojí).")
+    if a.get("kategorie") not in PLAY_KATEGORIE:
+        chyby.append(f"aplikace.kategorie musí být jedna z: {', '.join(PLAY_KATEGORIE)}.")
+    if not (a.get("kontakt_email") or manifest.get("kontakt_email")):
+        chyby.append("aplikace.kontakt_email (nebo kontakt_email v manifestu) chybí — Google Play ho vyžaduje.")
+    # Every stored entity says what it is for Google; an unannotated one would
+    # silently vanish from the Data safety form — a false claim to Google.
+    for u in manifest.get("ukladame") or []:
+        if not isinstance(u, dict):
+            continue
+        jmeno = u.get("entita", "?")
+        if not isinstance(u.get("play_typy"), list):
+            chyby.append(f"ukladame „{jmeno}“: chybí play_typy (seznam z {', '.join(PLAY_TYPY)}; "
+                         "[] jen když nejde o údaje uživatele, např. otisky tokenů).")
+            continue
+        spatne = [t for t in u["play_typy"] if t not in PLAY_TYPY]
+        if spatne:
+            chyby.append(f"ukladame „{jmeno}“: neznámé play_typy {spatne}.")
+        ucely = u.get("play_ucely") or []
+        if u["play_typy"] and (not ucely or [x for x in ucely if x not in PLAY_UCELY]):
+            chyby.append(f"ukladame „{jmeno}“: play_ucely musí být neprázdný seznam z {', '.join(PLAY_UCELY)}.")
     return chyby
 
 

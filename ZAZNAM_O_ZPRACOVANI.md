@@ -51,6 +51,7 @@ v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávaj
 |---|---|---|---|
 | Cloudflare, Inc. (USA) | hosting aplikace a databáze (primární instance v EU) | primární instance databáze v EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 | Resend (Plus Five Five, Inc.) (USA) | odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
+| GitHub, Inc. (Microsoft) (USA) | předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 
 Kopie záruk: uloženy u správce, na žádost poskytovány subjektům údajů.
 
@@ -77,7 +78,7 @@ do aplikace vkládají údaje třetích osob. Právním rámcem je
 | **Kategorie subjektů údajů** | motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace |
 | **Kategorie údajů** | jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní |
 | **Zvláštní kategorie (čl. 9/10)** | služba k nim není určena; jejich vkládání je smluvně vyloučeno |
-| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.) (viz A.3) |
+| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.); GitHub, Inc. (Microsoft) (viz A.3) |
 | **Předání mimo EU** | jen na pokyn správce nebo v rámci dalších zpracovatelů, se zárukami podle A.3 |
 | **Doba zpracování** | po dobu trvání smlouvy o službě; poté výmaz nebo vrácení dle volby správce |
 | **Technická a organizační opatření** | shodná s A.4 |

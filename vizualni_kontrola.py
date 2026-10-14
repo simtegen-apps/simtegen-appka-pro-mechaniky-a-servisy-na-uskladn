@@ -523,7 +523,11 @@ def _spust_prohlizec(exe: str, profil: Path, log) -> tuple[subprocess.Popen, _De
         # GitHub runners and containers lack the user namespaces Chrome's
         # sandbox wants; the page is our own, served from 127.0.0.1.
         argv.insert(1, "--no-sandbox")
-    proces = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=log)
+    # __COMPAT_LAYER is a Windows compatibility shim some launchers pass down
+    # (seen: DetectorsAppHealth). Under it Edge 155 hands the window to the
+    # user's running Edge and exits 0 — no DevToolsActivePort, no check.
+    prostredi = {k: v for k, v in os.environ.items() if k.upper() != "__COMPAT_LAYER"}
+    proces = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=log, env=prostredi)
     soubor = profil / "DevToolsActivePort"
     konec = time.monotonic() + 60
     while True:
@@ -723,10 +727,130 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
     return problemy, snimky_out, poznamka
 
 
+# ── Google Play assets (the release workflow runs this) ───────────────
+#
+# Play wants phone screenshots and a 1024×500 feature graphic for every
+# listing. Drawing them by hand per product is exactly the repeated manual
+# step the firm exists to remove, and the product can render itself: the
+# same server and browser as the check, a phone at 1080×1920, each screen,
+# and a graphic composed from the design system (paper, product colour,
+# name, the SimteGen mark). JPEG, because Play refuses PNG with alpha.
+
+MAX_SNIMKU_OBCHODU = 8
+
+_GRAFIKA = """<!doctype html><html lang="cs"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/styl.css"><link rel="stylesheet" href="/produkt.css">
+<style>
+  body {{ margin: 0; width: 1024px; height: 500px; overflow: hidden; }}
+  .g {{ box-sizing: border-box; height: 500px; padding: 64px 72px; display: flex; flex-direction: column;
+        justify-content: space-between; }}
+  .g h1 {{ font-size: 76px; line-height: 1; margin: 0; display: flex; align-items: center; gap: 28px; }}
+  .g h1::before {{ content: ""; width: 44px; height: 44px; background: var(--barva-produktu); flex: none; }}
+  .g p {{ font-size: 30px; max-width: 760px; margin: 22px 0 0; }}
+  .g .pata {{ display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--barva-linka); padding-top: 22px; }}
+</style></head><body><div class="g">
+  <div><h1></h1><p></p></div>
+  <div class="pata"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></div>
+</div></body></html>"""
+
+
+def obchod(root: Path, vystup: Path) -> list[str]:
+    """Phone screenshots and the feature graphic into `vystup`; returns the
+    file names. Raises on a browser that will not start — the release
+    workflow then fails loudly instead of uploading an empty listing."""
+    root = Path(root)
+    zaznam = {}
+    if (root / "play" / "zaznam.json").exists():
+        zaznam = json.loads((root / "play" / "zaznam.json").read_text(encoding="utf-8"))
+    vystup.mkdir(parents=True, exist_ok=True)
+    exe = najdi_prohlizec()
+    if exe is None:
+        raise RuntimeError("na stroji není Chrome, Chromium ani Edge")
+    server = _server(root / "web")
+    profil = Path(tempfile.mkdtemp(prefix="simtegen-prohlizec-"))
+    fd, log_jmeno = tempfile.mkstemp(prefix="simtegen-prohlizec-", suffix=".log")
+    log = os.fdopen(fd, "wb")
+    proces, dt = None, None
+    soubory: list[str] = []
+    try:
+        proces, dt = _spust_prohlizec(exe, profil, log)
+        dt.volej("Page.enable")
+        dt.volej("Emulation.setEmulatedMedia", features=[
+            {"name": "prefers-color-scheme", "value": "light"},
+            {"name": "prefers-reduced-motion", "value": "reduce"}])
+        dt.volej("Emulation.setDeviceMetricsOverride", width=360, height=640, deviceScaleFactor=3, mobile=True)
+        port = server.server_address[1]
+        dt.volej("Page.navigate", url=f"http://127.0.0.1:{port}/index.html")
+        dt.cekej_na("Page.loadEventFired", 20)
+        konec = time.monotonic() + 5
+        while dt.js(_UVODNI) == "videt" and time.monotonic() < konec:
+            time.sleep(0.1)
+        time.sleep(0.5)
+        obrazovky = [o for o in (dt.js(_OBRAZOVKY) or [None]) if "nacitani" not in (o or "")]
+        for poradi, obrazovka in enumerate(obrazovky[:MAX_SNIMKU_OBCHODU], 1):
+            if obrazovka:
+                dt.js(_UKAZ % json.dumps(obrazovka))
+            dt.js("window.scrollTo(0, 0)")
+            time.sleep(0.3)
+            data = dt.volej("Page.captureScreenshot", format="jpeg", quality=90)["data"]
+            jmeno = f"telefon-{poradi}.jpg"
+            (vystup / jmeno).write_bytes(base64.b64decode(data))
+            soubory.append(jmeno)
+        dt.volej("Emulation.setDeviceMetricsOverride", width=1024, height=500, deviceScaleFactor=1, mobile=False)
+        dt.js("document.open(); document.write(%s); document.close();" % json.dumps(_GRAFIKA.format()))
+        dt.js("document.querySelector('.g h1').textContent = %s; document.querySelector('.g p').textContent = %s;"
+              % (json.dumps(zaznam.get("nazev") or ""), json.dumps(zaznam.get("kratky_popis") or "")))
+        dt.js("document.fonts.ready.then(() => true)")
+        time.sleep(0.5)
+        data = dt.volej("Page.captureScreenshot", format="jpeg", quality=92,
+                        clip={"x": 0, "y": 0, "width": 1024, "height": 500, "scale": 1})["data"]
+        (vystup / "grafika.jpg").write_bytes(base64.b64decode(data))
+        soubory.append("grafika.jpg")
+        ikona = root / "web" / "ikona-512.png"
+        if ikona.exists():
+            shutil.copy(ikona, vystup / "ikona.png")
+            soubory.append("ikona.png")
+    finally:
+        if dt is not None:
+            try:
+                dt.session = None
+                dt.volej("Browser.close")
+            except Exception:
+                pass
+            dt.ws.zavri()
+        if proces is not None:
+            try:
+                proces.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proces.kill()
+                proces.wait()
+        server.shutdown()
+        server.server_close()
+        log.close()
+        # Edge lets go of its profile a moment after it exits (same as in
+        # zkontroluj): one rmtree left folders behind in the temp dir.
+        for _ in range(10):
+            shutil.rmtree(profil, ignore_errors=True)
+            try:
+                os.unlink(log_jmeno)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+            if not profil.exists() and not Path(log_jmeno).exists():
+                break
+            time.sleep(0.3)
+    return soubory
+
+
 def main() -> int:
     args = sys.argv[1:]
     snimky = Path(args[args.index("--snimky") + 1]) if "--snimky" in args else None
     root = Path(args[args.index("--koren") + 1]) if "--koren" in args else None
+    if "--obchod" in args:
+        soubory = obchod(root or Path(__file__).resolve().parent, Path(args[args.index("--obchod") + 1]))
+        print("Podklady pro Google Play:", ", ".join(soubory))
+        return 0
     povinne = "--povinne" in args or os.environ.get("GITHUB_ACTIONS") == "true"
     problemy, fotky, poznamka = zkontroluj(root, snimky=snimky, povinne=povinne)
     if "--json" in args:
