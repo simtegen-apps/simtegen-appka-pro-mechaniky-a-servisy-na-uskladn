@@ -19,6 +19,10 @@
 //
 // V aplikaci z Google Play se platí přes Google Play; ceny tam nastavuje
 // majitel v Play Console a musí sedět s tímhle souborem (README, Google Play).
+// `v_aplikaci: true` = varianta jde koupit přes Google Play (šablona zná jen
+// produkt predplatne_mesic = Standard). Ostatní varianty aplikace z Google
+// Play neukazuje ani v ceníku na úvodu: nabídka, kterou tam nejde zaplatit,
+// by ukazovala k placení jinde.
 
 export const CENIK = {
   mena: "Kč",
@@ -30,6 +34,7 @@ export const CENIK = {
       jednotka: "firma / měsíc",
       obdobi: 1,
       vychozi: true,
+      v_aplikaci: true,
       popis: "Evidence uskladněných pneu s tiskem štítků (vlastní tiskárna "
         + "štítků), objednávkový kalendář s připomínkou pro mechanika, "
         + "neomezený počet záznamů, 1–2 přihlášení. Kredit na štítky nad "

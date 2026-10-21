@@ -154,6 +154,12 @@
        správce by zaplatil za svůj prázdný účet) a ostatní dostanou větu. */
     html:not(.sg-ukazka) .sekce-ukazka { display: none !important; }
     body:not(.vlastnik) [data-predplatne-play] { display: none !important; }
+    /* .jen-web: co aplikace z Google Play nesmí ukázat mimo fakturační kartu
+       (varianty ceníku, které Google Play neprodá). Stejně bezpečně jako
+       [data-objednavka] ve styl.css: skryté, dokud play.js nepotvrdí
+       prohlížeč — chyba je schová, nikdy neukáže. */
+    html[data-aplikace]:not(.sg-web) .jen-web,
+    html.sg-v-aplikaci .jen-web,
     html:not(.sg-v-aplikaci) .jen-v-aplikaci,
     body.vlastnik .jen-pozvany-zprava { display: none !important; }
 
@@ -2607,10 +2613,12 @@
 
     // Ceník jako řádky „Standard — 129 Kč / firma / měsíc“ a pod ním, co
     // varianta obsahuje. Stejně na úvodu i na obrazovce Předplatné.
+    // Varianty, které nejde koupit přes Google Play, nesou .jen-web: v aplikaci
+    // z Google Play je ceník neukáže (viz pravidlo .jen-web nahoře).
     function vykresliRadkyCeniku(radky, obsah) {
       const seznam = varianty();
       radky.innerHTML = seznam.map((v) =>
-        `<div><span class="klic">${bezpecne(v.nazev)}</span>
+        `<div${v.v_aplikaci ? "" : ' class="jen-web"'}><span class="klic">${bezpecne(v.nazev)}</span>
           <span class="hodnota">${bezpecne(cenaVarianty(v))}</span></div>`).join("");
       obsah.textContent = seznam.filter((v) => v.popis)
         .map((v) => `${v.nazev} obsahuje: ${v.popis}`).join(" ");
