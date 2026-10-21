@@ -21,7 +21,7 @@
   <p class="meta">Verze 2.0 · účinné od <span class="doplnit">(doplnit datum účinnosti)</span> · předchozí verze poskytneme na vyžádání.</p>
 
   <p>Služba <strong>Pneusklad — evidence uskladněných pneu</strong>, provozovatel a správce údajů
-  <strong>SimteGen s.r.o.</strong>, IČO <span class="doplnit">(doplnit IČO)</span>, se sídlem <span class="doplnit">(doplnit sídlo)</span>, e-mail <a href="mailto:podpora@simtegen.cz">podpora@simtegen.cz</a>. S dotazy k údajům nás kontaktujte na uvedeném e-mailu.</p>
+  <strong>SimteGen s.r.o.</strong>, IČO <span class="doplnit">(doplnit IČO)</span>, se sídlem <span class="doplnit">(doplnit sídlo)</span>, e-mail <a href="mailto:support@simtegen.com">support@simtegen.com</a>. S dotazy k údajům nás kontaktujte na uvedeném e-mailu.</p>
   <p>Pověřence pro ochranu osobních údajů jsme nejmenovali — nesplňujeme žádnou z podmínek
   čl. 37 GDPR, které by nám to ukládaly. Dotazy k údajům vyřizuje kontaktní e-mail výše.</p>
 
@@ -56,6 +56,7 @@
       <tr><td>evidence zaplaceného období předplatného</td><td>odkaz na účet, datum konce předplatného, poznámka k platbě, čas poslední změny</td><td>plnění smlouvy</td><td>do smazání účtu zákazníkem</td></tr>
       <tr><td>historie plateb předplatného, aby bylo vidět obnovení i ukončení</td><td>odkaz na účet, počet zaplacených měsíců, poznámka k platbě, čas zapsání</td><td>plnění smlouvy</td><td>do smazání účtu zákazníkem</td></tr>
       <tr><td>objednávka předplatného z aplikace a doklad o souhlasu spotřebitele se zahájením služby před uplynutím lhůty pro odstoupení</td><td>odkaz na účet, délka předplatného v měsících, zvolená varianta a cena, fakturační údaje, příznak spotřebitele, souhlas se zahájením před uplynutím 14denní lhůty a čas jeho udělení, stav objednávky, čas vytvoření</td><td>plnění smlouvy</td><td>do smazání účtu zákazníkem; daňové doklady vede provozovatel mimo aplikaci po zákonnou dobu</td></tr>
+      <tr><td>evidence předplatného koupeného v Google Play</td><td>odkaz na účet, doklad o nákupu od Googlu, produkt, konec zaplaceného období, stav, čas ověření</td><td>plnění smlouvy</td><td>do smazání účtu zákazníkem</td></tr>
       <tr><td>provozní a bezpečnostní záznamy (logy)</td><td>IP adresa, čas a typ požadavku, identifikace prohlížeče</td><td>oprávněný zájem — provoz a zabezpečení služby</td><td><span class="doplnit">(doplnit skutečnou dobu, typicky 30 dnů)</span></td></tr>
       <tr><td>vyřízení dotazu nebo požadavku podpory</td><td>e-mailová adresa a obsah komunikace</td><td>plnění smlouvy, u nezákazníků oprávněný zájem</td><td><span class="doplnit">(doplnit, typicky 1 rok)</span></td></tr>
       <tr><td>účetní a daňové doklady</td><td>fakturační údaje, částka, datum</td><td>plnění právní povinnosti (zákon o účetnictví, zákon o DPH)</td><td>10 let; vedeno mimo aplikaci</td></tr>
@@ -74,6 +75,7 @@
     <li><strong>Cloudflare, Inc.</strong> — hosting aplikace a databáze (primární instance v EU) (primární instance databáze v EU) (<a href="https://www.cloudflare.com/cloudflare-customer-dpa/">zpracovatelská smlouva</a>)</li>
     <li><strong>Resend (Plus Five Five, Inc.)</strong> — odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi (USA / EU) (<a href="https://resend.com/legal/dpa">zpracovatelská smlouva</a>)</li>
     <li><strong>GitHub, Inc. (Microsoft)</strong> — předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá (USA / EU) (<a href="https://github.com/customer-terms/github-data-protection-agreement">zpracovatelská smlouva</a>)</li>
+    <li><strong>Google Ireland Limited / Google Commerce Limited</strong> — prodej předplatného v aplikaci z Google Play a ověření nákupu (platbu zpracovává Google) (EU)</li>
   </ul>
 
   <h2>Předávání mimo Evropskou unii</h2>
@@ -92,6 +94,7 @@
   (§ 89 odst. 3 zákona č. 127/2005 Sb., o elektronických komunikacích):</p>
   <ul>
     <li><code>relace</code> — udržení přihlášení (technická, HttpOnly); platnost 30 dní.</li>
+    <li><code>aplikace</code> — pozná aplikaci z Google Play, aby v ní nebyla nabídka placení mimo Google Play (technická, HttpOnly); platnost 1 rok.</li>
   </ul>
 
   <h2>Vaše práva</h2>

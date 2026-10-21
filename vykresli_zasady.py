@@ -59,7 +59,18 @@ _ZPRACOVATELE_SIDLO = {
     "Cloudflare": ("Cloudflare, Inc.", "USA", "primární instance databáze v EU"),
     "Resend": ("Resend (Plus Five Five, Inc.)", "USA", "USA / EU"),
     "GitHub": ("GitHub, Inc. (Microsoft)", "USA", "USA / EU"),
+    # Payment in the Play app: Google sells and collects as the store; we
+    # only learn that a purchase exists and until when it is paid.
+    "Google Play": ("Google Ireland Limited / Google Commerce Limited", "Irsko", "EU"),
 }
+
+
+def _play(manifest: dict) -> bool:
+    """Does the product sell in the Google Play app (module play)? The
+    entity is what the product stores about such purchases, so the
+    manifest says it once and terms, policy and record follow."""
+    return any(isinstance(u, dict) and u.get("entita") == "play_nakupy"
+               for u in manifest.get("ukladame") or [])
 
 
 def _esc(text) -> str:
@@ -326,6 +337,36 @@ def vykresli_zasady(manifest: dict) -> str:
 
 # ── Obchodní podmínky ───────────────────────────────────────────────
 
+def _play_predplatne(manifest: dict) -> str:
+    """Terms for the subscription bought in the Google Play app. The app
+    sells only this way (Google Play Payments policy); the paid period is
+    one and the same on the web and in the app."""
+    if not _play(manifest):
+        return ""
+    return """  <p><strong>Předplatné v aplikaci z Google Play.</strong> V aplikaci nainstalované
+  z Google Play se předplatné kupuje výhradně přes Google Play: platbu přijímá a zpracovává
+  Google podle podmínek Google Play, cena, délka období a automatické obnovení jsou vidět
+  v nabídce před nákupem. Předplatné se obnovuje automaticky na další období, dokud ho
+  zákazník nezruší; zrušit ho lze kdykoli v Google Play (Platby a předplatná → Předplatná)
+  a zaplacené období doběhne. Zaplacené období platí stejně v aplikaci i na webu.
+  <strong>Smazáním účtu se předplatné v Google Play nezruší</strong> — zrušte ho prosím
+  v Google Play, jinak ho Google dál účtuje.</p>
+"""
+
+
+def _play_odstoupeni(manifest: dict) -> str:
+    """Withdrawal for a Play purchase. The Play purchase sheet does not ask
+    for the § 1837 l consent our web order asks for, so the right is kept
+    in full: we refund everything rather than argue a consent we never got."""
+    if not _play(manifest):
+        return ""
+    return """  <p><strong>Předplatné koupené přes Google Play:</strong> souhlas se zahájením plnění
+  podle § 1837 písm. l) se při nákupu přes Google Play nevyžaduje, právo odstoupit do 14 dnů
+  proto trvá v plném rozsahu. Stačí nám napsat na kontaktní adresu; vrátíme celou zaplacenou
+  částku, a to přes Google Play.</p>
+"""
+
+
 def vykresli_podminky(manifest: dict) -> str:
     produkt = _produkt(manifest)
     zkusebni = manifest.get("zkusebni_dni") or 30
@@ -368,7 +409,7 @@ def vykresli_podminky(manifest: dict) -> str:
   délku a celkovou cenu předplatného.</p>
   <p>Předplatné se hradí na základě faktury (daňového dokladu) vystavené poskytovatelem,
   se splatností uvedenou na faktuře. Zaplacené období se v aplikaci zobrazuje u účtu.</p>
-  <p>Změnu ceny oznámíme v aplikaci nebo e-mailem nejméně 30 dní předem; nová cena platí
+{_play_predplatne(manifest)}  <p>Změnu ceny oznámíme v aplikaci nebo e-mailem nejméně 30 dní předem; nová cena platí
   až od dalšího předplaceného období. Zákazník, který se změnou nesouhlasí, může smlouvu
   do účinnosti změny ukončit bez jakékoli sankce.</p>
   <p>Není-li předplatné uhrazeno, přejde účet po uplynutí zaplaceného období do omezeného
@@ -393,7 +434,7 @@ def vykresli_podminky(manifest: dict) -> str:
   placenou službu až po uplynutí 14denní lhůty.</p>
   <p>Bezplatné zkušební období není smlouvou za úplatu a spotřebitel z něj nemá žádný
   platební závazek; účet lze kdykoli smazat.</p>
-  </div>
+{_play_odstoupeni(manifest)}  </div>
 
   <h2>5. Dostupnost, podpora a vady služby</h2>
   <p>Poskytovatel provozuje službu s odbornou péčí a po celou dobu trvání smlouvy zajišťuje,

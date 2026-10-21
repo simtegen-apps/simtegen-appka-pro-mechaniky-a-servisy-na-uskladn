@@ -133,10 +133,10 @@ export function denACas(ts) {
 }
 
 // Matches ZKUSEBNI_DNI in predplatne.js and zkusebni_dni in the manifest,
-// which is what the terms of service promise. Shops created before this was
-// shortened keep the zkusebni_do they were given — the column is written
-// once, on first read.
-export const ZKUSEBNI_DNU = 14;
+// which is what the terms of service promise. Shops that started under an
+// earlier trial length keep the zkusebni_do they were given — the column is
+// written once, on first read. 30 days since build 10 (approved price list).
+export const ZKUSEBNI_DNU = 30;
 export const ZKUSEBNI_LIMIT_SAD = 40;
 export const RETENCE_ARCHIV = 730 * DEN; // 24 months, matches the manifest
 
@@ -168,9 +168,13 @@ export async function novyKodSady(env, uzivatelId) {
   return `${rok}-${String(radek.posledni_cislo).padStart(4, "0")}`;
 }
 
-export async function zkontrolujLimit(env, uzivatelId, nastaveni) {
+export async function zkontrolujLimit(env, uzivatelId, nastaveni, predplatne) {
   // Returns a Czech sentence to refuse with, or null. Only the trial is
   // capped — a paying shop is never told it may not store a customer's wheels.
+  // "Paying" means either the old plan column or a paid period in
+  // predplatne (invoice or Google Play): both ways of paying only ever write
+  // predplatne.plati_do, and the approved Standard promises unlimited records.
+  if (predplatne && predplatne.stav === "aktivni") return null;
   //
   // A trial that has RUN OUT is no longer handled here: that is the
   // subscription's job (vyzadujPredplatne → 402), and two different refusals
@@ -374,6 +378,19 @@ function sklonujObjednavky(n) {
   return "objednávek";
 }
 
+// "In N days" as a Prague calendar day ("2026-10-22"), or "" when N is not a
+// small whole number. The demo data (play/ukazka.json) is replayed on any
+// date, so it says "tomorrow" instead of a date that would go stale and leave
+// the store screenshots with an empty calendar. Midday keeps a DST switch from
+// moving the answer to a neighbouring day.
+export function denPosunuty(posun) {
+  const n = Number(posun);
+  if (posun === undefined || posun === null || posun === "" || !Number.isInteger(n) || n < -400 || n > 400) {
+    return "";
+  }
+  return denACas(zacatekDne(ted()) + n * DEN + 12 * 3600).den;
+}
+
 // Everything the mechanic typed, validated once — shared by create and edit so
 // the two cannot drift apart.
 export async function pripravObjednavku(env, servisId, telo) {
@@ -384,7 +401,7 @@ export async function pripravObjednavku(env, servisId, telo) {
   const cas = celyDen
     ? minutyNaCas(nastaveni.otevreno_od)
     : (ocisti(telo.cas, 5) || "08:00");
-  const datum = epochZDataCasu(ocisti(telo.den, 10), cas);
+  const datum = epochZDataCasu(ocisti(telo.den, 10) || denPosunuty(telo.posun_dni), cas);
   if (!datum) return { chyba: "Zadejte prosím datum termínu." };
 
   let sadaId = Number(telo.sada_id) || null;

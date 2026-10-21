@@ -110,3 +110,47 @@ pak ukáže u částky. Dokud je slot prázdný, appka o DPH mlčí.
 servisy, které dosud platily přes `nastaveni_servisu.plan`, a dala jim rok
 runwaye. Zkontrolujte `SELECT * FROM predplatne;` a upravte `plati_do`
 podle skutečné faktury.
+
+## Google Play
+
+Pneusklad je od buildu 10 i aplikace v Google Play (Trusted Web Activity,
+balíček `cz.simtegen.pneusklad` — **nikdy neměnit**). V aplikaci se
+předplatné kupuje přes Google Play, na webu dál fakturou. Obojí končí ve
+stejném `predplatne.plati_do` provozovny (platí pozdější datum) a každé nové
+zaplacené období se zapíše i do `platby`.
+
+**Co musí udělat majitel v Play Console:**
+
+1. **Předplatné.** Modul ze šablony (`play_nakupy.js`, `web/play.js`) zná
+   jen dvě ID produktu: `predplatne_mesic` (1 měsíc) a `predplatne_rok`
+   (12 měsíců). Založte **jen `predplatne_mesic` za 129 Kč měsíčně**
+   (Standard). `predplatne_rok` nezakládejte — schválený ceník roční cenu
+   nemá a aplikace by ji ukázala. **Sezónní vstup (790 Kč / 6 měsíců)
+   a Větší provozovna (229 Kč / měsíc) se v aplikaci koupit nedají**, dokud
+   šablona nepozná víc produktů. Na webu je fakturou objednat lze.
+2. **Otisk podpisového klíče.** Play Console → Integrita aplikace → SHA-256
+   otisk → do `data-manifest.json`, `aplikace.otisky`, pak
+   `python vykresli_aplikaci.py`. Do té doby aplikace běží s adresním řádkem.
+3. **Servisní účet na ověření nákupů.** Samostatný účet s oprávněním jen
+   „Spravovat objednávky a předplatná“. Jeho JSON patří do secretu
+   `PLAY_NAKUPY_UCET`, balíček do `PLAY_BALICEK`. Bez nich aplikace nákup
+   neověří a předplatné nezapíše (`/api/play` vrátí 503).
+4. **Bezpečnost údajů a obsah aplikace.** Odpovědi jsou v
+   `play/BEZPECNOST_DAT.md` (generované z manifestu). Pro kontrolora Googlu
+   je na přihlašovací obrazovce „Vyzkoušet ukázku“ — dočasný účet na
+   24 hodin s daty z `play/ukazka.json`.
+
+**Kdo v aplikaci kupuje:** jen **majitel účtu** (ten, kdo provozovnu
+založil). `/api/play` připisuje nákup na účet přihlášené osoby, kdežto
+předplatné patří provozovně (`servis.id`). Pozvaný správce by zaplatil za
+svůj prázdný účet, proto mu aplikace nákup neukáže a napíše, kdo kupuje.
+
+**Ukázková data mají dvě podoby:** „Vyzkoušet ukázku“ (`/api/ukazka`,
+šablona, dočasný účet) a „Naplnit ukázkovými daty“ v Nastavení
+(`/api/ukazkova-data`, ve vlastním účtu, označené `ukazka = 1`).
+
+Po každé změně manifestu: `python vykresli_zasady.py && python
+vykresli_aplikaci.py && python kontrola_manifestu.py`. Generované soubory
+(`web/manifest.webmanifest`, ikony, `web/sw.js`, `web/offline.html`,
+`web/.well-known/assetlinks.json`, `web/ukazka.json`, `play/zaznam.json`,
+`play/BEZPECNOST_DAT.md`) se needitují ručně.

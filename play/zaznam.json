@@ -1,0 +1,225 @@
+{
+  "jazyk": "cs-CZ",
+  "nazev": "Pneusklad: uskladnění pneu",
+  "kratky_popis": "Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.",
+  "dlouhy_popis": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.\n\nObjednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.\n\nPřed sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.\n\nDo servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.\n\nPrvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129 Kč měsíčně přes Google Play. Obnovuje se automaticky a zrušit ho můžete kdykoli v Google Play. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.",
+  "kategorie": "BUSINESS",
+  "kontakt_email": "support@simtegen.com",
+  "hlavni_veta": "Kde leží čí kola a co zítra sundat",
+  "snimky": [
+    {
+      "obrazovka": "obrazovka-dnes",
+      "stitek": "Dnes",
+      "titulek": "Ráno víte, co sundat z regálu"
+    },
+    {
+      "obrazovka": "obrazovka-sklad",
+      "stitek": "Sklad",
+      "titulek": "Každá sada má kód a místo v regálu",
+      "kliky": [
+        "[data-obrazovka=obrazovka-sklad]"
+      ]
+    },
+    {
+      "obrazovka": "obrazovka-sada",
+      "stitek": "Detail sady",
+      "titulek": "Hloubka dezénu všech čtyř kol",
+      "kliky": [
+        "[data-obrazovka=obrazovka-sklad]",
+        "#sklad-seznam .otevri-sadu"
+      ]
+    },
+    {
+      "obrazovka": "obrazovka-objednavky",
+      "stitek": "Objednávky",
+      "titulek": "Celý týden dílny na jednom místě",
+      "kliky": [
+        "[data-obrazovka=obrazovka-objednavky]"
+      ],
+      "tablet": true
+    },
+    {
+      "obrazovka": "obrazovka-priprava",
+      "stitek": "Připravit kola",
+      "titulek": "Seznam kol na zítřek i s pozicí",
+      "kliky": [
+        "#dlazdice-priprava"
+      ]
+    },
+    {
+      "obrazovka": "obrazovka-prehled",
+      "stitek": "Sezóna",
+      "titulek": "Koho obvolat před sezónou",
+      "kliky": [
+        "#dnes-na-prehled"
+      ],
+      "tablet": true
+    }
+  ],
+  "zasady_cesta": "/zasady.html",
+  "ucty": true,
+  "smazani_uctu_cesta": "/zasady.html",
+  "bezpecnost_dat": {
+    "sbira": true,
+    "sdili": false,
+    "sifrovano_pri_prenosu": true,
+    "lze_smazat": true,
+    "typy": [
+      {
+        "klic": "email",
+        "kategorie": "Personal info",
+        "typ": "Email address",
+        "ucely": [
+          "Account management",
+          "Fraud prevention, security, and compliance",
+          "App functionality"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "uzivatele",
+          "prihlasovaci_odkazy",
+          "zakaznici",
+          "clenove"
+        ]
+      },
+      {
+        "klic": "jmeno",
+        "kategorie": "Personal info",
+        "typ": "Name",
+        "ucely": [
+          "App functionality",
+          "Account management"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "nastaveni_servisu",
+          "zakaznici",
+          "objednavky",
+          "objednavky_predplatneho"
+        ]
+      },
+      {
+        "klic": "adresa",
+        "kategorie": "Personal info",
+        "typ": "Address",
+        "ucely": [
+          "App functionality",
+          "Account management"
+        ],
+        "volitelne": true,
+        "zdroje": [
+          "nastaveni_servisu",
+          "objednavky_predplatneho"
+        ]
+      },
+      {
+        "klic": "telefon",
+        "kategorie": "Personal info",
+        "typ": "Phone number",
+        "ucely": [
+          "App functionality"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "nastaveni_servisu",
+          "zakaznici"
+        ]
+      },
+      {
+        "klic": "osobni_jine",
+        "kategorie": "Personal info",
+        "typ": "Other info",
+        "ucely": [
+          "App functionality"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "sady"
+        ]
+      },
+      {
+        "klic": "historie_nakupu",
+        "kategorie": "Financial info",
+        "typ": "Purchase history",
+        "ucely": [
+          "App functionality",
+          "Account management"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "predplatne",
+          "platby",
+          "objednavky_predplatneho",
+          "play_nakupy"
+        ]
+      },
+      {
+        "klic": "financni_jine",
+        "kategorie": "Financial info",
+        "typ": "Other financial info",
+        "ucely": [
+          "App functionality",
+          "Account management"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "sady",
+          "objednavky_predplatneho"
+        ]
+      },
+      {
+        "klic": "zpravy",
+        "kategorie": "Messages",
+        "typ": "Other in-app messages",
+        "ucely": [
+          "App functionality",
+          "Developer communications"
+        ],
+        "volitelne": true,
+        "zdroje": [
+          "hlášení chyb (tlačítko Nahlásit chybu)"
+        ]
+      },
+      {
+        "klic": "obsah_uzivatele",
+        "kategorie": "App activity",
+        "typ": "Other user-generated content",
+        "ucely": [
+          "App functionality"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "zakaznici",
+          "sady",
+          "pohyby",
+          "objednavky"
+        ]
+      },
+      {
+        "klic": "kalendar",
+        "kategorie": "Calendar",
+        "typ": "Calendar events",
+        "ucely": [
+          "App functionality"
+        ],
+        "volitelne": false,
+        "zdroje": [
+          "objednavky"
+        ]
+      },
+      {
+        "klic": "diagnostika",
+        "kategorie": "App info and performance",
+        "typ": "Diagnostics",
+        "ucely": [
+          "App functionality",
+          "Developer communications"
+        ],
+        "volitelne": true,
+        "zdroje": [
+          "hlášení chyb (tlačítko Nahlásit chybu)"
+        ]
+      }
+    ]
+  }
+}

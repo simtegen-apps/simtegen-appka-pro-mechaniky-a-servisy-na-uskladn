@@ -8,7 +8,7 @@
 
 import {
   bezDiakritiky, cislo, json, nactiNastaveni, novyKodSady, ocisti, odepriZapis,
-  smiPsat, sqlBezDiakritiky, ted, zkontrolujLimit, SADY_SELECT, TYPY_PNEU,
+  smiPsat, sqlBezDiakritiky, ted, zkontrolujLimit, DEN, SADY_SELECT, TYPY_PNEU,
 } from "../../spolecne.js";
 import { vyzadujPredplatne } from "../../predplatne.js";
 
@@ -95,7 +95,7 @@ export async function onRequestPost(context) {
   }
 
   const nastaveni = await nactiNastaveni(env, data.servis.id);
-  const zamitnuti = await zkontrolujLimit(env, data.servis.id, nastaveni);
+  const zamitnuti = await zkontrolujLimit(env, data.servis.id, nastaveni, data.predplatne);
   if (zamitnuti) return json({ chyba: zamitnuti }, 403);
 
   // Either an existing motorist or a new one created in the same step — the
@@ -122,6 +122,9 @@ export async function onRequestPost(context) {
   const typ = TYPY_PNEU.includes(telo.typ) ? telo.typ : "zimni";
   const pocet = Math.min(Math.max(cislo(telo.pocet_kusu, 4), 1), 8);
   const cena = Math.min(Math.max(cislo(telo.cena_skladovani, nastaveni.vychozi_cena), 0), 100000);
+  // Optional, for sets written in after the fact (and the demo data, which
+  // is replayed on any date): taken in N days ago, never in the future.
+  const prijem = ted() - Math.min(Math.max(cislo(telo.prijato_pred_dni, 0), 0), 400) * DEN;
 
   const sada = await env.DB.prepare(
     "INSERT INTO sady (uzivatel_id, zakaznik_id, kod, spz, vozidlo, typ, rozmer, " +
@@ -135,12 +138,12 @@ export async function onRequestPost(context) {
     telo.na_discich === false ? 0 : 1,
     hloubka(telo.hloubka_lp), hloubka(telo.hloubka_pp),
     hloubka(telo.hloubka_lz), hloubka(telo.hloubka_pz),
-    ocisti(telo.pozice, 40), ted(), cena, ocisti(telo.poznamka, 300),
+    ocisti(telo.pozice, 40), prijem, cena, ocisti(telo.poznamka, 300),
   ).first();
 
   await env.DB.prepare(
     "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
-  ).bind(data.servis.id, sada.id, "prijem", ted(), ocisti(telo.pozice, 40)).run();
+  ).bind(data.servis.id, sada.id, "prijem", prijem, ocisti(telo.pozice, 40)).run();
 
   const ulozena = await env.DB.prepare(
     `${SADY_SELECT} WHERE s.uzivatel_id = ? AND s.id = ?`

@@ -1,0 +1,41 @@
+{
+  "name": "Pneusklad: uskladnění pneu",
+  "short_name": "Pneusklad",
+  "description": "Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.",
+  "lang": "cs",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f4ef",
+  "theme_color": "#c2410c",
+  "icons": [
+    {
+      "src": "/ikona-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ikona-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ikona-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "cz.simtegen.pneusklad",
+      "url": "https://play.google.com/store/apps/details?id=cz.simtegen.pneusklad"
+    }
+  ],
+  "prefer_related_applications": false
+}

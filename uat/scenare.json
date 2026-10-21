@@ -110,21 +110,21 @@
           "pozadavek": "POST /api/objednavka",
           "telo": {
             "mesice": 6,
-            "varianta": "zaklad",
+            "varianta": "standard",
             "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno",
             "spotrebitel": false,
             "souhlas_zahajeni": false
           },
           "ocekavam": 200,
           "uloz": { "predplatne_id": "id" },
-          "obsahuje": ["774", "Základ"]
+          "obsahuje": ["774", "Standard"]
         },
         {
           "jako": "A",
           "pozadavek": "POST /api/objednavka",
           "telo": {
             "mesice": 6,
-            "varianta": "zaklad",
+            "varianta": "standard",
             "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno"
           },
           "ocekavam": 409
@@ -147,17 +147,160 @@
           "pozadavek": "POST /api/objednavka",
           "telo": {
             "mesice": 12,
-            "varianta": "solo",
+            "varianta": "sezona",
+            "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno"
+          },
+          "ocekavam": 422
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavka",
+          "telo": {
+            "mesice": 6,
+            "varianta": "sezona",
             "fakturace": "UAT-fakturace-Alfa, Dílenská 1, Brno"
           },
           "ocekavam": 200,
-          "obsahuje": ["1068"]
+          "uloz": { "sezona_id": "id" },
+          "obsahuje": ["790", "Sezónní vstup", "nova"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/objednavka",
+          "ocekavam": 200,
+          "obsahuje": ["\"mesice\":6", "\"cena_czk\":790", "Sezónní vstup", "nova"]
         },
         {
           "jako": "B",
           "pozadavek": "POST /api/objednavka/{predplatne_id}",
           "telo": { "akce": "zrusit" },
           "ocekavam": 404
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/objednavka/{sezona_id}",
+          "telo": { "akce": "zrusit" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/objednavka",
+          "ocekavam": 200,
+          "neobsahuje": ["Sezónní vstup", "\"cena_czk\":790"]
+        }
+      ]
+    },
+    {
+      "nazev": "Příprava na zítřek z objednávky zadané posunem dní",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Gama",
+            "telefon": "601000333",
+            "spz": "UAT7777",
+            "vozidlo": "UAT-vozidlo-Gama",
+            "typ": "zimni",
+            "rozmer": "215/55 R16",
+            "pocet_kusu": 4,
+            "na_discich": true,
+            "pozice": "UATREGAL-07",
+            "cena_skladovani": 800,
+            "prijato_pred_dni": 180
+          },
+          "ocekavam": 200,
+          "uloz": { "gama_id": "sada.id", "gama_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky",
+          "telo": {
+            "sada_id": "{gama_id}",
+            "posun_dni": 1,
+            "cas": "09:00",
+            "ukon": "prezuti",
+            "na_discich": true,
+            "delka_min": 45,
+            "poznamka": "UAT-poznamka-Gama",
+            "potvrzeno": true
+          },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/priprava",
+          "ocekavam": 200,
+          "obsahuje": ["{gama_kod}", "UATREGAL-07", "UAT-motorista-Gama"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/priprava",
+          "ocekavam": 200,
+          "neobsahuje": ["UATREGAL-07", "UAT-motorista-Gama"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady/{gama_id}",
+          "ocekavam": 404,
+          "neobsahuje": ["UAT-motorista-Gama"]
+        }
+      ]
+    },
+    {
+      "nazev": "Ukázková data v účtu: naplnit a smazat, vlastní sada zůstane",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Delta",
+            "telefon": "601000444",
+            "spz": "UAT8888",
+            "typ": "letni",
+            "rozmer": "195/65 R15",
+            "pozice": "UATREGAL-09",
+            "cena_skladovani": 700
+          },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/ukazkova-data",
+          "telo": { "akce": "naplnit" },
+          "ocekavam": 200,
+          "obsahuje": ["naplneno"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=vse&q=Kucerova",
+          "ocekavam": 200,
+          "obsahuje": ["Marie Kučerová"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady?stav=vse&q=Kucerova",
+          "ocekavam": 200,
+          "neobsahuje": ["Marie Kučerová"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/ukazkova-data",
+          "telo": { "akce": "smazat" },
+          "ocekavam": 200,
+          "obsahuje": ["smazano"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=vse&q=Kucerova",
+          "ocekavam": 200,
+          "neobsahuje": ["Marie Kučerová"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=vse&q=UATREGAL-09",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-motorista-Delta"]
         }
       ]
     },
@@ -168,7 +311,8 @@
           "jako": "nikdo",
           "pozadavek": "GET /api/ja",
           "ocekavam": 200,
-          "obsahuje": ["cenik", "zkusebni_dni", "89", "129", "249"],
+          "obsahuje": ["cenik", "Standard", "129", "Sezónní vstup", "790",
+                       "Větší provozovna", "229", "\"zkusebni_dni\":30"],
           "neobsahuje": ["email"]
         },
         {

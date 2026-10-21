@@ -36,7 +36,10 @@ from pathlib import Path
 # in front of the reviewer, never a silent exception.
 VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js",
                        "functions/api/odhlaseni.js", "functions/api/navsteva.js",
-                       "functions/api/nahlasit.js"}
+                       "functions/api/nahlasit.js",
+                       # Vyzkoušet ukázku (module play, SimteGen): a throwaway
+                       # demo account — the reviewer and the visitor have none.
+                       "functions/api/ukazka.js"}
 
 # Security plumbing of the template, queried by token or expiry, not by
 # customer — the uzivatel_id rule is about customer data.
@@ -46,7 +49,7 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # (export and delete over every table with uzivatel_id). Only there, and only
 # as a quoted identifier "${...}", is interpolation allowed.
 IDENTIFIKATORY_SMI = {"spolecne.js", "functions/api/ucet/export.js",
-                      "functions/api/ucet/smazat.js"}
+                      "functions/api/ucet/smazat.js", "functions/api/ukazka.js"}
 
 _STRAZ = re.compile(r"!\s*(?:context\.)?(?:data\.)?uzivatel\b|vyzadujUzivatele\s*\(|vyzadujPredplatne\s*\(")
 

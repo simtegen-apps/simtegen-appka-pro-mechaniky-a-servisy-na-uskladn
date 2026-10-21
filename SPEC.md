@@ -94,3 +94,43 @@ Na náhledovém nasazení:
 - Účet B — požádá o sadu, přípravu a objednávku předplatného účtu A — nesmí uvidět žádnou sadu, jméno motoristy ani objednávku účtu A (404 nebo prázdný seznam).
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě buildu 10 oproti specifikaci změnilo
+
+1. **V aplikaci jde koupit jen Standard (129 Kč / měsíc).** Šablonový
+   modul (`play_nakupy.js`, `web/play.js`, needitují se) zná jen ID
+   `predplatne_mesic` a `predplatne_rok`. Sezónní vstup a Větší provozovnu
+   Google Play v aplikaci neprodá, dokud šablona nepozná víc produktů. Na
+   webu jdou objednat fakturou všechny tři varianty. Úplný popis v obchodě
+   a „Co je nového“ proto slibují jen Standard přes Google Play. README
+   říká majiteli, co založit v Play Console.
+2. **Ceník na obrazovce Předplatné je jen na webu** (`data-objednavka`).
+   V aplikaci by ukazoval varianty, které tam koupit nejde, tedy odkaz
+   k placení jinde. Cenu a podmínky v aplikaci ukazuje panel Google Play,
+   úvodní obrazovka dál ukazuje celý ceník (to pravidla dovolují).
+3. **Nákup v aplikaci vidí jen majitel účtu,** ne každý správce.
+   `/api/play` připisuje nákup na `data.uzivatel.id`, předplatné ale čte
+   middleware podle `servis.id`. Pozvaný správce by zaplatil za svůj
+   prázdný účet. Pozvaní vidí větu, kdo kupuje.
+4. **Žádné `play_produkt` v `cenik.js`:** ID produktů drží šablona.
+5. **Oprava navíc: limit 40 sad ve zkušebce už neplatí pro zaplacený
+   servis.** `zkontrolujLimit` hlídal jen sloupec `plan`, jenže faktura
+   i Google Play zapisují jen `predplatne.plati_do`. Servis by zaplatil
+   a po 40 sadách dostal „Ve zkušebním režimu…“, přestože Standard slibuje
+   neomezený počet záznamů.
+6. **Sklad na tabletu je seznam ve sloupci s8, ne tabulka.** Řádky nesou
+   zaškrtávátko pro dávkový tisk štítků a tlačítko detailu. Druhé vykreslení
+   jako tabulka by bylo druhé místo, které se může rozejít. Sezónní přehled
+   používá `.dva-sloupce`, ne pevné `.s4`: na tabletu 820 px by tři sloupce
+   měly asi 190 px a tlačítka Zavolat / Sada / Zaplaceno by se nevešla.
+7. **Visačka v piktogramu je natočený pětiúhelník (`polyline`), ne `rect`.**
+   Obdélník ze specifikace ležel přes bok pláště a validátor přidává
+   k poloměru rezervu 0,8. Visačka teď visí mimo plášť do 13,85 od středu.
+8. **Akceptační scénář objednávky přepsán na nový ceník** (`standard`,
+   `sezona`). Starý počítal se zrušenými variantami `zaklad` a `solo`
+   a spadl by na 422. Ukázková data hledají `q=Kucerova` bez diakritiky,
+   protože UAT klient adresu nekóduje a server hledá bez diakritiky.
+9. **Generátory v tomhle sezení nespustil stavitel.** Prostředí odmítlo
+   spustit Python (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
+   `kontrola_manifestu.py`) i Node. Generované soubory se proto ručně
+   nepsaly a před nasazením je musí vytvořit člověk (README, Google Play).

@@ -21,7 +21,10 @@ firemní podpis a zároveň nechává vyniknout téma produktu.
 - **Obří číslo.** To, na čem na obrazovce záleží nejvíc, je obří číslo
   (`.cislo-obri`) — počet, částka, stav. Jedno na obrazovku.
 - **Úvodní obrazovka s logem SimteGen** při každém startu — dělá ji
-  `web/simtegen.js`, stránka ho jen načte (viz Kostra).
+  `web/simtegen.js`, stránka ho jen načte (viz Kostra). Logo „Díl“ se při
+  prvním otevření poskládá animací; kulatý díl v něm má barvu produktu.
+  Značku jinde v appce dává jen třída `.znacka-ctverec` — nikdy ji nekresli
+  vlastním obrázkem.
 - **Barva produktu jen jako ukazatel**: čtvereček u názvu, aktivní položka
   menu, plnění stupnice, „Dnes“. Nikdy jako plocha pod textem, nikdy na
   hlavním tlačítku — to je vždy černé.
@@ -118,6 +121,35 @@ Ikony: inline SVG, tah 1,6, mřížka 24, `stroke="currentColor"`, bez výplně.
 - Text česky, zákazníkovi se vyká, bez lorem ipsum a bez „Chyba 500“.
 - Pohyb jen krátký, na `transform`/`opacity`; `prefers-reduced-motion`
   ho vypne automaticky.
+
+## Aplikace v obchodě (modul aplikace)
+
+Záznam v Google Play kreslí vydání samo, z podkladů v repu. Vypadá u všech
+appek SimteGen stejně: papír s tečkovanou mřížkou, nahoře číslovaný štítek
+a jedna věta, pod ní telefon s obrazovkou aplikace, který jde přes spodní
+okraj.
+
+- **Ikona** vzniká z `play/piktogram.svg`: jeden předmět z oboru produktu
+  nakreslený rovnými čarami na mřížce 24×24 (`line`, `rect`, `polyline`,
+  `circle`, `path` jen s M L H V Z). Tloušťku, barvu, přechod z barvy
+  produktu, rýsovací mřížku a stín dodá generátor; v souboru nejsou.
+  Všechno musí ležet do 14 od středu (12,12), jinak to Android v kulaté
+  ikoně uřízne. Jeden drobný doplněk z praxe oboru (kóta pod linkou, ryska)
+  patří do `<g class="detail">` — kreslí se tenčeji a průhledněji.
+- **Snímky**: `aplikace.snimky` v manifestu, 3–6 položek. Každá je jedna
+  obrazovka a jedna věta (titulek 8–40 znaků), štítek do 24 znaků, `kliky`
+  otevřou obrazovku s daty (např. první zakázku), `tablet: true` ji vyfotí
+  i na tabletu. Web bez `.obrazovka` (jedna stránka) místo obrazovky
+  posune stránku (`posun` v px). Pořadí vypráví práci zákazníka od začátku
+  do výsledku.
+- **Ukázková data**: produkt s databází má `play/ukazka.json` — kroky přes
+  vlastní API, které vytvoří věrohodný, ale vymyšlený obsah. Žádné skutečné
+  osoby ani firmy, e-maily jen `@example.cz`. CI je spouští při každé stavbě
+  (UAT), snímky se fotí přihlášené právě s nimi.
+- **Grafika** nese `aplikace.hlavni_veta` (12–60 znaků) a výřez první
+  obrazovky.
+- **Co je nového**: `play/co_je_noveho.txt`, přepsaný každou stavbou —
+  změna z pohledu zákazníka, nejvýš 500 znaků.
 
 ## Co CI odmítne (deterministicky)
 
