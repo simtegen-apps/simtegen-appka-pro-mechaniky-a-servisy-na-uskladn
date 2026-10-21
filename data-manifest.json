@@ -1,7 +1,7 @@
 {
   "produkt": "Pneusklad — evidence uskladněných pneu",
   "provozovatel": "SimteGen s.r.o.",
-  "kontakt_email": "podpora@simtegen.cz",
+  "kontakt_email": "support@simtegen.com",
   "obsah_zakaznika": "uklada_se",
   "obsah_zakaznika_popis": "jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní",
   "subjekty_obsahu": "motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace",

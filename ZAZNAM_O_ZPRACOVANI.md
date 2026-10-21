@@ -5,7 +5,7 @@
 **Přezkoumat:** nejméně 1× ročně a při každé změně zpracování, zpracovatelů nebo účelů.
 
 **Správce:** SimteGen s.r.o., IČO (doplnit), se sídlem (doplnit),
-e-mail podpora@simtegen.cz, datová schránka (doplnit).
+e-mail support@simtegen.com, datová schránka (doplnit).
 **Zástupce podle čl. 27 GDPR:** nejmenován (správce je usazen v EU).
 **Pověřenec pro ochranu osobních údajů:** nejmenován — nesplněna žádná z podmínek čl. 37 GDPR.
 
