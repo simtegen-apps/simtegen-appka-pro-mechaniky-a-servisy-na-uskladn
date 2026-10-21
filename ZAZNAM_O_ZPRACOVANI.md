@@ -32,6 +32,7 @@ správcem, a **B** pro zpracování prováděná pro zákazníky, kde je SimteGe
 | predplatne | evidence zaplaceného období předplatného | zákazníci služby | odkaz na účet, datum konce předplatného, poznámka k platbě, čas poslední změny | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
 | platby | historie plateb předplatného, aby bylo vidět obnovení i ukončení | zákazníci služby | odkaz na účet, počet zaplacených měsíců, poznámka k platbě, čas zapsání | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
 | objednavky_predplatneho | objednávka předplatného z aplikace a doklad o souhlasu spotřebitele se zahájením služby před uplynutím lhůty pro odstoupení | zákazníci služby | odkaz na účet, délka předplatného v měsících, zvolená varianta a cena, fakturační údaje, příznak spotřebitele, souhlas se zahájením před uplynutím 14denní lhůty a čas jeho udělení, stav objednávky, čas vytvoření | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem; daňové doklady vede provozovatel mimo aplikaci po zákonnou dobu |
+| play_nakupy | evidence předplatného koupeného v Google Play | zákazníci služby | odkaz na účet, doklad o nákupu od Googlu, produkt, konec zaplaceného období, stav, čas ověření | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
 | provozní a bezpečnostní logy | provozní a bezpečnostní záznamy (logy) | zákazníci a návštěvníci | IP adresa, čas a typ požadavku, identifikace prohlížeče | čl. 6/1/f — oprávněný zájem | (doplnit skutečnou dobu, typicky 30 dnů) |
 | podpora a komunikace | vyřízení dotazu nebo požadavku podpory | zákazníci, zájemci | e-mailová adresa a obsah komunikace | čl. 6/1/b, u nezákazníků čl. 6/1/f | (doplnit, typicky 1 rok) |
 | účetní a daňové doklady | účetní a daňové doklady | zákazníci | fakturační údaje, částka, datum | čl. 6/1/c — právní povinnost | 10 let; vedeno mimo aplikaci |
@@ -52,6 +53,7 @@ v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávaj
 | Cloudflare, Inc. (USA) | hosting aplikace a databáze (primární instance v EU) | primární instance databáze v EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 | Resend (Plus Five Five, Inc.) (USA) | odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 | GitHub, Inc. (Microsoft) (USA) | předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
+| Google Ireland Limited / Google Commerce Limited (Irsko) | prodej předplatného v aplikaci z Google Play a ověření nákupu (platbu zpracovává Google) | EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 
 Kopie záruk: uloženy u správce, na žádost poskytovány subjektům údajů.
 
@@ -78,7 +80,7 @@ do aplikace vkládají údaje třetích osob. Právním rámcem je
 | **Kategorie subjektů údajů** | motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace |
 | **Kategorie údajů** | jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní |
 | **Zvláštní kategorie (čl. 9/10)** | služba k nim není určena; jejich vkládání je smluvně vyloučeno |
-| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.); GitHub, Inc. (Microsoft) (viz A.3) |
+| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.); GitHub, Inc. (Microsoft); Google Ireland Limited / Google Commerce Limited (viz A.3) |
 | **Předání mimo EU** | jen na pokyn správce nebo v rámci dalších zpracovatelů, se zárukami podle A.3 |
 | **Doba zpracování** | po dobu trvání smlouvy o službě; poté výmaz nebo vrácení dle volby správce |
 | **Technická a organizační opatření** | shodná s A.4 |

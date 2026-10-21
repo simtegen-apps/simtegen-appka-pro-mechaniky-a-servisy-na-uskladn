@@ -26,7 +26,7 @@
 // an order binding the shop to pay is not a mechanic's call.
 
 import { json, odepriSpravu, smiSpravovat, ted } from "../../spolecne.js";
-import { variantaPodleKlice } from "../../cenik.js";
+import { cenaObjednavky, variantaPodleKlice } from "../../cenik.js";
 
 const MAX_FAKTURACE = 600;
 
@@ -51,16 +51,16 @@ export async function onRequestPost(context) {
   } catch {
     return json({ chyba: "Neplatný požadavek." }, 400);
   }
-  const mesice = Number(telo && telo.mesice);
-  if (!Number.isInteger(mesice) || mesice < 1 || mesice > 24) {
-    return json({ chyba: "Zvolte délku předplatného 1–24 měsíců." }, 422);
-  }
   // Částku určuje server z téhož schváleného ceníku, který vidí zákazník
-  // (cenik.js → /api/ja). Z prohlížeče smí přijít jen klíč varianty.
+  // (cenik.js → /api/ja). Z prohlížeče smí přijít jen klíč varianty a délka.
   const vybrana = variantaPodleKlice(telo && telo.varianta);
   if (!vybrana) return json({ chyba: "Zvolte prosím variantu předplatného." }, 422);
+  const mesice = Number(telo && telo.mesice);
+  const cena = cenaObjednavky(vybrana, mesice);
+  if (cena === null) {
+    return json({ chyba: "Zvolte prosím délku předplatného z nabídky." }, 422);
+  }
   const varianta = vybrana.nazev;
-  const cena = vybrana.mesic * mesice;
   const fakturace = String((telo && telo.fakturace) || "").trim();
   if (fakturace.length < 3) {
     return json({ chyba: "Vyplňte prosím fakturační údaje (název nebo jméno, adresa, IČO máte-li)." }, 422);

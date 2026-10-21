@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="cs">
+<html data-aplikace lang="cs">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -146,8 +146,31 @@
     body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
     body.spravce .jen-mechanik-zprava { display: none !important; }
     body:not(.prihlasen) .navigace > button[data-obrazovka] { display: none !important; }
+
+    /* Google Play. Sekce s ukázkou zmizí spolu s tlačítkem (styl.css ho
+       skryje, dokud play.js nenajde /ukazka.json). Nákup přes Google Play
+       připíše play.js na účet PŘIHLÁŠENÉ osoby, kdežto předplatné patří
+       provozovně — proto ho v aplikaci vidí jen majitel účtu (pozvaný
+       správce by zaplatil za svůj prázdný účet) a ostatní dostanou větu. */
+    html:not(.sg-ukazka) .sekce-ukazka { display: none !important; }
+    body:not(.vlastnik) [data-predplatne-play] { display: none !important; }
+    /* .jen-web: co aplikace z Google Play nesmí ukázat mimo fakturační kartu
+       (varianty ceníku, které Google Play neprodá). Stejně bezpečně jako
+       [data-objednavka] ve styl.css: skryté, dokud play.js nepotvrdí
+       prohlížeč — chyba je schová, nikdy neukáže. */
+    html[data-aplikace]:not(.sg-web) .jen-web,
+    html.sg-v-aplikaci .jen-web,
+    html:not(.sg-v-aplikaci) .jen-v-aplikaci,
+    body.vlastnik .jen-pozvany-zprava { display: none !important; }
+
+    /* Tablet a notebook: obsah obrazovek leží ve vnitřní .mrizka (styl.css,
+       12 sloupců od 768 px) — ne na samotné .obrazovka, jejíž display řídí
+       přepínání obrazovek. Na telefonu je to jeden sloupec jako dosud. */
+    .mrizka > .pod-sebou { gap: var(--mezera-5); }
   </style>
   <style id="tisk-stranka">@page { size: 100mm 50mm; margin: 0; }</style>
+  <!-- aplikace: vykresli_aplikaci.py -->
+  <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
   <script src="simtegen.js"></script>
@@ -222,6 +245,7 @@
             <p>měsíčně za celou<br>provozovnu</p>
           </div>
           <div class="radky" id="uvod-cenik"></div>
+          <p class="popisek" id="uvod-cenik-obsah"></p>
         </div>
         <p class="popisek" id="uvod-zkusebni"></p>
 
@@ -259,6 +283,16 @@
           stáhnete nebo smažete přímo v aplikaci.</p>
         </div>
 
+        <!-- Ukázka bez přihlášení (pravidla Google Play: kontrolor se
+             e-mailovým odkazem nepřihlásí). Dočasný účet a jeho data obsluhuje
+             web/play.js; sekce se ukáže, jen když ukázka existuje. -->
+        <div class="sekce sekce-ukazka">
+          <h2 class="sekce-titulek"><span>03 — Bez registrace</span></h2>
+          <p class="popisek">Dočasný účet s vymyšlenými daty na 24 hodin:
+          sklad s pozicemi v regálu, objednávky na zítřek i sezónní přehled.</p>
+          <button type="button" class="tlacitko" data-ukazka>Vyzkoušet ukázku</button>
+        </div>
+
         <div class="lista-dole">
           <button class="tlacitko" id="poslat-odkaz" type="button">Začít zdarma</button>
         </div>
@@ -272,7 +306,8 @@
              v cestě ranní práci. -->
         <button class="hlaska pruh-predplatne" id="pruh-predplatne" type="button" hidden></button>
 
-        <div class="sekce">
+        <div class="mrizka">
+        <div class="sekce s5">
           <h2 class="sekce-titulek"><span>01 — Stav dne</span>
             <a href="#prehled" id="dnes-na-prehled">Sezóna →</a></h2>
           <div class="karta vykres">
@@ -299,6 +334,7 @@
           </div>
         </div>
 
+        <div class="s7 pod-sebou">
         <div class="sekce">
           <h2 class="sekce-titulek"><span>02 — Najít v evidenci</span>
             <a href="#zakaznici" id="dnes-na-zakazniky">Zákazníci →</a></h2>
@@ -316,6 +352,8 @@
           <div id="dnes-objednavky" class="seznam"></div>
           <div id="dnes-zprava" class="zprava" aria-live="polite"></div>
         </div>
+        </div>
+        </div>
 
         <div class="lista-dole">
           <button class="tlacitko jen-zapis" id="dnes-nova-sada" type="button">Nová sada na uskladnění</button>
@@ -324,7 +362,8 @@
 
       <!-- ------------------------------ Sklad ----------------------------- -->
       <section id="obrazovka-sklad" class="obrazovka">
-        <div class="sekce">
+        <div class="mrizka">
+        <div class="sekce s4">
           <h2 class="sekce-titulek"><span>01 — Sklad</span></h2>
           <div class="karta vykres">
             <div class="cislo-radek">
@@ -339,7 +378,7 @@
           </div>
         </div>
 
-        <div class="sekce">
+        <div class="sekce s8">
           <h2 class="sekce-titulek"><span>02 — Hledání</span></h2>
           <div class="pole">
             <label for="hledani-sklad">Kód, SPZ, jméno, telefon nebo místo</label>
@@ -347,6 +386,7 @@
                    inputmode="search" placeholder="A1-04">
           </div>
           <div id="sklad-seznam" class="seznam"></div>
+        </div>
         </div>
 
         <div class="lista-dole">
@@ -540,7 +580,8 @@
 
       <!-- --------------------------- Objednávky --------------------------- -->
       <section id="obrazovka-objednavky" class="obrazovka">
-        <div class="sekce">
+        <div class="mrizka">
+        <div class="sekce s7">
           <h2 class="sekce-titulek"><span>01 — Týden</span>
             <a href="#dnes" id="obj-dnes">Dnes →</a></h2>
           <div class="karta vykres">
@@ -552,10 +593,11 @@
             <p class="popisek" id="obj-rozsah"></p>
           </div>
         </div>
-        <div class="sekce">
+        <div class="sekce s5">
           <h2 class="sekce-titulek"><span>02 — Termíny</span></h2>
           <div id="obj-seznam" class="seznam"></div>
           <div id="obj-zprava" class="zprava" aria-live="polite"></div>
+        </div>
         </div>
         <div class="lista-dole">
           <button class="tlacitko jen-zapis" id="obj-nova" type="button">Nová objednávka</button>
@@ -782,8 +824,8 @@
           <button class="tlacitko vedlejsi" id="pred-znovu" type="button">Zkusit znovu</button>
         </div>
 
-        <div id="pred-obsah" class="pod-sebou" hidden>
-          <div class="sekce">
+        <div id="pred-obsah" class="mrizka" hidden>
+          <div class="sekce s5">
             <h2 class="sekce-titulek"><span>01 — Stav účtu</span></h2>
             <div class="karta vykres">
               <div class="cislo-radek">
@@ -801,14 +843,40 @@
             </div>
           </div>
 
-          <div class="sekce">
+          <div class="s7 pod-sebou">
+          <!-- Ceník všech variant jen na webu: v aplikaci z Google Play se
+               kupuje jen to, co nabízí Google Play, a cenu s podmínkami ukáže
+               sám panel nákupu. Varianty, které tam koupit nejde, by
+               ukazovaly k placení jinde. (Úvodní obrazovka ceník ukazuje.) -->
+          <div class="sekce" data-objednavka>
             <h2 class="sekce-titulek"><span>02 — Ceník</span></h2>
+            <!-- Přesně podle schválení majitele (cenik.js → /api/ja). -->
+            <div class="radky" id="pred-cenik"></div>
+            <p class="popisek" id="pred-cenik-obsah"></p>
             <p class="popisek">Cena je za celou provozovnu, ne za mechanika.
             Ve zkušebním období neplatíte nic.</p>
+          </div>
+
+          <p class="hlaska varovani jen-mechanik-zprava">Předplatné kupuje
+          správce účtu. Zaplacené období pak platí pro celý tým.</p>
+
+          <div class="jen-spravce sekce">
+            <h2 class="sekce-titulek"><span class="jen-v-aplikaci">02 — Nákup</span><span
+              data-objednavka>03 — Objednávka</span></h2>
+            <!-- V aplikaci z Google Play sem web/play.js vykreslí nákup přes
+                 Google Play (cena, automatické obnovení, zrušení). -->
+            <div data-predplatne-play></div>
+            <p class="hlaska varovani jen-v-aplikaci jen-pozvany-zprava">V aplikaci
+            kupuje předplatné majitel účtu — ten, kdo provozovnu v Pneuskladu
+            založil. Zaplacené období pak platí pro celý tým.</p>
+
+            <!-- Fakturační objednávka: jen na webu. V aplikaci z Google Play ji
+                 styl.css skryje (data-objednavka), dokud play.js nepotvrdí
+                 prohlížeč. -->
+            <div class="pod-sebou" data-objednavka>
             <div class="pole">
               <span class="stitek" id="pred-varianty-popis">Varianta</span>
               <div class="chipy" id="pred-varianty" role="group" aria-labelledby="pred-varianty-popis"></div>
-              <span class="napoveda" id="pred-varianta-popis"></span>
             </div>
             <div class="pole">
               <span class="stitek" id="pred-delka-popis">Délka předplatného</span>
@@ -820,14 +888,6 @@
               <p class="popisek" id="pred-cena-rozpis"></p>
               <p class="popisek" id="pred-dph" hidden></p>
             </div>
-          </div>
-
-          <p class="hlaska varovani jen-mechanik-zprava">Předplatné objednává
-          správce účtu. Ceník vidíte, objednávku odešle kolega se správcovským
-          oprávněním.</p>
-
-          <div class="jen-spravce sekce">
-            <h2 class="sekce-titulek"><span>03 — Objednávka</span></h2>
             <div class="pole">
               <label for="pred-fakturace">Fakturační údaje</label>
               <textarea id="pred-fakturace" rows="4"
@@ -852,15 +912,17 @@
             <a href="zasady.html">zásady zpracování údajů</a>. Platí se převodem
             na fakturu, aplikace peníze nepřijímá.</p>
             <div id="pred-zprava" class="zprava" aria-live="polite"></div>
+            </div>
           </div>
 
-          <div class="sekce">
+          <div class="sekce" data-objednavka>
             <h2 class="sekce-titulek"><span>04 — Objednávky provozovny</span></h2>
             <div id="pred-historie" class="seznam"></div>
           </div>
+          </div>
         </div>
 
-        <div class="lista-dole jen-spravce" id="pred-akce" hidden>
+        <div class="lista-dole jen-spravce" id="pred-akce" data-objednavka hidden>
           <button class="tlacitko" id="pred-objednat" type="button">Objednávka zavazující k platbě</button>
         </div>
       </section>
@@ -868,9 +930,12 @@
 
     <footer class="paticka">
       <a href="zasady.html">Zásady zpracování údajů</a>
-      <a href="podminky.html">Obchodní podmínky</a>
+      <!-- Podmínky a formulář odstoupení popisují placení fakturou — v aplikaci
+           z Google Play by vedly k placení mimo Google Play, proto
+           data-objednavka (na webu jsou vidět dál). -->
+      <a href="podminky.html" data-objednavka>Obchodní podmínky</a>
       <a href="zpracovatelska-smlouva.html">Zpracovatelská smlouva</a>
-      <a href="odstoupeni-formular.html">Odstoupení od smlouvy</a>
+      <a href="odstoupeni-formular.html" data-objednavka>Odstoupení od smlouvy</a>
       <button class="nahlasit-chybu" type="button">Nahlásit chybu</button>
     </footer>
   </div>
@@ -932,7 +997,7 @@
       obdobi: [],
       zkusebniDni: null,
       cenaDph: "",
-      objednavka: { varianta: "zaklad", mesice: 6 },
+      objednavka: { varianta: "standard", mesice: 6 },
       sada: null,
       zakaznik: null,
       pohyby: [],
@@ -1082,11 +1147,48 @@
     window.ukaz = ukaz;
 
     // pushState with no URL change: the login redirect lands on "/" and a hash
-    // router would fight it. Back simply pops to the previous screen.
+    // router would fight it. Back pops to the previous screen.
+    //
+    // The app from Google Play has no address bar and no browser back button
+    // of its own, so the arrow in the header must never pop out of the app.
+    // Every pushed state carries its depth; at depth 0 (the app was just
+    // opened, or came back from the privacy policy through "Zpět do
+    // aplikace") the arrow opens the screen above instead.
+    const NADRAZENE = {
+      "obrazovka-sada": "obrazovka-sklad",
+      "obrazovka-zakaznik": "obrazovka-zakaznici",
+      "obrazovka-nova-objednavka": "obrazovka-objednavky",
+      "obrazovka-predplatne": "obrazovka-nastaveni",
+    };
+
     function jdi(id) {
       if (HLAVNI.indexOf(id) >= 0) stav.predObrazovkou = id;
-      history.pushState({ obrazovka: id }, "");
+      const uroven = ((history.state && history.state.uroven) || 0) + 1;
+      history.pushState({ obrazovka: id, uroven }, "");
       ukaz(id);
+    }
+
+    function nactiHlavni(cil) {
+      if (cil === "obrazovka-dnes") nactiDnes();
+      if (cil === "obrazovka-sklad") nactiSklad();
+      if (cil === "obrazovka-objednavky") nactiObjednavky();
+      if (cil === "obrazovka-zakaznici") nactiZakazniky();
+      if (cil === "obrazovka-nastaveni") {
+        vykresliNastaveni();
+        if (stav.nastaveni && stav.nastaveni.role === "spravce") nactiTym();
+      }
+    }
+
+    function zpet() {
+      if (history.state && history.state.uroven > 0) {
+        history.back();
+        return;
+      }
+      const aktivni = document.querySelector(".obrazovka.aktivni");
+      const cil = NADRAZENE[aktivni && aktivni.id] || "obrazovka-dnes";
+      history.replaceState({ obrazovka: cil, uroven: 0 }, "");
+      ukaz(cil);
+      nactiHlavni(cil);
     }
 
     window.addEventListener("popstate", (e) => {
@@ -1094,19 +1196,13 @@
       ukaz(document.getElementById(cil) ? cil : "obrazovka-dnes");
     });
 
-    $("hlavicka-zpet").addEventListener("click", () => history.back());
+    $("hlavicka-zpet").addEventListener("click", zpet);
 
     document.querySelectorAll(".navigace > button[data-obrazovka]").forEach((b) =>
       b.addEventListener("click", () => {
         const cil = b.dataset.obrazovka;
         jdi(cil);
-        if (cil === "obrazovka-dnes") nactiDnes();
-        if (cil === "obrazovka-sklad") nactiSklad();
-        if (cil === "obrazovka-objednavky") nactiObjednavky();
-        if (cil === "obrazovka-nastaveni") {
-          vykresliNastaveni();
-          if (stav.nastaveni && stav.nastaveni.role === "spravce") nactiTym();
-        }
+        nactiHlavni(cil);
       }));
 
     function chipy(kontejner, klic, hodnota) {
@@ -1438,7 +1534,7 @@
       if (novy) {
         // Back to the list, where the new name is now visible — same as after
         // a delete.
-        history.back();
+        zpet();
         nactiZakazniky();
         return;
       }
@@ -1471,7 +1567,7 @@
       if (!ok) {
         return zprava("zakaznik-zprava", data.chyba || "Smazání se nepovedlo.", true);
       }
-      history.back();
+      zpet();
       nactiZakazniky();
     });
     // ------------------------------------------------------- New set wizard
@@ -2302,6 +2398,7 @@
             <div><span class="klic">Nepřipraveno na zítra</span><span class="hodnota">${data.nepripraveno}</span></div>
           </div>
         </div>
+        <div class="dva-sloupce">
         ${sekce("01", "Obvolat na přezutí",
           "Kola leží ve skladu a majitel se za posledních pět měsíců neobjednal. "
           + "Každý telefonát je objednávka.", data.vyzva)}
@@ -2309,7 +2406,8 @@
           "Nejtenčí měřené kolo pod 4 mm — zákazník to sám nevidí.", data.opotrebene)}
         ${sekce("03", "Nezaplacené uskladnění",
           "Uskladnění, které vám zákazník ještě nezaplatil.", data.nezaplacene,
-          (s) => `<button class="tlacitko vedlejsi jen-role oznac-zaplaceno" data-id="${s.id}" type="button">Zaplaceno</button>`)}`;
+          (s) => `<button class="tlacitko vedlejsi jen-role oznac-zaplaceno" data-id="${s.id}" type="button">Zaplaceno</button>`)}
+        </div>`;
 
       $("prehled-telo").querySelectorAll(".otevri-sadu").forEach((b) =>
         b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
@@ -2378,6 +2476,10 @@
       const role = (stav.nastaveni && stav.nastaveni.role) || "spravce";
       document.body.classList.toggle("jen-cteni", role === "cteni");
       document.body.classList.toggle("spravce", role === "spravce");
+      // Majitel účtu (ne pozvaný kolega): jen on smí kupovat přes Google Play,
+      // protože nákup se připíše na účet toho, kdo ho udělal.
+      document.body.classList.toggle("vlastnik",
+        role === "spravce" && !!stav.nastaveni && stav.nastaveni.vlastni_ucet !== false);
     }
 
     $("nast-format").querySelectorAll("button").forEach((b) =>
@@ -2412,7 +2514,7 @@
     // (/api/ja, /api/nastaveni) i po 402 — tak se nemůžou rozejít.
     const PRED_VETY = {
       zkusebni: "Zkušební období běží. Zapisovat můžete jako obvykle; "
-        + "předplatné si objednejte, než doba vyprší.",
+        + "předplatné si pořiďte, než doba vyprší.",
       aktivni: "Předplatné je aktivní. Appka funguje bez omezení.",
       vyprselo: "Předplatné skončilo. Evidenci máte dál k nahlédnutí i k "
         + "vyhledávání, ale nové sady a objednávky zapsat nejde. Vydat "
@@ -2456,7 +2558,7 @@
         pruh.textContent = vyprselo
           ? `Předplatné skončilo — appka je v režimu čtení.${sady} Klepněte pro obnovení.`
           : `${p.stav === "zkusebni" ? "Zkušební období" : "Předplatné"} končí za `
-            + `${dnu(p.dni_zbyva)}.${sady} Klepněte pro objednání.`;
+            + `${dnu(p.dni_zbyva)}.${sady} Klepněte pro prodloužení.`;
       }
 
       // --- řádek v Nastavení ---
@@ -2464,7 +2566,9 @@
       if (!p) {
         radek.textContent = "—";
       } else if (p.stav === "aktivni") {
-        radek.textContent = `Aktivní do ${datumCesky(p.plati_do)}`;
+        // Zakoupeno v aplikaci: kde se dá předplatné spravovat a zrušit.
+        radek.textContent = `Aktivní do ${datumCesky(p.plati_do)}`
+          + (p.poznamka === "Google Play" ? " · Google Play" : "");
       } else if (p.stav === "zkusebni") {
         radek.textContent = `Zkušební období — zbývá ${dnu(p.dni_zbyva)}`;
       } else {
@@ -2502,14 +2606,40 @@
       vykresliCenik();
     }
 
+    // „129 Kč / firma / měsíc“ — cena a jednotka přesně ze schválení.
+    function cenaVarianty(v) {
+      return `${v.cena} ${mena()} / ${v.jednotka}`;
+    }
+
+    // Ceník jako řádky „Standard — 129 Kč / firma / měsíc“ a pod ním, co
+    // varianta obsahuje. Stejně na úvodu i na obrazovce Předplatné.
+    // Varianty, které nejde koupit přes Google Play, nesou .jen-web: v aplikaci
+    // z Google Play je ceník neukáže (viz pravidlo .jen-web nahoře).
+    function vykresliRadkyCeniku(radky, obsah) {
+      const seznam = varianty();
+      radky.innerHTML = seznam.map((v) =>
+        `<div${v.v_aplikaci ? "" : ' class="jen-web"'}><span class="klic">${bezpecne(v.nazev)}</span>
+          <span class="hodnota">${bezpecne(cenaVarianty(v))}</span></div>`).join("");
+      obsah.textContent = seznam.filter((v) => v.popis)
+        .map((v) => `${v.nazev} obsahuje: ${v.popis}`).join(" ");
+    }
+
+    // Délky, které jde u varianty objednat: sezónní varianta jen jednu
+    // sezónu (její cena je cena za sezónu), měsíční 1/3/6/12 měsíců.
+    function delkyVarianty(v) {
+      if (v.obdobi > 1) return [{ mesice: v.obdobi, nazev: `1 sezóna (${mesicu(v.obdobi)})` }];
+      return stav.obdobi;
+    }
+
     function vykresliCenik() {
       const seznam = varianty();
       if (!seznam.length) return;
+      vykresliRadkyCeniku($("pred-cenik"), $("pred-cenik-obsah"));
       const vybrana = stav.objednavka.varianta;
       $("pred-varianty").innerHTML = seznam.map((v) => `
         <button data-varianta="${bezpecne(v.klic)}" type="button"
                 aria-pressed="${v.klic === vybrana}">
-          ${bezpecne(v.nazev)} · ${v.mesic} ${bezpecne(mena())}/měs.
+          ${bezpecne(v.nazev)}
         </button>`).join("");
       $("pred-varianty").querySelectorAll("button").forEach((b) =>
         b.addEventListener("click", () => {
@@ -2517,7 +2647,13 @@
           vykresliCenik();
         }));
 
-      $("pred-delka").innerHTML = stav.obdobi.map((o) => `
+      const v = seznam.find((x) => x.klic === vybrana) || seznam[0];
+      const delky = delkyVarianty(v);
+      if (!delky.some((o) => o.mesice === stav.objednavka.mesice)) {
+        const vychozi = delky.find((o) => o.vychozi) || delky[0];
+        stav.objednavka.mesice = vychozi ? vychozi.mesice : v.obdobi;
+      }
+      $("pred-delka").innerHTML = delky.map((o) => `
         <button data-mesice="${o.mesice}" type="button"
                 aria-pressed="${o.mesice === stav.objednavka.mesice}">
           ${bezpecne(o.nazev)}
@@ -2528,15 +2664,15 @@
           vykresliCenik();
         }));
 
-      const v = seznam.find((x) => x.klic === vybrana) || seznam[0];
-      $("pred-varianta-popis").textContent = v.popis || "";
-
-      // Celková cena PŘED tlačítkem — prostý násobek, žádné slevy navíc.
-      const celkem = v.mesic * stav.objednavka.mesice;
+      // Celková cena PŘED tlačítkem — cena za období × počet období, žádné
+      // slevy navíc. Server počítá totéž z téhož ceníku (cenik.js).
+      const obdobi = stav.objednavka.mesice / v.obdobi;
+      const celkem = v.cena * obdobi;
       $("pred-cena").textContent = `${celkem} ${mena()}`;
-      $("pred-cena-rozpis").textContent =
-        `${v.nazev} · ${v.mesic} ${mena()}/měsíc × ${mesicu(stav.objednavka.mesice)} `
-        + "za celou provozovnu.";
+      $("pred-cena-rozpis").textContent = v.obdobi > 1
+        ? `${v.nazev} · ${cenaVarianty(v)}, za celou provozovnu.`
+        : `${v.nazev} · ${cenaVarianty(v)} × ${mesicu(stav.objednavka.mesice)}, `
+          + "za celou provozovnu.";
       // Věta o DPH jen tehdy, když ji provozovatel v manifestu uvedl.
       // Dokud mlčí dokumenty, mlčí i appka.
       $("pred-dph").textContent = stav.cenaDph || "";
@@ -2704,7 +2840,7 @@
 
     $("nast-ukazka-naplnit").addEventListener("click", async () => {
       zprava("nast-zprava", "Plním ukázková data…");
-      const { ok, data } = await api("/api/ukazka", "POST", { akce: "naplnit" });
+      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "naplnit" });
       if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
       await nactiUcet();
       zprava("nast-zprava",
@@ -2713,7 +2849,7 @@
 
     $("nast-ukazka-smazat").addEventListener("click", async () => {
       if (!confirm("Smazat ukázková data? Vaše skutečné záznamy zůstanou.")) return;
-      const { ok, data } = await api("/api/ukazka", "POST", { akce: "smazat" });
+      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "smazat" });
       if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
       await nactiUcet();
       // Example customers you hung a real set or booking on cannot go without
@@ -2903,14 +3039,18 @@
       const karta = $("uvod-cena");
       karta.hidden = !seznam.length;
       if (seznam.length) {
-        const nejlevnejsi = seznam.reduce((a, b) => (a.mesic <= b.mesic ? a : b));
-        $("uvod-cena-cislo").textContent = `${nejlevnejsi.mesic} ${mena()}`;
-        $("uvod-cenik").innerHTML = seznam.map((v) =>
-          `<div><span class="klic">${bezpecne(v.nazev)}</span>
-            <span class="hodnota">${v.mesic} ${bezpecne(mena())} / měsíc</span></div>`).join("");
+        // Obří číslo je nejlevnější MĚSÍČNÍ cena — sezóna je jiná jednotka
+        // a „od 790 Kč“ by o měsíčním placení lhalo.
+        const mesicni = seznam.filter((v) => v.obdobi === 1);
+        const nejlevnejsi = (mesicni.length ? mesicni : seznam)
+          .reduce((a, b) => (a.cena <= b.cena ? a : b));
+        $("uvod-cena-cislo").textContent = `${nejlevnejsi.cena} ${mena()}`;
+        vykresliRadkyCeniku($("uvod-cenik"), $("uvod-cenik-obsah"));
       }
+      // Bez věty o způsobu platby: v aplikaci z Google Play se platí přes
+      // Google Play, na webu fakturou — způsob ukazuje až obrazovka Předplatné.
       $("uvod-zkusebni").textContent = stav.zkusebniDni
-        ? `Prvních ${dnu(stav.zkusebniDni)} zdarma, bez karty. Platí se na fakturu.`
+        ? `Prvních ${dnu(stav.zkusebniDni)} zdarma, bez karty.`
         : "";
     }
 
@@ -2967,5 +3107,6 @@
 
     obnov();
   </script>
+  <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");</script>
 </body>
 </html>

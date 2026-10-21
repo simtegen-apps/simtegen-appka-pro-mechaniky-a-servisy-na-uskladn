@@ -20,13 +20,16 @@ What runs, in order:
 3. the product's scenarios (uat/scenare.json), step by step;
 4. isolation, automatically: every GET that answered A is repeated as B,
    and B must not get back anything A wrote (the strings from A's bodies);
-5. B's data export contains nothing of A's.
+5. B's data export contains nothing of A's;
+6. the demo data (play/ukazka.json) builds, step by step, as its own
+   account — the store screenshots are taken on exactly that data.
 
 Run alone:  python uat_kontrola.py [--povinne]
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -48,8 +51,11 @@ SCENARE = Path("uat") / "scenare.json"
 # login screen — and carries nothing else.
 VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js",
                        "functions/api/odhlaseni.js", "functions/api/navsteva.js",
-                       "functions/api/ja.js", "functions/api/nahlasit.js"}
+                       "functions/api/ja.js", "functions/api/nahlasit.js",
+                       "functions/api/ukazka.js"}
 UCTY = {"A": "uat-a@example.cz", "B": "uat-b@example.cz"}
+UKAZKA = Path("play") / "ukazka.json"
+UKAZKOVY_UCET = "ukazka@example.cz"
 _METODY = {"onRequestGet": "GET", "onRequestPost": "POST", "onRequestPut": "PUT",
            "onRequestPatch": "PATCH", "onRequestDelete": "DELETE", "onRequest": "GET"}
 
@@ -300,27 +306,31 @@ def zkontroluj(root: Path | None = None, *, povinne: bool = False) -> tuple[list
     scenare, chyby = _zkontroluj_scenare(root)
     if chyby:
         return chyby, ""
-    sablona = root / "wrangler.toml.sablona"
-    if not sablona.exists():
-        return ["wrangler.toml.sablona chybí — bez něj nejde API spustit."], ""
     npx = shutil.which("npx")
     try:
         if npx is None:
             raise Prostredi("na stroji není Node.js (npx)")
-        return _zkontroluj_naostro(root, scenare, npx, sablona), "API: wrangler pages dev"
+        return _zkontroluj_naostro(root, scenare, npx), "API: wrangler pages dev"
     except Prostredi as e:
         if povinne:
             return [f"akceptační testy se nepovedlo spustit: {e}"], ""
         return [], f"akceptační testy přeskočeny: {e}"
 
 
-def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str, sablona: Path) -> list[str]:
-    manifest_cesta = root / "data-manifest.json"
-    manifest = json.loads(manifest_cesta.read_text(encoding="utf-8")) if manifest_cesta.exists() else {}
-    verejna = set(VEREJNA_API_SABLONY) | {
-        (p or {}).get("soubor", "").replace("\\", "/") for p in manifest.get("verejna_api") or []
-        if isinstance(p, dict)}
+class ApiNenabehlo(Exception):
+    """The product's own fault: migrations fail, the server dies on start."""
 
+
+@contextlib.contextmanager
+def api_produktu(root: Path, npx: str):
+    """The product running as Cloudflare runs it, on a free local port, with
+    a fresh local D1 — yields the base URL. Shared by the acceptance tests
+    and the store screenshots (vizualni_kontrola --obchod), so the pictures
+    show exactly what the tests exercised. Raises Prostredi (the machine)
+    or ApiNenabehlo (the product)."""
+    sablona = root / "wrangler.toml.sablona"
+    if not sablona.exists():
+        raise ApiNenabehlo("wrangler.toml.sablona chybí — bez něj nejde API spustit.")
     prac = Path(tempfile.mkdtemp(prefix="simtegen-uat-"))
     # The product as the repo has it, minus history and local state; mail keys
     # stay out of the environment so login runs in development mode.
@@ -342,7 +352,7 @@ def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str, sablona: Path
             raise Prostredi(f"wrangler se nepodařilo stáhnout nebo spustit: {vystup.strip()[-200:]}")
         kod, vystup = _wrangler(npx, ["d1", "migrations", "apply", "uat-db", "--local"], kopie, env, 180)
         if kod != 0:
-            return [f"migrace databáze neprojdou ani lokálně: {vystup.strip()[-400:]}"]
+            raise ApiNenabehlo(f"migrace databáze neprojdou ani lokálně: {vystup.strip()[-400:]}")
 
         port = _volny_port()
         log = open(prac / "server.log", "wb")
@@ -354,7 +364,7 @@ def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str, sablona: Path
             if server.poll() is not None or time.monotonic() > konec:
                 log.flush()
                 vystup = (prac / "server.log").read_text(encoding="utf-8", errors="replace")
-                return [f"API produktu nenastartovalo (wrangler pages dev): {vystup.strip()[-400:]}"]
+                raise ApiNenabehlo(f"API produktu nenastartovalo (wrangler pages dev): {vystup.strip()[-400:]}")
             try:
                 with urllib.request.urlopen(zaklad + "/", timeout=2):
                     break
@@ -362,30 +372,7 @@ def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str, sablona: Path
                 break
             except OSError:
                 time.sleep(0.5)
-
-        chyby: list[str] = []
-        nikdo = Klient(zaklad, "nikdo")
-        for soubor, metoda, cesta in _endpointy(kopie, verejna):
-            kod, text, _ = nikdo.pozadavek(metoda, cesta, {} if metoda != "GET" else None)
-            if 200 <= kod < 300:
-                chyby.append(f"{soubor}: {metoda} {cesta} bez přihlášení vrátil {kod} — data či akce "
-                             "dostupné komukoli.")
-            elif kod >= 500:
-                chyby.append(f"{soubor}: {metoda} {cesta} bez přihlášení spadl ({kod}): {text[:120]}")
-
-        klienti = {"nikdo": nikdo}
-        for kdo, email in UCTY.items():
-            klienti[kdo] = Klient(zaklad, kdo)
-            chyba = klienti[kdo].prihlas(email)
-            if chyba:
-                return chyby + [f"přihlášení účtu {kdo} nefunguje: {chyba}"]
-
-        chyby += _spust_scenare(scenare, klienti)
-
-        kod, export_b, _ = klienti["B"].pozadavek("GET", "/api/ucet/export")
-        if kod == 200 and UCTY["A"] in export_b:
-            chyby.append("export dat účtu B obsahuje e-mail účtu A.")
-        return chyby
+        yield zaklad
     finally:
         if server is not None:
             _pohrbi(server)
@@ -396,6 +383,83 @@ def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str, sablona: Path
             if not prac.exists():
                 break
             time.sleep(0.5)
+
+
+def spust_ukazku(root: Path, klient: Klient) -> list[str]:
+    """play/ukazka.json as the demo account: the data the store screenshots
+    show. Every step must succeed (2xx unless it says otherwise) — a demo
+    that breaks would photograph an error."""
+    soubor = root / UKAZKA
+    if not soubor.exists():
+        return []
+    try:
+        kroky = json.loads(soubor.read_text(encoding="utf-8")).get("kroky") or []
+    except (json.JSONDecodeError, AttributeError) as e:
+        return [f"{UKAZKA.as_posix()} nejde přečíst: {e}"]
+    ulozene: dict = {}
+    for j, krok in enumerate(kroky, 1):
+        metoda, cesta = str(krok.get("pozadavek", "")).split(" ", 1)
+        cesta = _dosad(cesta, ulozene)
+        kod, text, _ = klient.pozadavek(metoda, cesta, _dosad(krok.get("telo"), ulozene))
+        ocekavam = krok.get("ocekavam")
+        dobre = (kod in (ocekavam if isinstance(ocekavam, list) else [ocekavam])) if ocekavam else 200 <= kod < 300
+        if not dobre:
+            return [f"{UKAZKA.as_posix()} krok {j} ({metoda} {cesta}): přišlo {kod}: {text[:160]}"]
+        for jmeno, kde_v in (krok.get("uloz") or {}).items():
+            try:
+                hodnota = _vyber(json.loads(text), kde_v)
+            except json.JSONDecodeError:
+                hodnota = None
+            if hodnota is None:
+                return [f"{UKAZKA.as_posix()} krok {j}: v odpovědi chybí „{kde_v}“ pro {{{jmeno}}}: {text[:120]}"]
+            ulozene[jmeno] = hodnota
+    return []
+
+
+def _zkontroluj_naostro(root: Path, scenare: list[dict], npx: str) -> list[str]:
+    manifest_cesta = root / "data-manifest.json"
+    manifest = json.loads(manifest_cesta.read_text(encoding="utf-8")) if manifest_cesta.exists() else {}
+    verejna = set(VEREJNA_API_SABLONY) | {
+        (p or {}).get("soubor", "").replace("\\", "/") for p in manifest.get("verejna_api") or []
+        if isinstance(p, dict)}
+    try:
+        with api_produktu(root, npx) as zaklad:
+            return _proti_api(root, zaklad, scenare, verejna)
+    except ApiNenabehlo as e:
+        return [str(e)]
+
+
+def _proti_api(root: Path, zaklad: str, scenare: list[dict], verejna: set[str]) -> list[str]:
+    chyby: list[str] = []
+    nikdo = Klient(zaklad, "nikdo")
+    for soubor, metoda, cesta in _endpointy(root, verejna):
+        kod, text, _ = nikdo.pozadavek(metoda, cesta, {} if metoda != "GET" else None)
+        if 200 <= kod < 300:
+            chyby.append(f"{soubor}: {metoda} {cesta} bez přihlášení vrátil {kod} — data či akce "
+                         "dostupné komukoli.")
+        elif kod >= 500:
+            chyby.append(f"{soubor}: {metoda} {cesta} bez přihlášení spadl ({kod}): {text[:120]}")
+
+    klienti = {"nikdo": nikdo}
+    for kdo, email in UCTY.items():
+        klienti[kdo] = Klient(zaklad, kdo)
+        chyba = klienti[kdo].prihlas(email)
+        if chyba:
+            return chyby + [f"přihlášení účtu {kdo} nefunguje: {chyba}"]
+
+    chyby += _spust_scenare(scenare, klienti)
+
+    kod, export_b, _ = klienti["B"].pozadavek("GET", "/api/ucet/export")
+    if kod == 200 and UCTY["A"] in export_b:
+        chyby.append("export dat účtu B obsahuje e-mail účtu A.")
+
+    # The demo data must work on every build, not first in the release run
+    # — a broken step would otherwise surface as a store listing of errors.
+    if (root / UKAZKA).exists():
+        ukazka = Klient(zaklad, "ukazka")
+        chyba = ukazka.prihlas(UKAZKOVY_UCET)
+        chyby += [f"přihlášení ukázkového účtu nefunguje: {chyba}"] if chyba else spust_ukazku(root, ukazka)
+    return chyby
 
 
 def main() -> int:

@@ -28,8 +28,11 @@ uskladnění). Druhý nákup přichází sám: fyzické uskladnění běží cel
 a přezouvací sezóna se opakuje každé jaro a podzim.
 
 **Build 3** postavil tohle jádro. **Build 4** přidal placení a nic z jádra
-nepřestavěl. **Build 7** (poslední sekce) přepsal appku do návrhového
-systému v2 a dodělal, co kolem placení a připomínky chybělo.
+nepřestavěl. **Build 7** přepsal appku do návrhového systému v2 a dodělal,
+co kolem placení a připomínky chybělo. **Build 10** (poslední sekce) z ní
+udělal aplikaci v Google Play s nákupem předplatného přes Google Play,
+záznamem v obchodě a schváleným ceníkem (Standard 129 Kč, Sezónní vstup
+790 Kč, Větší provozovna 229 Kč, 30 dní zdarma).
 
 ---
 
@@ -335,3 +338,156 @@ stavělo se to, co specifikace chce, nad tím, co v produktu skutečně běží:
    ani ručně. Manifest se změnil o jeden prázdný slot (`cena_dph`), který
    generátor vykresluje stejně jako jeho absenci — a dokumenty přegeneruje
    krok „Kontrola manifestu proti kodu“ v CI.
+
+---
+
+# Specifikace — build 10 (Google Play a záznam v obchodě)
+
+Běžící Pneusklad (sklad sad se štítky, objednávkový kalendář, Připravit kola, sezónní přehled, tým, předplatné s objednávkou na fakturu) se stane instalovatelnou aplikací v Google Play (Trusted Web Activity, balíček cz.simtegen.pneusklad). V aplikaci se předplatné kupuje přes Google Play, na webu dál fakturační objednávkou. Obojí zapisuje totéž zaplacené období `predplatne.plati_do` provozovny. Vznikne i kompletní záznam v obchodě: texty, piktogram ikony, 6 snímků z ukázkových dat, formulář Bezpečnost údajů a ukázka bez přihlášení, kterou Google vyžaduje. Ceník se přepíše na schválený (Standard 129 Kč, Sezónní vstup 790 Kč, Větší provozovna 229 Kč, 30 dní zdarma). Jádro appky se nepřestavuje.
+
+## Placená hodnota (proč přijde druhý nákup)
+Platí se za evidenci uložených kol, která je jediné místo, kde servis ví, čí kola leží ve které polici, co má zítra sundat a koho před sezónou obvolat. Druhý nákup přijde sám: kola leží v regálu dál, přezouvá se každé jaro i podzim a předplatné z Google Play se samo obnovuje. Prodej v Play navíc řeší nejslabší místo zadání, totiž kanál. Mobilní mechanik hledá nástroj v obchodě na telefonu, ne na webu.
+
+## Design (obrazovky, navigace, stavy)
+BARVA PRODUKTU: zůstává rumělka #c2410c (tmavý režim #f07a45). Je to barva zahřáté pryže a výstražných štítků v dílně, appka a štítky ji u zákazníka už nesou a ikona Play se z ní vykreslí. Kontrast na papíře #f6f4ef vychází asi 4,7:1 (≥ 4,5). Nic v produkt.css se nemění.
+
+PIKTOGRAM (play/piktogram.svg, viewBox 0 0 24 24, bez barev, bez tloušťky, bez textu): pneumatika z boku. circle r=9 (bok pláště), circle r=5.5 (ráfek), circle r=1.6 (náboj), 12 krátkých radiálních <line> od r=9 dovnitř na r=7.6 (běhoun). Vše leží do 9 od středu (12,12), celkem 15 tvarů. V <g class="detail"> je visačka uskladnění, předmět, který Pneusklad tiskne: rect x=16 y=17.5 w=5.5 h=3.5 (nejvzdálenější roh 13,1 od středu), provázek <line> (17,17.5)→(15.6,15.9) a otvor circle r=0.5.
+
+APLIKACE v manifestu: nazev „Pneusklad: uskladnění pneu“ (26 znaků), kratky_nazev „Pneusklad“, popis „Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.“ (69 znaků), kategorie BUSINESS (je to nástroj provozovny, ne aplikace pro motoristy, ti by ji z kategorie Auta instalovali omylem), hlavni_veta „Kde leží čí kola a co zítra sundat“. dlouhy_popis (asi 1 100 znaků, jen pravda z produktu): „Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.\n\nObjednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.\n\nPřed sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.\n\nDo servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.\n\nPrvních 30 dní je zdarma. Potom předplatné za celou provozovnu přes Google Play: Standard 129 Kč měsíčně, Větší provozovna 229 Kč měsíčně, nebo Sezónní vstup 790 Kč na 6 měsíců. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.“
+
+SNÍMKY (pořadí vypráví den mechanika, snímky se fotí v ukázkovém účtu z play/ukazka.json):
+1. obrazovka-dnes · štítek „Dnes“ · titulek „Ráno víte, co sundat z regálu“
+2. obrazovka-sklad · „Sklad“ · „Každá sada má kód a místo v regálu“ · kliky ["[data-obrazovka=obrazovka-sklad]"]
+3. obrazovka-sada · „Detail sady“ · „Hloubka dezénu všech čtyř kol“ · kliky ["[data-obrazovka=obrazovka-sklad]", "#sklad-seznam .radek"]
+4. obrazovka-objednavky · „Objednávky“ · „Celý týden dílny na jednom místě“ · kliky ["[data-obrazovka=obrazovka-objednavky]"] · tablet: true
+5. obrazovka-priprava · „Připravit kola“ · „Seznam kol na zítřek i s pozicí“ · kliky ["#dlazdice-priprava"]
+6. obrazovka-prehled · „Sezóna“ · „Koho obvolat před sezónou“ · kliky ["#dnes-na-prehled"] · tablet: true
+
+NAVIGACE: beze změny, 4 položky Dnes · Sklad · Objednávky · Nastavení. Hlavní hodnota je na 1–2 klepnutích: Dnes → „Nová sada na uskladnění“ → průvodce → tisk štítku. Předplatné je 1 klepnutí z pruhu na Dnes, nebo 2 klepnutí přes Nastavení → Předplatné. APLIKACE BEZ ADRESNÍHO ŘÁDKU: šipka Zpět v hlavičce (#hlavicka-zpet) dnes volá history.back(). Když historie v appce chybí (aplikace otevřená rovnou na podobrazovce, nebo po návratu z právních stránek), musí otevřít nadřazenou obrazovku (Detail sady → Sklad, Předplatné → Nastavení, ostatní → Dnes), nikdy nesmí appku zavřít. Právní stránky už nesou odkaz „Zpět do aplikace“. Hlavní obrazovky jsou v menu a nic nespoléhá na systémové tlačítko Zpět.
+
+OBRAZOVKY (obří číslo · hlavní akce · sekce · oborový detail · stavy prázdný / načítání / chyba):
+1) Úvod a přihlášení: obří „129 Kč“ (nejlevnější měsíční varianta, ze serveru) s ceníkem přesně podle schválení pod ním: „Standard: 129 Kč / firma / měsíc“, „Sezónní vstup: 790 Kč / sezóna (6 měsíců)“, „Větší provozovna: 229 Kč / firma / měsíc“, a „Prvních 30 dní zdarma, bez karty.“ (věta „Platí se na fakturu“ se odstraní všude). Hlavní akce v .lista-dole je dál „Začít zdarma“. Sekce 01 Co to umí, 02 Přihlášení, 03 Bez registrace s povinným `<button type="button" class="tlacitko" data-ukazka>Vyzkoušet ukázku</button>` a větou „Dočasný účet s vymyšlenými daty na 24 hodin.“ Detail: rozměr 205/55 R16 a kód A1-04 v ukázkových řádcích. Prázdný stav: bez ceníku se karta ceny nevykreslí. Načítání: #obrazovka-nacitani + .kostra. Chyba: .hlaska.chyba pod tlačítkem („Odkaz se nepodařilo odeslat, zkuste to prosím znovu.“, „Ukázku se nepodařilo spustit.“).
+2) Dnes, 3) Sklad, 4) Detail sady, 5) Objednávky, 6) Nová objednávka, 7) Připravit kola, 8) Sezónní přehled, 9) Zákazníci, Zákazník, Nová sada: beze změny z buildu 7 (obří čísla: kol na zítra · sad v regálu · kód sady · týdenní pás .tyden · kol zbývá připravit · obvolat/pod 4 mm/nezaplaceno; oborové detaily: rozměr, dezén, hloubky 4 kol v mm, pozice A1-04, týden). Mění se jen to, že pruh předplatného na Dnes v aplikaci vede na nákup přes Play a nezmiňuje fakturu. Jejich prázdné, načítací a chybové stavy zůstávají, jak je build 7 postavil. V ukázkovém účtu je naplní play/ukazka.json, takže žádný snímek nefotí prázdnou obrazovku.
+10) Nastavení: sekce 05 „Ukázková data“ zůstává a volá nový /api/ukazkova-data. Řádek Předplatné ukazuje stav a u zakoupení přes Play doplní „· Google Play“. V aplikaci se v patičce skryjí odkazy Obchodní podmínky a Odstoupení od smlouvy (`data-objednavka`, oba popisují placení fakturou). Zásady zpracování a Zpracovatelská smlouva zůstávají.
+11) Předplatné (mění se nejvíc): obří číslo je stav účtu, „Zbývá 12 dní“ / „Aktivní do 30. 4. 2027“ / „Vypršelo 2. 9. 2026“ se .znacka (uspech/pozor/chyba) a řádky „Uskladněné sady 38 · Zákazníci 31“. Sekce: 01 Stav účtu; 02 Ceník, doslova schválený text včetně „obsahuje: …“ u Standardu; 03 Nákup. V aplikaci je to `<div data-predplatne-play></div>` (play.js vykreslí nákup přes Google Play, podmínky, automatické obnovení a zrušení). Na webu je to stávající fakturační karta s délkou, cenou PŘED tlačítkem, fakturačními údaji, „jako spotřebitel“ a souhlasem § 1837 l). Karta, sekce 04 Objednávky provozovny (stavy „čeká na fakturu“) a .lista-dole #pred-akce s tlačítkem „Objednávka zavazující k platbě“ nesou `data-objednavka`. V aplikaci je jediná hlavní akce tlačítko Google Play, na webu „Objednávka zavazující k platbě“. Obojí je jen pro správce (.jen-spravce), protože nákup patří provozovně. Mechanik vidí hlášku „Předplatné kupuje správce účtu.“ Oborový detail: počet sad v regálu, tedy to, za co se platí. Prázdný stav: .prazdno „Stav předplatného se nepodařilo zjistit“ s tlačítkem „Zkusit znovu“. Načítání: #pred-kostra. Chyba: .hlaska.chyba (odmítnutý nebo neověřený nákup: „Nákup se nepodařilo ověřit, nic vám nebylo účtováno navíc. Zkuste to prosím znovu.“). Úspěch: .toast „Předplatné je aktivní do …“.
+
+TABLET A NOTEBOOK: styl.css dává levý pruh (tablet) a boční menu (notebook). Obsah jde do .mrizka: Dnes s4 stav dne + s8 hledání a dnešní objednávky. Sklad s4 obří číslo a filtr + s8 tabulka (.tabulka-obal: kód · SPZ · rozměr · pozice · hloubky). Objednávky s8 týden + s4 termíny vybraného dne. Předplatné s5 stav účtu + s7 ceník a nákup. Sezónní přehled jsou tři sloupce .s4 (obvolat · pod 4 mm · nezaplaceno). Nic se jen neroztahuje z telefonu.
+
+## Plán
+1. Kolize jmen: stávající `functions/api/ukazka.js` (naplnit/smazat ukázková data ve vlastním účtu) přejmenovat beze změny logiky na `functions/api/ukazkova-data.js` a v `web/index.html` přepnout obě volání (`nast-ukazka-naplnit`/`-smazat`) na `/api/ukazkova-data`. Cestu `/api/ukazka` pak převezme šablonový 24h ukázkový účet (needitovat).
+2. `cenik.js`: přepsat na schválený ceník. Varianty {klic: "standard", nazev: "Standard", cena: 129, jednotka: "firma / měsíc", mesice: 1, popis: doslova „Evidence uskladněných pneu s tiskem štítků (vlastní tiskárna štítků), objednávkový kalendář s připomínkou pro mechanika, neomezený počet záznamů, 1–2 přihlášení. Kredit na štítky nad rámec běžné spotřeby se dokupuje zvlášť.“, vychozi}, {klic: "sezona", nazev: "Sezónní vstup", cena: 790, jednotka: "sezóna (6 měsíců)", mesice: 6} a {klic: "vetsi", nazev: "Větší provozovna", cena: 229, jednotka: "firma / měsíc", mesice: 1}. Ke každé variantě `play_produkt` = ID předplatného v Play Console (pneusklad_standard, pneusklad_sezona, pneusklad_vetsi), pokud šablonový play_nakupy.js nečte ID odjinud. Zdvojené „Kč Kč“ ze zadání se zobrazí jednou.
+3. `functions/api/objednavka.js` (webová faktura): cena = varianta.cena × počet období. Měsíční varianty nabízejí 1/3/6/12 měsíců, Sezónní vstup jen 1 sezónu (6 měsíců, 790 Kč). Uložený název a cena starých objednávek (Sólo/Základ/Tým) zůstávají v historii beze změny, migrace není potřeba.
+4. Zkušební doba 30 dní: `predplatne.js` ZKUSEBNI_DNI = 30 a `zkusebni_dni: 30` v manifestu. Servisy s uloženým `nastaveni_servisu.zkusebni_do` si podrží své datum (stavPredplatneho ho čte přednostně).
+5. Ukázková data s relativními daty, aby snímky nikdy nezestárly: `spolecne.js` pripravObjednavku přijme volitelné `posun_dni` (0 = dnes, 1 = zítra) místo `den`. POST /api/sady přijme volitelné `prijato_pred_dni` (0–400) pro datum příjmu. Obojí je jen přidané, stávající volání se nemění.
+6. `play/ukazka.json`: kroky POST /api/sady (12 sad 6 vymyšlených motoristů jako v dnešním seedu: telefony 601 000 1xx, SPZ 1AB 2345 …, rozměry 205/55 R16, 225/65 R16C, hloubky 2,8–7,3 mm, pozice A1-03…C1-02, část nezaplacená, část pod 4 mm), uloz sada_id. Dál POST /api/objednavky s posun_dni 0/1/1/2/4 pro výdej, přezutí a průjezd s opravou defektu a POST /api/objednavky/{id} pripraveno u jedné zítřejší, ať stupnice na Dnes nestojí na nule. Případný e-mail jen @example.cz. Naplní všech 6 obrazovek ze `snimky`.
+7. `data-manifest.json`: sekce `aplikace` (balicek přesně „cz.simtegen.pneusklad“, nazev, kratky_nazev, popis, otisky [], dlouhy_popis, kategorie BUSINESS, hlavni_veta, snimky podle designu). Ke všem položkám `ukladame` doplnit play_typy, play_ucely a play_volitelne: uzivatele [email] (ucet); prihlasovaci_odkazy [email] (ucet, bezpecnost); relace [] ; nastaveni_servisu [jmeno, telefon, adresa] (funkce, volitelne); zakaznici [jmeno, telefon, email, obsah_uzivatele] (funkce); sady [osobni_jine, obsah_uzivatele, financni_jine] (funkce); pohyby [obsah_uzivatele] (funkce); objednavky [kalendar, jmeno, obsah_uzivatele] (funkce); clenove [email] (ucet, funkce, volitelne); predplatne a platby [historie_nakupu] (funkce, ucet); objednavky_predplatneho [jmeno, adresa, historie_nakupu, financni_jine] (funkce, ucet, volitelne, jen webová faktura). Nová entita play_nakupy podle zadání, služba Google Play (androidpublisher.googleapis.com), cookie „aplikace“ (1 rok) a zkusebni_dni 30.
+8. `web/index.html`: `data-objednavka` na fakturační kartu (sekce 03), sekci 04 Objednávky provozovny, #pred-akce a odkazy Obchodní podmínky a Odstoupení od smlouvy v patičce. Odstranit „Platí se na fakturu“ z úvodu. Pruh předplatného a texty mimo kartu nesmí zmínit fakturu ani převod. Přidat `<div data-predplatne-play></div>` do sekce 03 Předplatného uvnitř .jen-spravce. Na přihlášení přidat sekci 03 s tlačítkem data-ukazka. Ceník vykreslit z nových polí (cena, jednotka, popis). U #hlavicka-zpet doplnit záložní cestu na nadřazenou obrazovku, když history.state chybí. Na Předplatném přidat .toast úspěchu a chybovou hlášku nákupu.
+9. `play/piktogram.svg` podle designu, `play/co_je_noveho.txt`: „Pneusklad je nově aplikace v Google Play. Předplatné si koupíte přímo v aplikaci přes Google Play a obnovuje se samo. Na přihlašovací obrazovce si bez registrace vyzkoušíte ukázku s vymyšlenými daty. Platí nový ceník: Standard 129 Kč měsíčně, Větší provozovna 229 Kč měsíčně, Sezónní vstup 790 Kč na 6 měsíců. Nové účty mají 30 dní zdarma.“
+10. Spustit `python vykresli_zasady.py` a `python vykresli_aplikaci.py` (manifest.webmanifest, ikony, sw.js, offline.html, .well-known/assetlinks.json, play/zaznam.json, play/BEZPECNOST_DAT.md, web/ukazka.json, odkazy v index.html), nic z toho needitovat ručně. Pak `python kontrola_manifestu.py`.
+11. `uat/scenare.json`: přidat scénáře z akceptace (ceník v /api/ja, příprava přes posun_dni, ukázková data přes /api/ukazkova-data, oddělení účtu B). Stávající scénáře nechat.
+12. README.md: sekce pro majitele „Google Play“ (založit 3 předplatná v Play Console s cenami 129 Kč/měs., 229 Kč/měs. a 790 Kč/6 měs. a ID z cenik.js, doplnit otisk do aplikace.otisky, servisní účet pro ověření nákupu). SPEC.md doplnit o build 8.
+
+## Soubory
+- cenik.js
+- predplatne.js
+- spolecne.js
+- functions/api/ukazkova-data.js (přejmenovaný z functions/api/ukazka.js)
+- functions/api/objednavka.js
+- functions/api/sady.js
+- functions/api/objednavky.js
+- web/index.html
+- data-manifest.json
+- play/piktogram.svg
+- play/ukazka.json
+- play/co_je_noveho.txt
+- uat/scenare.json
+- README.md
+- SPEC.md
+- generované (needitovat): web/zasady.html, web/podminky.html, web/zpracovatelska-smlouva.html, web/odstoupeni-formular.html, ZAZNAM_O_ZPRACOVANI.md, POSTUP_PRI_INCIDENTU.md, web/manifest.webmanifest, web/sw.js, web/offline.html, web/ikona-192.png, web/ikona-512.png, web/ikona-maskable-512.png, web/.well-known/assetlinks.json, web/ukazka.json, play/zaznam.json, play/BEZPECNOST_DAT.md
+- doplní stavba ze šablony (needitovat): web/play.js, functions/api/ukazka.js, functions/api/play.js, play_nakupy.js, db/migrace/0900_play_nakupy.sql
+
+## Rizika
+1. Kolize `/api/ukazka`: šablonový soubor by přepsal stávající „Naplnit/Smazat ukázková data“ a tlačítka v Nastavení by tiše přestala fungovat. Řeší krok 1 (přesun na /api/ukazkova-data). Ověřit, že stará cesta nikde nezůstala.
+2. Nákup musí patřit provozovně: middleware čte předplatné podle servis.id. Kdyby šablonový play_nakupy.js zapsal plati_do na uzivatel.id přihlášeného mechanika, servis by zaplatil a zůstal v režimu čtení. Proto je nákup jen pro správce. Stavba ověří, které id play.js zapisuje, a otestuje to dvěma účty přes Tým.
+3. Pravidla Google Play: jakákoli zmínka o faktuře nebo převodu v aplikaci znamená stažení z obchodu. Podle vygenerovaných obchodních podmínek (čl. 3) se platí fakturou, proto jsou odkazy na podmínky a formulář odstoupení v aplikaci skryté. Generátor vykresli_zasady.py patří šabloně a podmínky zatím nákup přes Google Play nepopisují. Doporučuji ho doplnit v šabloně a ručně ho needitovat.
+4. Schválený ceník má dvě nesrovnalosti, které appka zobrazí doslova: Sezónní vstup (790 Kč za 6 měsíců) je dražší než 6× Standard (774 Kč). Věta „Kredit na štítky … se dokupuje zvlášť“ slibuje produkt, který appka nemá: štítky se tisknou bez limitu a kredit nejde koupit. Do záznamu v obchodě proto kredit nejde. Majitel by měl větu buď stáhnout, nebo kredit objednat jako další stavbu.
+5. Ceny v Google Play nastavuje majitel v Play Console a musí sedět s cenik.js. Google si z předplatného bere poplatek (obvykle 15 %). Bez servisního účtu Google Play nejde nákup ověřit a předplatné se nezapíše.
+6. Prázdné `otisky`: do doplnění otisku z Play Console (Integrita aplikace) poběží aplikace s adresním řádkem. Proto musí každá obrazovka mít vlastní cestu zpět, ne jen history.back().
+7. Změna zkušební doby ze 14 na 30 dní a nového ceníku se týká jen nových účtů a objednávek. Stávající platící a zkoušející servisy si drží své plati_do / zkusebni_do. Migraci ověřit na náhledové D1.
+8. Bezpečnost údajů je prohlášení vůči Googlu: play_typy musí sedět s tím, co appka opravdu ukládá. Každá nová tabulka v budoucnu = nová položka s play_typy, jinak CI shodí build.
+9. Ukázková data jsou veřejná (web/ukazka.json). Jsou vymyšlená (blok 601 000 1xx, nevydávané řady SPZ, @example.cz) a nesmí do nich přijít nic z produkční databáze zákazníka.
+
+## Jak ověřit
+Na náhledovém nasazení:
+1. Telefon ~390 px, prohlížeč, odhlášeně: úvod ukazuje obří „129 Kč“ a pod ním doslova tři varianty schváleného ceníku a „Prvních 30 dní zdarma, bez karty.“. Nikde není věta o faktuře. Je vidět tlačítko „Vyzkoušet ukázku“.
+2. Klepnout „Vyzkoušet ukázku“: otevře se Dnes s čísly (kol na zítra > 0). Sklad má 12 sad s pozicemi A1-03…C1-02, Připravit kola ukazuje zítřejší kola s pozicí a Sezóna má obvolat / pod 4 mm / nezaplaceno. Po návratu na přihlášení se ukázka dá spustit znovu.
+3. Přihlásit se vlastním účtem, Nastavení → Ukázková data → Naplnit, pak Smazat: obojí funguje (nová cesta /api/ukazkova-data).
+4. Na webu jako správce: Předplatné → vybrat Sezónní vstup → vidět „790 Kč“ před tlačítkem „Objednávka zavazující k platbě“, odeslat → objednávka v historii. Mechanik tlačítko nevidí.
+5. Nainstalovat interní testovací verzi z Play na Android telefon: na Předplatném NENÍ fakturační karta, historie objednávek ani tlačítko „Objednávka zavazující k platbě“. Patička nemá Obchodní podmínky ani Odstoupení. Je tam nákup přes Google Play. Testovacím účtem koupit Standard → po návratu Předplatné ukazuje „Aktivní do …“, na webu se stejným účtem je totéž datum.
+6. V aplikaci projít Detail sady → Zpět → Sklad a otevřít Zásady → „Zpět do aplikace“. Nikde není potřeba systémové tlačítko Zpět a appka se šipkou nezavře.
+7. Na tabletu (820 px) a notebooku (1440 px): levý pruh / boční menu, Předplatné ve dvou sloupcích, Sklad jako tabulka.
+8. Lokálně `python vykresli_zasady.py && python vykresli_aplikaci.py && python kontrola_manifestu.py` → „Manifest souhlasí…“. play/BEZPECNOST_DAT.md uvádí E-mail jako povinný a Historii nákupů. `python uat_kontrola.py` projde všechny scénáře.
+
+## Akceptační scénáře (CI je spustí proti API)
+- Nepřihlášený návštěvník — načte GET /api/ja — musí vidět varianty Standard 129 Kč, Sezónní vstup 790 Kč a Větší provozovna 229 Kč a zkušební dobu 30 dní.
+- Mechanik účtu A — uskladní sadu přes POST /api/sady s pozicí v regálu — musí ji najít hledáním podle SPZ i podle pozice a vidět její kód pro štítek.
+- Mechanik účtu A — zapíše objednávku k uskladněné sadě s posun_dni 1 — musí ji v GET /api/priprava na zítřek vidět i s kódem sady a pozicí v regálu.
+- Správce účtu A — naplní účet přes POST /api/ukazkova-data a pak ukázková data smaže — musí po naplnění vidět ukázkové sady ve skladu a po smazání už žádnou z nich, zatímco vlastní sada zůstane.
+- Správce účtu A — odešle webovou objednávku varianty Sezónní vstup — musí v ní vidět cenu 790 Kč a 6 měsíců a stav čekající na platbu.
+- Účet B — požádá o sadu, přípravu a objednávku předplatného účtu A — nesmí uvidět žádnou sadu, jméno motoristy ani objednávku účtu A (404 nebo prázdný seznam).
+
+_Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě buildu 10 oproti specifikaci změnilo
+
+1. **V aplikaci jde koupit jen Standard (129 Kč / měsíc).** Šablonový
+   modul (`play_nakupy.js`, `web/play.js`, needitují se) zná jen ID
+   `predplatne_mesic` a `predplatne_rok`. Sezónní vstup a Větší provozovnu
+   Google Play v aplikaci neprodá, dokud šablona nepozná víc produktů. Na
+   webu jdou objednat fakturou všechny tři varianty. Úplný popis v obchodě
+   a „Co je nového“ proto slibují jen Standard přes Google Play. README
+   říká majiteli, co založit v Play Console.
+2. **Ceník na obrazovce Předplatné je jen na webu** (`data-objednavka`).
+   V aplikaci by ukazoval varianty, které tam koupit nejde, tedy odkaz
+   k placení jinde. Cenu a podmínky v aplikaci ukazuje panel Google Play.
+   Ze stejného důvodu ukazuje úvodní obrazovka v aplikaci jen Standard.
+   Varianty bez `v_aplikaci` v `cenik.js` nesou `.jen-web` a v aplikaci
+   jsou skryté stejně bezpečně jako `[data-objednavka]`. Na webu je ceník
+   na úvodu celý.
+3. **Nákup v aplikaci vidí jen majitel účtu,** ne každý správce.
+   `/api/play` připisuje nákup na `data.uzivatel.id`, předplatné ale čte
+   middleware podle `servis.id`. Pozvaný správce by zaplatil za svůj
+   prázdný účet. Pozvaní vidí větu, kdo kupuje.
+4. **Žádné `play_produkt` v `cenik.js`:** ID produktů drží šablona.
+5. **Oprava navíc: limit 40 sad ve zkušebce už neplatí pro zaplacený
+   servis.** `zkontrolujLimit` hlídal jen sloupec `plan`, jenže faktura
+   i Google Play zapisují jen `predplatne.plati_do`. Servis by zaplatil
+   a po 40 sadách dostal „Ve zkušebním režimu…“, přestože Standard slibuje
+   neomezený počet záznamů.
+6. **Sklad na tabletu je seznam ve sloupci s8, ne tabulka.** Řádky nesou
+   zaškrtávátko pro dávkový tisk štítků a tlačítko detailu. Druhé vykreslení
+   jako tabulka by bylo druhé místo, které se může rozejít. Sezónní přehled
+   používá `.dva-sloupce`, ne pevné `.s4`: na tabletu 820 px by tři sloupce
+   měly asi 190 px a tlačítka Zavolat / Sada / Zaplaceno by se nevešla.
+7. **Visačka v piktogramu je natočený pětiúhelník (`polyline`), ne `rect`.**
+   Obdélník ze specifikace ležel přes bok pláště a validátor přidává
+   k poloměru rezervu 0,8. Visačka teď visí mimo plášť do 13,85 od středu.
+8. **Akceptační scénář objednávky přepsán na nový ceník** (`standard`,
+   `sezona`). Starý počítal se zrušenými variantami `zaklad` a `solo`
+   a spadl by na 422. Ukázková data hledají `q=Kucerova` bez diakritiky,
+   protože UAT klient adresu nekóduje a server hledá bez diakritiky.
+9. **Generátory spustil systém, ne stavitel.** Stavitelovi prostředí
+   spuštění Pythonu i Node odmítlo. Vygenerované soubory proto vytvořil
+   systém před kontrolou (`vykresli_zasady.py`, `vykresli_aplikaci.py`)
+   a jsou v commitu: zásady a právní dokumenty, `ZAZNAM_O_ZPRACOVANI.md`,
+   `web/manifest.webmanifest`, `web/sw.js`, `web/offline.html`, ikony
+   `web/ikona-*.png`, `web/.well-known/assetlinks.json`, `web/ukazka.json`,
+   `play/zaznam.json`, `play/BEZPECNOST_DAT.md`. V `index.html` jsou odkaz
+   na manifest, registrace service workeru a `<html data-aplikace>`. Ručně
+   se do nich nesahalo.
+10. **Migrace ze šablony v pracovní kopii.** Šablona po commitu znovu
+   nasype `0002_predplatne.sql`, `0004_platby.sql` a `0005_objednavky.sql`.
+   `.gitignore` je drží mimo repo, ale lokální kontrola je aplikuje
+   a spadne na `table objednavky already exists`. Přitom padá i tvorba
+   snímků do obchodu, protože bez API nevznikne žádný snímek. Kopie
+   se smazaly, v repu jsou jen produktové migrace `0001`–`0007` a `0900`.

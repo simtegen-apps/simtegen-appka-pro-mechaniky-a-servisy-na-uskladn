@@ -737,109 +737,244 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
 # name, the SimteGen mark). JPEG, because Play refuses PNG with alpha.
 
 MAX_SNIMKU_OBCHODU = 8
+MAX_TABLETU = 4
 
-_GRAFIKA = """<!doctype html><html lang="cs"><head><meta charset="utf-8">
+# The company's mark on the store graphics: the logo "Díl" in its clean
+# small form, drawn by styl.css (.znacka-ctverec — block with the bite,
+# the piece in the product's colour), so the graphic and the app can never
+# show two different logos.
+ZNACKA_HTML = '<span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span>'
+
+# The store pictures are composed in the app's own origin: /styl.css brings
+# the same fonts and colours the app uses, and the inline styles here are
+# allowed by the product's CSP. Texts and the screenshot are set by script
+# (textContent, src) — never spliced into markup.
+_KOMPOZICE = """<!doctype html><html lang="cs"><head><meta charset="utf-8">
 <link rel="stylesheet" href="/styl.css"><link rel="stylesheet" href="/produkt.css">
 <style>
-  body {{ margin: 0; width: 1024px; height: 500px; overflow: hidden; }}
-  .g {{ box-sizing: border-box; height: 500px; padding: 64px 72px; display: flex; flex-direction: column;
-        justify-content: space-between; }}
-  .g h1 {{ font-size: 76px; line-height: 1; margin: 0; display: flex; align-items: center; gap: 28px; }}
-  .g h1::before {{ content: ""; width: 44px; height: 44px; background: var(--barva-produktu); flex: none; }}
-  .g p {{ font-size: 30px; max-width: 760px; margin: 22px 0 0; }}
-  .g .pata {{ display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--barva-linka); padding-top: 22px; }}
-</style></head><body><div class="g">
-  <div><h1></h1><p></p></div>
-  <div class="pata"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></div>
-</div></body></html>"""
+  html, body { margin: 0 !important; padding: 0 !important; background: #f6f4ef !important; }
+  .sgk { position: relative; overflow: hidden; color: #141414; background-color: #f6f4ef;
+         background-image: radial-gradient(circle, #ddd8cd var(--tecka), transparent calc(var(--tecka) + 0.5px));
+         font-family: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif; }
+  .sgk-stitek { position: absolute; display: flex; align-items: center; color: #5e5c57; line-height: 1;
+                font-family: "Plex Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.18em; }
+  .sgk-stitek i { display: block; background: var(--barva-produktu); flex: none; }
+  .sgk-titulek { position: absolute; font-weight: 700; line-height: 1; letter-spacing: -0.03em; text-wrap: balance; }
+  .sgk-ram { position: absolute; background: #141414; }
+  .sgk-ram img { position: absolute; display: block; }
+  .sgk-znacka { position: absolute; display: flex; align-items: center; gap: 12px; }
+</style></head><body>%s</body></html>"""
+
+# (width, height, body). Positions are the approved design (artifact
+# "Kusovník v Obchodě Play", 18. 10. 2026): label and sentence on top, the
+# device from below, cut by the edge.
+_TELEFON = (1080, 1920, """<div class="sgk" style="width:1080px;height:1920px;--tecka:3px;background-size:60px 60px;background-position:30px 30px">
+  <div class="sgk-stitek" style="left:96px;top:118px;font-size:30px;gap:18px"><i style="width:26px;height:26px"></i><span id="st"></span></div>
+  <div class="sgk-titulek" id="ti" style="left:96px;top:196px;width:888px;font-size:104px"></div>
+  <div class="sgk-ram" id="ram" data-mezera="130" style="left:150px;top:640px;width:780px;height:1600px;border-radius:72px">
+    <img id="img" alt="" style="left:22px;top:22px;width:736px;border-radius:52px"></div></div>""")
+_TABLET = (1920, 1200, """<div class="sgk" style="width:1920px;height:1200px;--tecka:3px;background-size:60px 60px;background-position:30px 30px">
+  <div class="sgk-stitek" style="left:96px;top:110px;font-size:28px;gap:16px"><i style="width:24px;height:24px"></i><span id="st"></span></div>
+  <div class="sgk-titulek" id="ti" style="left:96px;top:180px;width:1700px;font-size:92px"></div>
+  <div class="sgk-ram" id="ram" data-mezera="90" style="left:250px;top:400px;width:1420px;height:1000px;border-radius:56px">
+    <img id="img" alt="" style="left:20px;top:20px;width:1380px;border-radius:38px"></div></div>""")
+_GRAFIKA = (1024, 500, """<div class="sgk" style="width:1024px;height:500px;--tecka:2px;background-size:40px 40px;background-position:20px 20px">
+  <div class="sgk-stitek" style="left:64px;top:70px;font-size:18px;gap:12px"><i style="width:16px;height:16px"></i><span id="st"></span></div>
+  <div class="sgk-titulek" id="ti" style="left:64px;top:112px;width:520px;font-size:62px"></div>
+  <div class="sgk-znacka" style="left:64px;top:410px">""" + ZNACKA_HTML + """</div>
+  <div class="sgk-ram" style="left:640px;top:58px;width:300px;height:620px;border-radius:34px">
+    <img id="img" alt="" style="left:10px;top:10px;width:280px;border-radius:26px"></div></div>""")
+# Phone screens are taken at the phone's own layout width; the tablet at the
+# wide tablet layout, scaled to the frame's screen. The phone shot is taller
+# than 9:16 so the device still runs off the bottom edge after it moves up
+# under a short sentence.
+_TELEFON_SNIMEK = (360, 720, 3.0)
+_TABLET_SNIMEK = (1180, 820, 1380 / 1180)
+
+_DOPLN = r"""
+(async (st, ti, src) => {
+  document.getElementById('st').textContent = st;
+  const titulek = document.getElementById('ti');
+  titulek.textContent = ti;
+  await document.fonts.ready;
+  // A one- or two-line sentence leaves room: the device moves up under it
+  // (never below the designed position), so more of the screen shows.
+  const ram = document.getElementById('ram');
+  if (ram && ram.dataset.mezera) {
+    const pod = titulek.offsetTop + titulek.offsetHeight + Number(ram.dataset.mezera);
+    ram.style.top = Math.min(parseFloat(ram.style.top), pod) + 'px';
+  }
+  const img = document.getElementById('img');
+  if (img && src) { img.src = src; try { await img.decode(); } catch (e) {} }
+  await document.fonts.ready;
+  return true;
+})(%s, %s, %s)
+"""
+
+
+def _nacti_aplikaci(dt: _DevTools, url: str) -> None:
+    dt.volej("Page.navigate", url=url)
+    dt.cekej_na("Page.loadEventFired", 20)
+    konec = time.monotonic() + 5
+    while dt.js(_UVODNI) == "videt" and time.monotonic() < konec:
+        time.sleep(0.1)
+    time.sleep(0.5)
+
+
+def _vyfot_obrazovku(dt: _DevTools, url: str, snimek: dict, rozmer: tuple) -> bytes:
+    """One app screen as the customer sees it: fresh load (the previous
+    screen's clicks must not leak in), the screen shown, its clicks done."""
+    sirka, vyska, meritko = rozmer
+    dt.volej("Emulation.setDeviceMetricsOverride", width=sirka, height=vyska,
+             deviceScaleFactor=meritko, mobile=sirka < TELEFON_DO)
+    _nacti_aplikaci(dt, url)
+    if snimek.get("obrazovka"):
+        dt.js(_UKAZ % json.dumps(snimek["obrazovka"]))
+        time.sleep(0.4)
+    for selektor in snimek.get("kliky") or []:
+        dt.js("(() => { const e = document.querySelector(%s); if (e) e.click(); return !!e; })()"
+              % json.dumps(selektor))
+        time.sleep(0.6)
+    if snimek.get("kliky"):
+        # A click often ends in a confirmation toast ("Kusovník uložen") —
+        # photographed, it covers the very thing the shot is about.
+        time.sleep(3.5)
+    dt.js("window.scrollTo(0, %d)" % int(snimek.get("posun") or 0))
+    time.sleep(0.4)
+    return base64.b64decode(dt.volej("Page.captureScreenshot", format="jpeg", quality=92)["data"])
+
+
+def _sloz(dt: _DevTools, zaklad: str, sablona: tuple, stitek: str, titulek: str, obrazek: bytes | None) -> bytes:
+    sirka, vyska, telo = sablona
+    dt.volej("Emulation.setDeviceMetricsOverride", width=sirka, height=vyska, deviceScaleFactor=1, mobile=False)
+    _nacti_aplikaci(dt, zaklad + "/index.html")
+    dt.js("document.open(); document.write(%s); document.close(); true" % json.dumps(_KOMPOZICE % telo))
+    src = ("data:image/jpeg;base64," + base64.b64encode(obrazek).decode("ascii")) if obrazek else ""
+    dt.js(_DOPLN % (json.dumps(stitek), json.dumps(titulek), json.dumps(src)))
+    time.sleep(0.3)
+    data = dt.volej("Page.captureScreenshot", format="jpeg", quality=92,
+                    clip={"x": 0, "y": 0, "width": sirka, "height": vyska, "scale": 1})["data"]
+    return base64.b64decode(data)
 
 
 def obchod(root: Path, vystup: Path) -> list[str]:
-    """Phone screenshots and the feature graphic into `vystup`; returns the
-    file names. Raises on a browser that will not start — the release
-    workflow then fails loudly instead of uploading an empty listing."""
+    """The store listing's pictures into `vystup`; returns the file names.
+
+    A product with a database runs on its real API with the demo data
+    (play/ukazka.json) logged in as the demo account — the same machinery
+    as the acceptance tests — so the screenshots show work, not a login
+    wall. Each shot in aplikace.snimky becomes a phone picture with its
+    sentence; the ones marked `tablet` also a tablet picture; the feature
+    graphic carries aplikace.hlavni_veta. Without aplikace.snimky (a product
+    from before the listing), the screens are taken as they are.
+
+    Raises on anything that would upload a broken listing — a browser that
+    will not start, demo data that fails — so the release fails loudly."""
+    import contextlib
+
     root = Path(root)
-    zaznam = {}
-    if (root / "play" / "zaznam.json").exists():
-        zaznam = json.loads((root / "play" / "zaznam.json").read_text(encoding="utf-8"))
+    manifest_cesta = root / "data-manifest.json"
+    manifest = json.loads(manifest_cesta.read_text(encoding="utf-8")) if manifest_cesta.exists() else {}
+    aplikace = manifest.get("aplikace") or {}
+    snimky = [s for s in aplikace.get("snimky") or [] if isinstance(s, dict)][:MAX_SNIMKU_OBCHODU]
+    nazev = str(aplikace.get("nazev") or manifest.get("produkt") or "")
     vystup.mkdir(parents=True, exist_ok=True)
     exe = najdi_prohlizec()
     if exe is None:
         raise RuntimeError("na stroji není Chrome, Chromium ani Edge")
-    server = _server(root / "web")
     profil = Path(tempfile.mkdtemp(prefix="simtegen-prohlizec-"))
     fd, log_jmeno = tempfile.mkstemp(prefix="simtegen-prohlizec-", suffix=".log")
     log = os.fdopen(fd, "wb")
     proces, dt = None, None
     soubory: list[str] = []
-    try:
-        proces, dt = _spust_prohlizec(exe, profil, log)
-        dt.volej("Page.enable")
-        dt.volej("Emulation.setEmulatedMedia", features=[
-            {"name": "prefers-color-scheme", "value": "light"},
-            {"name": "prefers-reduced-motion", "value": "reduce"}])
-        dt.volej("Emulation.setDeviceMetricsOverride", width=360, height=640, deviceScaleFactor=3, mobile=True)
-        port = server.server_address[1]
-        dt.volej("Page.navigate", url=f"http://127.0.0.1:{port}/index.html")
-        dt.cekej_na("Page.loadEventFired", 20)
-        konec = time.monotonic() + 5
-        while dt.js(_UVODNI) == "videt" and time.monotonic() < konec:
-            time.sleep(0.1)
-        time.sleep(0.5)
-        obrazovky = [o for o in (dt.js(_OBRAZOVKY) or [None]) if "nacitani" not in (o or "")]
-        for poradi, obrazovka in enumerate(obrazovky[:MAX_SNIMKU_OBCHODU], 1):
-            if obrazovka:
-                dt.js(_UKAZ % json.dumps(obrazovka))
-            dt.js("window.scrollTo(0, 0)")
-            time.sleep(0.3)
-            data = dt.volej("Page.captureScreenshot", format="jpeg", quality=90)["data"]
-            jmeno = f"telefon-{poradi}.jpg"
-            (vystup / jmeno).write_bytes(base64.b64decode(data))
-            soubory.append(jmeno)
-        dt.volej("Emulation.setDeviceMetricsOverride", width=1024, height=500, deviceScaleFactor=1, mobile=False)
-        dt.js("document.open(); document.write(%s); document.close();" % json.dumps(_GRAFIKA.format()))
-        dt.js("document.querySelector('.g h1').textContent = %s; document.querySelector('.g p').textContent = %s;"
-              % (json.dumps(zaznam.get("nazev") or ""), json.dumps(zaznam.get("kratky_popis") or "")))
-        dt.js("document.fonts.ready.then(() => true)")
-        time.sleep(0.5)
-        data = dt.volej("Page.captureScreenshot", format="jpeg", quality=92,
-                        clip={"x": 0, "y": 0, "width": 1024, "height": 500, "scale": 1})["data"]
-        (vystup / "grafika.jpg").write_bytes(base64.b64decode(data))
-        soubory.append("grafika.jpg")
-        ikona = root / "web" / "ikona-512.png"
-        if ikona.exists():
-            shutil.copy(ikona, vystup / "ikona.png")
-            soubory.append("ikona.png")
-    finally:
-        if dt is not None:
-            try:
-                dt.session = None
-                dt.volej("Browser.close")
-            except Exception:
-                pass
-            dt.ws.zavri()
-        if proces is not None:
-            try:
-                proces.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proces.kill()
-                proces.wait()
-        server.shutdown()
-        server.server_close()
-        log.close()
-        # Edge lets go of its profile a moment after it exits (same as in
-        # zkontroluj): one rmtree left folders behind in the temp dir.
-        for _ in range(10):
-            shutil.rmtree(profil, ignore_errors=True)
-            try:
-                os.unlink(log_jmeno)
-            except FileNotFoundError:
-                pass
-            except OSError:
-                pass
-            if not profil.exists() and not Path(log_jmeno).exists():
-                break
-            time.sleep(0.3)
+    with contextlib.ExitStack() as zasobnik:
+        cookie = None
+        if (root / "db").exists() and (root / "play" / "ukazka.json").exists():
+            import uat_kontrola
+
+            npx = shutil.which("npx")
+            if npx is None:
+                raise RuntimeError("ukázková data potřebují Node.js (npx) — na stroji chybí")
+            zaklad = zasobnik.enter_context(uat_kontrola.api_produktu(root, npx))
+            klient = uat_kontrola.Klient(zaklad, "ukazka")
+            chyba = klient.prihlas(uat_kontrola.UKAZKOVY_UCET)
+            chyby = [chyba] if chyba else uat_kontrola.spust_ukazku(root, klient)
+            if chyby:
+                raise RuntimeError("ukázková data: " + "; ".join(chyby))
+            cookie = klient.cookie
+        else:
+            server = _server(root / "web")
+            zasobnik.callback(server.server_close)
+            zasobnik.callback(server.shutdown)
+            zaklad = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            proces, dt = _spust_prohlizec(exe, profil, log)
+            dt.volej("Page.enable")
+            dt.volej("Emulation.setEmulatedMedia", features=[
+                {"name": "prefers-color-scheme", "value": "light"},
+                {"name": "prefers-reduced-motion", "value": "reduce"}])
+            if cookie:
+                jmeno, _, hodnota = cookie.partition("=")
+                dt.volej("Network.setCookie", name=jmeno, value=hodnota, url=zaklad + "/", path="/")
+            url = zaklad + "/index.html"
+
+            if not snimky:
+                dt.volej("Emulation.setDeviceMetricsOverride", width=360, height=640, deviceScaleFactor=3, mobile=True)
+                _nacti_aplikaci(dt, url)
+                obrazovky = [o for o in (dt.js(_OBRAZOVKY) or [None]) if "nacitani" not in (o or "")]
+                prvni = None
+                for poradi, obrazovka in enumerate(obrazovky[:MAX_SNIMKU_OBCHODU], 1):
+                    data = _vyfot_obrazovku(dt, url, {"obrazovka": obrazovka}, _TELEFON_SNIMEK)
+                    prvni = prvni or data
+                    (vystup / f"telefon-{poradi}.jpg").write_bytes(data)
+                    soubory.append(f"telefon-{poradi}.jpg")
+            else:
+                telefony = [_vyfot_obrazovku(dt, url, s, _TELEFON_SNIMEK) for s in snimky]
+                tablety = [(s, _vyfot_obrazovku(dt, url, s, _TABLET_SNIMEK))
+                           for s in snimky if s.get("tablet")][:MAX_TABLETU]
+                prvni = telefony[0]
+                for poradi, (s, data) in enumerate(zip(snimky, telefony), 1):
+                    obraz = _sloz(dt, zaklad, _TELEFON, f"{poradi:02d} — {s.get('stitek', '')}",
+                                  str(s.get("titulek") or ""), data)
+                    (vystup / f"telefon-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"telefon-{poradi}.jpg")
+                for poradi, (s, data) in enumerate(tablety, 1):
+                    obraz = _sloz(dt, zaklad, _TABLET, str(s.get("stitek") or ""), str(s.get("titulek") or ""), data)
+                    (vystup / f"tablet-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"tablet-{poradi}.jpg")
+            veta = str(aplikace.get("hlavni_veta") or aplikace.get("popis") or nazev)
+            (vystup / "grafika.jpg").write_bytes(_sloz(dt, zaklad, _GRAFIKA, nazev, veta, prvni))
+            soubory.append("grafika.jpg")
+            ikona = root / "web" / "ikona-512.png"
+            if ikona.exists():
+                shutil.copy(ikona, vystup / "ikona.png")
+                soubory.append("ikona.png")
+        finally:
+            if dt is not None:
+                try:
+                    dt.session = None
+                    dt.volej("Browser.close")
+                except Exception:
+                    pass
+                dt.ws.zavri()
+            if proces is not None:
+                try:
+                    proces.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proces.kill()
+                    proces.wait()
+            log.close()
+            # Edge lets go of its profile a moment after it exits (same as in
+            # zkontroluj): one rmtree left folders behind in the temp dir.
+            for _ in range(10):
+                shutil.rmtree(profil, ignore_errors=True)
+                try:
+                    os.unlink(log_jmeno)
+                except OSError:
+                    pass
+                if not profil.exists() and not Path(log_jmeno).exists():
+                    break
+                time.sleep(0.3)
     return soubory
 
 

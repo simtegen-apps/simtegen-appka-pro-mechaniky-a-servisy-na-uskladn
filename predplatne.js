@@ -25,7 +25,9 @@
 
 import { json, ted } from "./spolecne.js";
 
-export const ZKUSEBNI_DNI = 14;
+// 30 days since build 10 (approved price list); matches ZKUSEBNI_DNU in
+// spolecne.js and zkusebni_dni in the manifest.
+export const ZKUSEBNI_DNI = 30;
 
 const DEN = 24 * 3600;
 

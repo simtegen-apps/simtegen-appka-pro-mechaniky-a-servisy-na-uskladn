@@ -1,0 +1,469 @@
+{
+ "popis": "Ukázková data pro „Vyzkoušet ukázku“ a snímky do Google Play. Všechno je vymyšlené: telefony z bloku 601 000 1xx, žádná skutečná osoba ani firma. Data jsou relativní k dnešku (prijato_pred_dni, posun_dni), takže kalendář a příprava na zítřek nikdy nezestárnou.",
+ "kroky": [
+  {
+   "pozadavek": "POST /api/navod",
+   "telo": {}
+  },
+  {
+   "pozadavek": "POST /api/nastaveni",
+   "telo": {
+    "nazev": "Pneuservis Ukázka",
+    "telefon": "601 000 100",
+    "adresa": "Dílenská 1, Brno",
+    "format_stitku": "role_100x50",
+    "vychozi_cena": 800,
+    "soubezne_objednavky": 2,
+    "otevreno_od": "08:00",
+    "otevreno_do": "17:00",
+    "obed_od": "12:00",
+    "obed_do": "12:30"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Jana Dvořáková",
+    "telefon": "601 000 101",
+    "spz": "1AB 2345",
+    "vozidlo": "Škoda Octavia III",
+    "typ": "zimni",
+    "rozmer": "205/55 R16",
+    "dezen": "Nokian WR Snowproof",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 6.2,
+    "hloubka_pp": 6.0,
+    "hloubka_lz": 5.8,
+    "hloubka_pz": 5.9,
+    "pozice": "A1-03",
+    "cena_skladovani": 800,
+    "prijato_pred_dni": 185
+   },
+   "uloz": {
+    "s1": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Petr Novotný",
+    "telefon": "601 000 102",
+    "spz": "2CD 6789",
+    "vozidlo": "VW Golf VII",
+    "typ": "zimni",
+    "rozmer": "225/45 R17",
+    "dezen": "Michelin Alpin 6",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 3.8,
+    "hloubka_pp": 3.6,
+    "hloubka_lz": 4.1,
+    "hloubka_pz": 4.0,
+    "pozice": "A1-04",
+    "cena_skladovani": 900,
+    "prijato_pred_dni": 190
+   },
+   "uloz": {
+    "s2": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Marie Kučerová",
+    "telefon": "601 000 103",
+    "spz": "3EF 1122",
+    "vozidlo": "Hyundai i30",
+    "typ": "zimni",
+    "rozmer": "195/65 R15",
+    "dezen": "Semperit Speed-Grip 5",
+    "pocet_kusu": 4,
+    "na_discich": false,
+    "hloubka_lp": 7.0,
+    "hloubka_pp": 6.8,
+    "hloubka_lz": 7.1,
+    "hloubka_pz": 6.9,
+    "pozice": "A2-01",
+    "cena_skladovani": 700,
+    "prijato_pred_dni": 178
+   },
+   "uloz": {
+    "s3": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Tomáš Beneš",
+    "telefon": "601 000 104",
+    "spz": "4GH 3344",
+    "vozidlo": "Ford Focus",
+    "typ": "zimni",
+    "rozmer": "215/55 R16",
+    "dezen": "Dunlop Winter Sport 5",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 2.9,
+    "hloubka_pp": 3.1,
+    "hloubka_lz": 2.8,
+    "hloubka_pz": 3.0,
+    "pozice": "A2-05",
+    "cena_skladovani": 800,
+    "prijato_pred_dni": 182,
+    "poznamka": "Jeden disk odřený od obrubníku."
+   },
+   "uloz": {
+    "s4": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Lucie Horáková",
+    "telefon": "601 000 105",
+    "spz": "5IJ 5566",
+    "vozidlo": "Toyota Yaris",
+    "typ": "letni",
+    "rozmer": "175/65 R15",
+    "dezen": "Kleber Dynaxer HP4",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 5.8,
+    "hloubka_pp": 5.7,
+    "hloubka_lz": 6.0,
+    "hloubka_pz": 5.9,
+    "pozice": "A2-06",
+    "cena_skladovani": 650,
+    "prijato_pred_dni": 12
+   },
+   "uloz": {
+    "s5": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Autodoprava Krátký s.r.o.",
+    "telefon": "601 000 106",
+    "spz": "6KL 7788",
+    "vozidlo": "Renault Master",
+    "typ": "zimni",
+    "rozmer": "225/65 R16C",
+    "dezen": "Continental VanContact Winter",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 6.4,
+    "hloubka_pp": 6.3,
+    "hloubka_lz": 6.6,
+    "hloubka_pz": 6.5,
+    "pozice": "B1-01",
+    "cena_skladovani": 1200,
+    "prijato_pred_dni": 175
+   },
+   "uloz": {
+    "s6": "sada.id",
+    "kratky": "sada.zakaznik_id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "zakaznik_id": "{kratky}",
+    "spz": "6KL 7789",
+    "vozidlo": "Renault Master",
+    "typ": "zimni",
+    "rozmer": "225/65 R16C",
+    "dezen": "Continental VanContact Winter",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 5.1,
+    "hloubka_pp": 5.0,
+    "hloubka_lz": 4.9,
+    "hloubka_pz": 5.2,
+    "pozice": "B1-02",
+    "cena_skladovani": 1200,
+    "prijato_pred_dni": 175
+   },
+   "uloz": {
+    "s7": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Ondřej Malý",
+    "telefon": "601 000 107",
+    "spz": "7MN 9900",
+    "vozidlo": "Kia Ceed",
+    "typ": "letni",
+    "rozmer": "205/55 R16",
+    "dezen": "Hankook Ventus Prime 4",
+    "pocet_kusu": 4,
+    "na_discich": false,
+    "hloubka_lp": 4.8,
+    "hloubka_pp": 4.7,
+    "hloubka_lz": 4.5,
+    "hloubka_pz": 4.6,
+    "pozice": "B1-03",
+    "cena_skladovani": 800,
+    "prijato_pred_dni": 8
+   },
+   "uloz": {
+    "s8": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Eva Šimková",
+    "telefon": "601 000 108",
+    "spz": "8PR 1357",
+    "vozidlo": "Dacia Duster",
+    "typ": "letni",
+    "rozmer": "215/65 R16",
+    "dezen": "Barum Bravuris 5HM",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 3.3,
+    "hloubka_pp": 3.5,
+    "hloubka_lz": 3.0,
+    "hloubka_pz": 3.1,
+    "pozice": "B2-01",
+    "cena_skladovani": 800,
+    "prijato_pred_dni": 15
+   },
+   "uloz": {
+    "s9": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Martin Pokorný",
+    "telefon": "601 000 109",
+    "spz": "9ST 2468",
+    "vozidlo": "Škoda Fabia IV",
+    "typ": "zimni",
+    "rozmer": "185/65 R15",
+    "dezen": "Matador Sibir Snow",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 7.2,
+    "hloubka_pp": 7.3,
+    "hloubka_lz": 7.1,
+    "hloubka_pz": 7.0,
+    "pozice": "B2-02",
+    "cena_skladovani": 650,
+    "prijato_pred_dni": 188
+   },
+   "uloz": {
+    "s10": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Pavla Navrátilová",
+    "telefon": "601 000 110",
+    "spz": "1UV 3579",
+    "vozidlo": "Peugeot 308",
+    "typ": "letni",
+    "rozmer": "225/45 R17",
+    "dezen": "Goodyear EfficientGrip Performance 2",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 6.1,
+    "hloubka_pp": 6.0,
+    "hloubka_lz": 5.9,
+    "hloubka_pz": 6.2,
+    "pozice": "C1-01",
+    "cena_skladovani": 900,
+    "prijato_pred_dni": 5
+   },
+   "uloz": {
+    "s11": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady",
+   "telo": {
+    "jmeno": "Jiří Kolář",
+    "telefon": "601 000 111",
+    "spz": "2XY 4680",
+    "vozidlo": "Škoda Kodiaq",
+    "typ": "zimni",
+    "rozmer": "235/55 R18",
+    "dezen": "Nokian WR SUV 4",
+    "pocet_kusu": 4,
+    "na_discich": true,
+    "hloubka_lp": 5.5,
+    "hloubka_pp": 5.4,
+    "hloubka_lz": 5.6,
+    "hloubka_pz": 5.3,
+    "pozice": "C1-02",
+    "cena_skladovani": 1000,
+    "prijato_pred_dni": 192
+   },
+   "uloz": {
+    "s12": "sada.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s1}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s3}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s5}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s8}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s10}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/sady/{s11}",
+   "telo": {
+    "akce": "zaplaceno",
+    "zaplaceno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s1}",
+    "posun_dni": 0,
+    "cas": "09:00",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 45,
+    "poznamka": "",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "jmeno_bez_zakaznika": "Průjezd — oprava defektu",
+    "posun_dni": 0,
+    "cas": "13:30",
+    "ukon": "oprava",
+    "na_discich": true,
+    "delka_min": 30,
+    "poznamka": "Hřebík v pravé zadní.",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s2}",
+    "posun_dni": 1,
+    "cas": "08:00",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 45,
+    "poznamka": "Chce doměřit tlaky.",
+    "potvrzeno": true
+   },
+   "uloz": {
+    "o_zitra": "objednavka.id"
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s4}",
+    "posun_dni": 1,
+    "cas": "10:15",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 45,
+    "poznamka": "Nabídnout nové zimní, dezén pod 3 mm.",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s6}",
+    "posun_dni": 1,
+    "cas": "13:00",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 60,
+    "poznamka": "",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s10}",
+    "posun_dni": 2,
+    "cas": "11:00",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 45,
+    "poznamka": "",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s7}",
+    "posun_dni": 3,
+    "cas": "08:30",
+    "ukon": "prezuti",
+    "na_discich": true,
+    "delka_min": 60,
+    "poznamka": "Druhá dodávka Krátký.",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky",
+   "telo": {
+    "sada_id": "{s12}",
+    "posun_dni": 4,
+    "cas": "14:00",
+    "ukon": "vydej",
+    "na_discich": true,
+    "delka_min": 20,
+    "poznamka": "Ruší uskladnění, stěhuje se.",
+    "potvrzeno": true
+   }
+  },
+  {
+   "pozadavek": "POST /api/objednavky/{o_zitra}",
+   "telo": {
+    "akce": "pripraveno",
+    "pripraveno": true
+   }
+  }
+ ]
+}
