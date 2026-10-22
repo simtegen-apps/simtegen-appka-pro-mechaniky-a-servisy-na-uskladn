@@ -39,6 +39,10 @@ PODMINKY = WEB / "podminky.html"
 DPA = WEB / "zpracovatelska-smlouva.html"
 ODSTOUPENI = WEB / "odstoupeni-formular.html"
 ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
+# The template's own source attribution (functions/api/_middleware.js). The
+# policy says so whenever the product carries the migration — written by the
+# template, so no product forgets to.
+ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
 POSTUP = Path("POSTUP_PRI_INCIDENTU.md")
 
 _HLAVICKA = "GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: data-manifest.json, generátor: vykresli_zasady.py."
@@ -181,6 +185,18 @@ def _ukladame(manifest: dict) -> list[dict]:
             "zaklad_cl": u.get("zaklad_cl") or "čl. 6/1/b — plnění smlouvy",
             "subjekty": u.get("subjekty") or "zákazníci služby",
             "retence": u.get("retence", ""),
+        })
+    if ZDROJE_MIGRACE.exists():
+        rows.append({
+            "entita": "zdroj příchodu",
+            "ucel": "zjistit, která naše propagace (reklama, katalog) přivádí zákazníky",
+            "pole": "název zdroje a kampaně z odkazu, kterým jste přišli (např. „sklik“, "
+                    "„jarni-akce“), u účtu; souhrnné počty návštěv podle zdroje bez vazby na osobu. "
+                    "Nic se neukládá do vašeho prohlížeče.",
+            "zaklad": "oprávněný zájem — vyhodnocení účinnosti propagace",
+            "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
+            "subjekty": "zákazníci a návštěvníci",
+            "retence": "u účtu do jeho smazání; souhrnné počty bez osobních údajů",
         })
     rows.append({
         "entita": "provozní a bezpečnostní logy",

@@ -236,8 +236,16 @@ HLASENI_PLAY = {"entita": "hlášení chyb (tlačítko Nahlásit chybu)",
 PLAY = Path("play")
 
 
+# The template's source attribution (migration 0910, _middleware.js): a
+# campaign label on the account, used to measure which promotion works.
+ZDROJE_PLAY = {"entita": "zdroj příchodu (odkaz z kampaně)",
+               "play_typy": ["akce_v_aplikaci"], "play_ucely": ["analytika"], "play_volitelne": True}
+ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
+
+
 def _polozky_play(manifest: dict) -> list[dict]:
-    return [u for u in manifest.get("ukladame") or [] if isinstance(u, dict)] + [HLASENI_PLAY]
+    return ([u for u in manifest.get("ukladame") or [] if isinstance(u, dict)] + [HLASENI_PLAY]
+            + ([ZDROJE_PLAY] if ZDROJE_MIGRACE.exists() else []))
 
 
 def _bezpecnost_dat(manifest: dict) -> dict:

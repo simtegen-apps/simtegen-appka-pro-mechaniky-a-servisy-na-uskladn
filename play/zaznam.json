@@ -196,6 +196,18 @@
         ]
       },
       {
+        "klic": "akce_v_aplikaci",
+        "kategorie": "App activity",
+        "typ": "App interactions",
+        "ucely": [
+          "Analytics"
+        ],
+        "volitelne": true,
+        "zdroje": [
+          "zdroj příchodu (odkaz z kampaně)"
+        ]
+      },
+      {
         "klic": "kalendar",
         "kategorie": "Calendar",
         "typ": "Calendar events",
