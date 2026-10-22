@@ -39,7 +39,10 @@ VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js"
                        "functions/api/nahlasit.js",
                        # Vyzkoušet ukázku (module play, SimteGen): a throwaway
                        # demo account — the reviewer and the visitor have none.
-                       "functions/api/ukazka.js"}
+                       "functions/api/ukazka.js",
+                       # Where customers come from: wraps /api/* after the
+                       # product's own handler, never answers by itself.
+                       "functions/api/_middleware.js"}
 
 # Security plumbing of the template, queried by token or expiry, not by
 # customer — the uzivatel_id rule is about customer data.

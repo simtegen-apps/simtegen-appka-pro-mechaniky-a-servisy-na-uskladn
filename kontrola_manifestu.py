@@ -39,6 +39,10 @@ ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
 # Tables the template itself ships; account deletion handles them explicitly,
 # so they are the only ones allowed to live without a uzivatel_id column.
 ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
+# Aggregates the template ships itself (migration 0910, visits per source):
+# the privacy policy describes them on its own (vykresli_zasady), so the
+# product's manifest need not — but they are still held to "numbers only".
+SABLONOVE_AGREGATY = {"zdroje_navstev"}
 
 # Column names that make a table personal data. An aggregate table (manifest
 # `agregaty`) may live without uzivatel_id only if none of these appear —
@@ -170,7 +174,7 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
             tabulky.add(nazev)
             if nazev in ZAKLADNI_TABULKY:
                 continue
-            if nazev in (manifest.get("agregaty") or []):
+            if nazev in (manifest.get("agregaty") or []) or nazev in SABLONOVE_AGREGATY:
                 # Aggregates: allowed without uzivatel_id, forbidden to carry
                 # anything that looks like a person.
                 osobni = [s for s in OSOBNI_SLOUPCE

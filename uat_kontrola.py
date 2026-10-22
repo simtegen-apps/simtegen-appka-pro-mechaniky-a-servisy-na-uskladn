@@ -52,7 +52,10 @@ SCENARE = Path("uat") / "scenare.json"
 VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js",
                        "functions/api/odhlaseni.js", "functions/api/navsteva.js",
                        "functions/api/ja.js", "functions/api/nahlasit.js",
-                       "functions/api/ukazka.js"}
+                       "functions/api/ukazka.js",
+                       # Where customers come from: wraps /api/* after the
+                       # product's own handler, never answers by itself.
+                       "functions/api/_middleware.js"}
 UCTY = {"A": "uat-a@example.cz", "B": "uat-b@example.cz"}
 UKAZKA = Path("play") / "ukazka.json"
 UKAZKOVY_UCET = "ukazka@example.cz"
