@@ -281,5 +281,6 @@
       }
     ]
   },
-  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id."
+  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id.",
+  "adresa": "https://pneusklad.simtegen.com"
 }

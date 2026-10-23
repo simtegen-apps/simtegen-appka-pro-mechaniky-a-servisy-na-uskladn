@@ -98,7 +98,7 @@ def _zkontroluj_sit(manifest: dict) -> list[str]:
     for root, server in ((WEB, False), (FUNKCE, True)):
         for path in _soubory(root, (".html", ".htm", ".js", ".mjs", ".css")):
             for number, line in enumerate(
-                path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+                _bez_seo(path, path.read_text(encoding="utf-8", errors="replace")).splitlines(), 1
             ):
                 if "fetch(" in line and not fetch_povoleny(line, server):
                     chyby.append(f"{path}:{number}: fetch mimo deklarované domény "
@@ -383,6 +383,30 @@ def _zkontroluj_aplikaci(manifest: dict) -> list[str]:
     return vykresli_aplikaci.zkontroluj(manifest)
 
 
+def _zkontroluj_seo(manifest: dict) -> list[str]:
+    """Search and link-preview tags (vykresli_seo.py): in every product,
+    the block in index.html and robots/sitemap equal to the generator."""
+    try:
+        import vykresli_seo
+    except ImportError:
+        return ["chybí vykresli_seo.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
+    return vykresli_seo.zkontroluj(manifest)
+
+
+def _bez_seo(path: Path, text: str) -> str:
+    """web/index.html without the generated SEO block, for the network
+    scan: its canonical <link href="https://…"> is not a request, and
+    nothing can hide in the block, because _zkontroluj_seo proves it equals
+    the generator. Only index.html — the one file that proof covers."""
+    if path != WEB / "index.html":
+        return text
+    try:
+        import vykresli_seo
+    except ImportError:
+        return text
+    return vykresli_seo.bez_bloku(text)
+
+
 def _generovane(manifest: dict) -> set[Path]:
     """Files owned by a generator that proves them separately — the service
     worker has to fetch and cache, which the scans below would flag."""
@@ -402,7 +426,7 @@ def main() -> int:
 
     chyby = (_zkontroluj_sit(manifest) + _zkontroluj_uloziste(manifest)
              + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest)
-             + _zkontroluj_design() + _zkontroluj_aplikaci(manifest)
+             + _zkontroluj_design() + _zkontroluj_aplikaci(manifest) + _zkontroluj_seo(manifest)
              + _zkontroluj_bezpecnost(manifest, _PRESKOCIT) + _zkontroluj_vzhled()
              + _zkontroluj_uat())
     if chyby:
