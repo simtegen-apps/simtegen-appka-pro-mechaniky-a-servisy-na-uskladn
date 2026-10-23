@@ -372,8 +372,10 @@ def _zkontroluj_vzhled() -> list[str]:
 
 def _zkontroluj_aplikaci(manifest: dict) -> list[str]:
     """The installable-app module (vykresli_aplikaci.py): off without an
-    `aplikace` section; on, every generated file must equal the generator."""
-    if "aplikace" not in manifest:
+    `aplikace` section; on, every generated file must equal the generator.
+    Sample data (play/ukazka.json) are checked and published without the
+    app too — the first-login empty state loads them."""
+    if "aplikace" not in manifest and not (Path("play") / "ukazka.json").exists():
         return []
     try:
         import vykresli_aplikaci
