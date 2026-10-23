@@ -115,6 +115,19 @@ Ikony: inline SVG, tah 1,6, mřížka 24, `stroke="currentColor"`, bez výplně.
 3. **Chyba** (`.hlaska.chyba`) — česky, co se stalo a co s tím.
 4. **Úspěch** (`.toast` / `.hlaska.uspech`) — krátce potvrdí.
 
+**První přihlášení** (produkt s účty): prázdný stav hlavní obrazovky má vedle
+hlavní akce `<button type="button" class="tlacitko vedlejsi" data-ukazkova-data>
+Naplnit ukázkovými daty</button>`. Nahrání dat z `play/ukazka.json`, pruh
+„V účtu máte ukázková data“ a jejich odstranění jedním klepnutím obstará
+`simtegen.js`; tlačítko je vidět, jen když to jde.
+
+**Zkušební období** kreslí `simtegen.js` jako pruh nad obsahem (`.sg-pruh`,
+nebo do `<div data-pruh-predplatneho>`): klidně, dokud zbývá víc než týden,
+varovně posledních 7 dní, chybově po vypršení — vždy s tlačítkem k platbě.
+Vlastní odpočet nepiš. Platbu otevře přes `window.ukaz(id obrazovky)` nebo
+klikem na prvek s `data-platba`; v aplikaci z Google Play vede jen na nákup
+přes Google Play.
+
 ## Dotyk, čitelnost, pohyb
 
 - Dotykové cíle ≥ 44 px, řádky seznamu ≥ 56 px, mezi cíli ≥ 8 px.

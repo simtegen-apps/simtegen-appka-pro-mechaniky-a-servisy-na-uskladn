@@ -44,10 +44,11 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 
 | Kategorie | Typ údajů | Shromažďováno | Povinné? | Účely | Odkud (manifest) |
 |---|---|---|---|---|---|
-| Osobní údaje (Personal info) | E-mailová adresa (Email address) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management), Prevence podvodů, zabezpečení a dodržování předpisů (Fraud prevention, security, and compliance) | uzivatele, prihlasovaci_odkazy, zakaznici, clenove |
+| Osobní údaje (Personal info) | E-mailová adresa (Email address) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management), Komunikace vývojáře (Developer communications), Prevence podvodů, zabezpečení a dodržování předpisů (Fraud prevention, security, and compliance) | uzivatele, prihlasovaci_odkazy, zakaznici, clenove |
 | Osobní údaje (Personal info) | Jméno (Name) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management) | nastaveni_servisu, zakaznici, objednavky, objednavky_predplatneho |
 | Osobní údaje (Personal info) | Adresa (Address) | Ano | volitelné | Funkce aplikace (App functionality), Správa účtu (Account management) | nastaveni_servisu, objednavky_predplatneho |
 | Osobní údaje (Personal info) | Telefonní číslo (Phone number) | Ano | povinné | Funkce aplikace (App functionality) | nastaveni_servisu, zakaznici |
+| Osobní údaje (Personal info) | ID uživatelů (User IDs) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management), Komunikace vývojáře (Developer communications) | zkusebni_doba, upominky, ukazkova_data |
 | Osobní údaje (Personal info) | Jiné informace (Other info) | Ano | povinné | Funkce aplikace (App functionality) | sady |
 | Finanční údaje (Financial info) | Historie nákupů (Purchase history) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management) | predplatne, platby, objednavky_predplatneho, play_nakupy |
 | Finanční údaje (Financial info) | Jiné finanční údaje (Other financial info) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management) | sady, objednavky_predplatneho |
