@@ -380,6 +380,641 @@
     otevri();
   }, true);
 
+  /* ── Zkušební období a ukázková data ───────────────────────────────
+   * Pruh nad obsahem: kolik zbývá ze zkušebního období, v posledních
+   * 7 dnech a po vypršení výrazněji a s tlačítkem „Předplatit“, které
+   * otevře platbu tak, jak ji produkt má — v prohlížeči fakturační
+   * objednávku, v aplikaci z Google Play nákup přes Google Play (styl.css
+   * a play.js tam objednávku schovávají; tady se jen vybere první viditelný
+   * cíl, takže pravidla Google Play platí i pro pruh). Odkaz z upomínky
+   * (?platba) otevře totéž po načtení.
+   *
+   * Ukázková data: tlačítko [data-ukazkova-data] v prázdném stavu produktu
+   * nahraje do vlastního účtu vymyšlená data (functions/api/ukazka-uctu.js)
+   * a pruh je pak jedním klepnutím odstraní. Tlačítko je vidět jen tam, kde
+   * to jde (třída sg-ukazkova-nabidka na <html>, podle hlavičky z /api/ja).
+   *
+   * Proč tady: tenhle soubor se obnovuje v každém produktu, takže to dojde
+   * i do produktů, které vznikly dřív. Produkt, který má vlastní pruh
+   * (#pruh-predplatne), nedostane druhý. Nic se neukládá v prohlížeči.
+   */
+  var koren = doc.documentElement;
+  var UKAZKOVY_UCET = /@ukazka\.invalid$/;
+  var HACKY_PLATBY = "[data-predplatne-play], [data-objednavka], #predplatne-karta, [data-pruh-predplatneho], " +
+    "[data-ukazkova-data], [data-platba]";
+
+  function dny(n) {
+    return n === 1 ? "den" : (n >= 2 && n <= 4 ? "dny" : "dní");
+  }
+
+  function datumKratce(unix) {
+    var d = new Date(unix * 1000);
+    return d.getDate() + ". " + (d.getMonth() + 1) + ".";
+  }
+
+  // Hidden by the product or by the Google Play rule — but an inactive
+  // screen does not count: ukaz() opens it.
+  function viditelny(el) {
+    for (var e = el; e && e !== doc.body; e = e.parentElement) {
+      if (e.classList && e.classList.contains("obrazovka")) return true;
+      if (e.hidden || getComputedStyle(e).display === "none") return false;
+    }
+    return true;
+  }
+
+  function otevriPlatbu() {
+    // A product's own way in wins: [data-platba], or the bar it drew itself.
+    var vlastni = doc.querySelector("[data-platba]") || doc.getElementById("pruh-predplatne");
+    if (vlastni && viditelny(vlastni) && /^(A|BUTTON)$/.test(vlastni.tagName)) {
+      vlastni.click();
+      return;
+    }
+    var cil = null;
+    var vyber = ["[data-objednavka]", "[data-predplatne-play]", "#predplatne-karta"];
+    for (var i = 0; i < vyber.length && !cil; i++) {
+      cil = Array.prototype.filter.call(doc.querySelectorAll(vyber[i]), viditelny)[0] || null;
+    }
+    if (!cil) return;
+    var obrazovka = cil.closest(".obrazovka");
+    if (obrazovka && !obrazovka.classList.contains("aktivni") && typeof window.ukaz === "function") {
+      try { window.ukaz(obrazovka.id); } catch (e) { /* the product's router: best effort */ }
+    }
+    setTimeout(function () {
+      var karta = cil.closest(".karta") || cil;
+      karta.style.scrollMarginTop = "6rem";  // clear of the sticky header
+      // A jump, not a glide: a smooth scroll is cancelled by any layout the
+      // product still does, and needs no reduced-motion exception.
+      karta.scrollIntoView({ block: "start" });
+      if (!karta.hasAttribute("tabindex")) karta.setAttribute("tabindex", "-1");
+      try { karta.focus({ preventScroll: true }); } catch (e) { karta.focus(); }
+    }, 80);
+  }
+
+  var pruhy = null;
+  function vlozPruh(pruh) {
+    if (!pruhy) {
+      pruhy = prvek("div", "sg-pruhy");
+      var slot = doc.querySelector("[data-pruh-predplatneho]");
+      var obsah = doc.querySelector(".obsah") || doc.querySelector("main");
+      if (slot) slot.appendChild(pruhy);
+      else if (obsah) obsah.insertBefore(pruhy, obsah.firstChild);
+      else {
+        // Nothing to sit in: the very top, clear of the notch.
+        pruhy.classList.add("sg-pruhy--nahore");
+        doc.body.insertBefore(pruhy, doc.body.firstChild);
+      }
+    }
+    pruhy.appendChild(pruh);
+  }
+
+  function pruh(trida, text, akce, priKliku) {
+    var p = prvek("div", "sg-pruh" + (trida ? " sg-pruh--" + trida : ""));
+    p.setAttribute("role", "status");
+    p.appendChild(prvek("p", "sg-pruh-text", text));
+    var t = prvek("button", "tlacitko vedlejsi", akce);
+    t.type = "button";
+    t.addEventListener("click", function () { priKliku(t); });
+    p.appendChild(t);
+    return p;
+  }
+
+  // The bar for one subscription state, or null. Pure on purpose (state and
+  // clock in, text out): tests/test_konverze.py runs it in Node.
+  function obsahPruhu(p, nyni) {
+    if (!p || p.platce === false) return null;
+    if (p.stav === "vyprselo") {
+      return { trida: "konec", akce: "Předplatit",
+               text: "Předplatné vypršelo. Data máte dál uložená — stáhnout si je, napsat nám i smazat účet " +
+                     "můžete i teď. Pokračovat v práci půjde po zaplacení." };
+    }
+    if (p.stav !== "zkusebni") return null;
+    var konec = Number(p.zkusebni_do || p.plati_do) || 0;
+    var zbyva = Number(p.dni_zbyva) || 0;
+    if (zbyva > 7) {
+      return { trida: "", akce: "Předplatné",
+               text: "Zkušební období: zbývá " + zbyva + " " + dny(zbyva) +
+                     (konec ? " (do " + datumKratce(konec) + ")" : "") + "." };
+    }
+    var kdy;
+    if (konec) {
+      // Calendar days, not 24-hour blocks: "zítra" must mean tomorrow.
+      var dnes = new Date(nyni);
+      dnes.setHours(0, 0, 0, 0);
+      var den = new Date(konec * 1000);
+      den.setHours(0, 0, 0, 0);
+      var rozdil = Math.round((den - dnes) / 86400000);
+      kdy = rozdil <= 0 ? "dnes" : rozdil === 1 ? "zítra" : "za " + rozdil + " " + dny(rozdil) +
+        " (" + datumKratce(konec) + ")";
+    } else {
+      kdy = "za " + zbyva + " " + dny(zbyva);
+    }
+    return { trida: "brzy", akce: "Předplatit", text: "Zkušební období končí " + kdy + "." };
+  }
+
+  function dosad(hodnota, ulozene) {
+    if (typeof hodnota === "string") {
+      return hodnota.replace(/\{(\w+)\}/g, function (cele, jmeno) {
+        return Object.prototype.hasOwnProperty.call(ulozene, jmeno) ? String(ulozene[jmeno]) : cele;
+      });
+    }
+    if (Array.isArray(hodnota)) return hodnota.map(function (h) { return dosad(h, ulozene); });
+    if (hodnota && typeof hodnota === "object") {
+      var vysledek = {};
+      Object.keys(hodnota).forEach(function (k) { vysledek[k] = dosad(hodnota[k], ulozene); });
+      return vysledek;
+    }
+    return hodnota;
+  }
+
+  function vyberHodnotu(data, cesta) {
+    return String(cesta).split(".").reduce(function (d, klic) {
+      if (d === null || d === undefined) return undefined;
+      return d[/^\d+$/.test(klic) ? Number(klic) : klic];
+    }, data);
+  }
+
+  function apiJson(cesta, metoda, telo) {
+    var nastaveni = { method: metoda, credentials: "same-origin", headers: {} };
+    if (telo !== undefined) {
+      nastaveni.headers["Content-Type"] = "application/json";
+      nastaveni.body = JSON.stringify(telo);
+    }
+    return fetch(cesta, nastaveni).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: r.ok, status: r.status, data: data, hlavicky: r.headers };
+      });
+    });
+  }
+
+  // The same replay as play.js (the demo account) and uat_kontrola.py.
+  // Duplicated, not shared: play.js reaches a product only with a build,
+  // this file also with the template refresh — a shared helper would leave
+  // one of them calling something that is not there yet.
+  function prehrajKroky(kroky) {
+    var ulozene = {};
+    return kroky.reduce(function (cesta, krok) {
+      return cesta.then(function () {
+        var casti = String(krok.pozadavek || "").split(" ");
+        return apiJson(dosad(casti.slice(1).join(" "), ulozene), casti[0], dosad(krok.telo, ulozene))
+          .then(function (r) {
+            Object.keys(krok.uloz || {}).forEach(function (jmeno) {
+              var hodnota = vyberHodnotu(r.data, krok.uloz[jmeno]);
+              if (hodnota !== undefined) ulozene[jmeno] = hodnota;
+            });
+          });
+      });
+    }, Promise.resolve());
+  }
+
+  function nahrajUkazku(tlacitko) {
+    var puvodni = tlacitko.textContent;
+    tlacitko.disabled = true;
+    tlacitko.textContent = "Připravuji ukázková data…";
+    apiJson("/api/ukazka-uctu", "POST", { akce: "nahrat" }).then(function (r) {
+      if (!r.ok) throw new Error(r.data.chyba || "Ukázková data teď nejde nahrát.");
+      // The range is closed whatever the steps did: removal must work even
+      // after a step that failed.
+      return prehrajKroky(r.data.kroky || []).catch(function () { return null; }).then(function () {
+        return apiJson("/api/ukazka-uctu", "POST", { akce: "hotovo" });
+      });
+    }).then(function () {
+      location.reload();
+    }).catch(function (e) {
+      tlacitko.disabled = false;
+      tlacitko.textContent = puvodni;
+      var zprava = prvek("p", "zprava chyba", e.message || "Ukázková data teď nejde nahrát.");
+      zprava.setAttribute("role", "status");
+      if (tlacitko.parentNode) tlacitko.parentNode.insertBefore(zprava, tlacitko.nextSibling);
+    });
+  }
+
+  function pruhUkazkovychDat() {
+    return pruh("ukazka", "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
+      "v provozu. Až si zapíšete vlastní, ukázku odstraňte.", "Odstranit ukázková data", function (t) {
+      t.disabled = true;
+      t.textContent = "Odstraňuji…";
+      apiJson("/api/ukazka-uctu", "POST", { akce: "odstranit" }).then(function (r) {
+        if (!r.ok) throw new Error(r.data.chyba);
+        location.reload();
+      }).catch(function () {
+        t.disabled = false;
+        t.textContent = "Nepovedlo se — zkusit znovu";
+      });
+    });
+  }
+
+  // Wait until the product has drawn its first real screen (and, in an app
+  // product, until play.js has said web or app) — opening the payment
+  // before that would be overwritten by the product's own start.
+  function azBudeAplikace(fn) {
+    var zacatekCekani = Date.now();
+    (function zkus() {
+      var aktivni = doc.querySelector(".obrazovka.aktivni");
+      var hotova = !doc.querySelector(".obrazovka") || (aktivni && !/nacitani/.test(aktivni.id));
+      var playRozhodl = !koren.hasAttribute("data-aplikace") ||
+        koren.classList.contains("sg-web") || koren.classList.contains("sg-v-aplikaci");
+      if ((hotova && playRozhodl) || Date.now() - zacatekCekani > 6000) { fn(); return; }
+      setTimeout(zkus, 120);
+    })();
+  }
+
+  function bezParametru(jmeno) {
+    try {
+      var url = new URL(location.href);
+      url.searchParams.delete(jmeno);
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    } catch (e) { /* the link still works, it only stays in the address */ }
+  }
+
+  doc.addEventListener("click", function (e) {
+    var cil = e.target && e.target.closest ? e.target.closest("[data-ukazkova-data]") : null;
+    if (!cil || cil.disabled) return;
+    e.preventDefault();
+    nahrajUkazku(cil);
+  });
+
+  doc.addEventListener("DOMContentLoaded", function () {
+    // Only pages of a product with accounts: the hooks above, or a product
+    // that draws its empty state from script (the button is in the source).
+    var veSkriptu = Array.prototype.some.call(doc.scripts, function (s) {
+      return !s.src && s.textContent.indexOf("data-ukazkova-data") >= 0;
+    });
+    if (!doc.querySelector(HACKY_PLATBY) && !veSkriptu) return;
+    var chciPlatbu = /[?&]platba(?:[=&]|$)/.test(location.search);
+    apiJson("/api/ja", "GET").then(function (r) {
+      var ja = r.data || {};
+      if (!r.ok || !ja.prihlasen || UKAZKOVY_UCET.test(ja.email || "")) return;
+      var ukazka = r.hlavicky.get("X-SimteGen-Ukazkova-Data");
+      if (ukazka === "nabidka") koren.classList.add("sg-ukazkova-nabidka");
+      if (ukazka === "nahrana") vlozPruh(pruhUkazkovychDat());
+      var obsah = doc.getElementById("pruh-predplatne") ? null : obsahPruhu(ja.predplatne, Date.now());
+      if (obsah) vlozPruh(pruh(obsah.trida, obsah.text, obsah.akce, otevriPlatbu));
+      if (chciPlatbu && ja.predplatne && ja.predplatne.platce !== false) {
+        bezParametru("platba");
+        azBudeAplikace(otevriPlatbu);
+      }
+    }).catch(function () { /* offline or no accounts: nothing to say */ });
+  });
+
+  /* ── Connection: offline is not signed out ──────────────────────────
+   * A mechanic in a garage with one bar of signal must not look signed
+   * out. Pages used to show the login screen on ANY failed /api/ja, so a
+   * signed-in customer asked for a new login link and wondered where the
+   * data went. Signed out is only what the server says: 200 with
+   * prihlasen:false, or 401/403. Everything else — fetch throws, 5xx, a 404
+   * of a broken deploy, a captive portal's HTML instead of JSON — means
+   * "we don't know", and "we don't know" keeps the last screen.
+   *
+   *   SimteGen.kdoJsem()       → Promise {stav: "prihlasen"|"odhlasen"|"offline", ja, status}
+   *   SimteGen.offline(znovu)  → bar with "Zkusit znovu"; znovu() also runs on
+   *                              the browser's `online` event
+   *   SimteGen.spojeno()       → bar gone
+   *
+   * Here and not only in index.html: this file is refreshed in every
+   * product on its next build (stavitel._NAVRH), index.html is the
+   * product's own and the template never touches it again. The template's
+   * obnov() is the pattern the builder copies.
+   */
+  function kdoJsem() {
+    return apiJson("/api/ja", "GET").then(function (r) {
+      var ja = r.data || {};
+      if (r.status === 401 || r.status === 403) return { stav: "odhlasen", ja: {}, status: r.status };
+      if (r.ok && typeof ja.prihlasen === "boolean") {
+        return { stav: ja.prihlasen ? "prihlasen" : "odhlasen", ja: ja, status: r.status };
+      }
+      return { stav: "offline", ja: {}, status: r.status };
+    }, function () {
+      return { stav: "offline", ja: {}, status: 0 };
+    });
+  }
+
+  var offlinePruh = null;
+  var offlineZnovu = null;
+  function offline(znovu) {
+    // Without a callback the safest retry is the whole page: the product's
+    // own start runs again.
+    offlineZnovu = typeof znovu === "function" ? znovu : function () { location.reload(); };
+    if (offlinePruh) {
+      // A retry that failed again: the same bar, the button usable again.
+      var t = offlinePruh.querySelector("button");
+      if (t) { t.disabled = false; t.textContent = "Zkusit znovu"; }
+      return;
+    }
+    offlinePruh = pruh("offline", "Nejde se spojit se serverem — nejspíš slabý signál nebo výpadek " +
+      "internetu. Data zůstávají uložená; až se spojení vrátí, načteme je znovu.", "Zkusit znovu", function (t) {
+      t.disabled = true;
+      t.textContent = "Zkouším…";
+      offlineZnovu();
+    });
+    // An alert, not a status: the page did not change, so nothing else
+    // would tell a screen reader why the tap did nothing.
+    offlinePruh.setAttribute("role", "alert");
+    vlozPruh(offlinePruh);
+  }
+
+  function spojeno() {
+    if (offlinePruh && offlinePruh.parentNode) offlinePruh.parentNode.removeChild(offlinePruh);
+    offlinePruh = null;
+  }
+
+  window.addEventListener("online", function () {
+    if (offlinePruh && offlineZnovu) offlineZnovu();
+  });
+
+  /* ── Tisk a PDF ─────────────────────────────────────────────────────
+   * <button class="tlacitko vedlejsi" data-tisk>Vytisknout</button> prints
+   * the screen; data-tisk="#kusovnik" only that element (the cut list for
+   * the workshop, the drawing for the customer). "Uložit jako PDF" is the
+   * same dialog. The look is styl.css's @media print; here only the
+   * choice of what, so no product writes its own print code.
+   *   SimteGen.tisk("#kusovnik") — the same from a product's script.
+   */
+  function tisk(selektor) {
+    var cil = selektor ? doc.querySelector(selektor) : null;
+    if (cil) {
+      cil.classList.add("sg-tisk-cil");
+      koren.classList.add("sg-tisk-vyber");
+    }
+    window.print();
+  }
+  window.addEventListener("afterprint", function () {
+    koren.classList.remove("sg-tisk-vyber");
+    Array.prototype.forEach.call(doc.querySelectorAll(".sg-tisk-cil"), function (el) {
+      el.classList.remove("sg-tisk-cil");
+    });
+  });
+  doc.addEventListener("click", function (e) {
+    var tlacitko = e.target && e.target.closest ? e.target.closest("[data-tisk]") : null;
+    if (!tlacitko) return;
+    e.preventDefault();
+    tisk(tlacitko.getAttribute("data-tisk"));
+  });
+
+  /* ── Čísla, peníze, data, rozměry ───────────────────────────────────
+   * One way to write them in every app. Products wrote their own:
+   * toLocaleString here, string concatenation there, "1249 Kč" next to
+   * "1 249,00 Kč", ISO dates on a screen. All spaces inside a value are
+   * non-breaking, so "1 249 Kč" never ends a line with "Kč" alone.
+   *
+   *   SimteGen.cislo(12345.5, 1)            → "12 345,5"
+   *   SimteGen.kc(1249)                     → "1 249 Kč"   (1249.5 → "1 249,50 Kč")
+   *   SimteGen.kc(124950, {halere: true})   → "1 249,50 Kč" (the API stores haléře)
+   *   SimteGen.datum(d)                     → "25. 10." this year, else "25. 10. 2025"
+   *   SimteGen.datum(d, {rok: true, cas: true}) → "25. 10. 2026 14:05"
+   *   SimteGen.datum(d, {dny: true})        → "Dnes" / "Zítra" / "Včera", else as above
+   *   SimteGen.rozmer([600, 720, 510], "mm") → "600 × 720 × 510 mm"
+   *   SimteGen.pocet(3, ["sada", "sady", "sad"]) → "3 sady"
+   *
+   * Dates take a Date, an ISO string or unix seconds (what D1 returns).
+   * The arithmetic stays where it belongs — on the server, in haléře; this
+   * only writes a finished number.
+   */
+  var NBSP = " ";
+  function cislo(n, desetinna) {
+    var x = Number(n);
+    if (!isFinite(x)) return "–";
+    // Without a precision: at most two decimals, no trailing zeros (1,5 not 1,50).
+    var s = (desetinna == null ? String(Number(x.toFixed(2))) : x.toFixed(desetinna)).split(".");
+    var cele = s[0].replace(/^-/, "");
+    var skupiny = cele.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+    return (x < 0 && Number(s.join(".")) !== 0 ? "−" : "") + skupiny + (s[1] ? "," + s[1] : "");
+  }
+  function kc(castka, volby) {
+    var x = Number(castka);
+    if (volby && volby.halere) x = x / 100;
+    if (!isFinite(x)) return "–";
+    var cela = Math.round(x * 100) % 100 === 0;
+    return cislo(x, cela ? 0 : 2) + NBSP + "Kč";
+  }
+  function naDatum(d) {
+    if (d instanceof Date) return d;
+    if (typeof d === "number") return new Date(d < 1e12 ? d * 1000 : d);
+    // "2026-10-25 14:05:00" from SQLite is local-less; treat it as UTC like D1 writes it.
+    var s = String(d || "");
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) s = s.replace(" ", "T") + "Z";
+    return new Date(s);
+  }
+  function datum(d, volby) {
+    volby = volby || {};
+    var t = naDatum(d);
+    if (isNaN(t.getTime())) return "–";
+    var dnes = new Date();
+    var den = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    var cas = volby.cas ? NBSP + t.getHours() + ":" + ("0" + t.getMinutes()).slice(-2) : "";
+    if (volby.dny) {
+      var rozdil = Math.round((den(t) - den(dnes)) / 86400000);
+      var slovo = { "-1": "Včera", "0": "Dnes", "1": "Zítra" }[String(rozdil)];
+      if (slovo) return slovo + cas;
+    }
+    var rok = volby.rok || t.getFullYear() !== dnes.getFullYear();
+    return t.getDate() + "." + NBSP + (t.getMonth() + 1) + "." + (rok ? NBSP + t.getFullYear() : "") + cas;
+  }
+  function rozmer(hodnoty, jednotka) {
+    var cast = [].concat(hodnoty).map(function (h) { return cislo(h); }).join(NBSP + "×" + NBSP);
+    return cast + (jednotka ? NBSP + jednotka : "");
+  }
+  function pocet(n, tvary) {
+    var x = Math.abs(Number(n));
+    // 1 sada, 2–4 sady, 5 sad; a fraction takes the genitive singular (1,5 sady).
+    var cele = Math.round(x) === x;
+    var tvar = !cele ? tvary[1] : x === 1 ? tvary[0] : (x >= 2 && x <= 4) ? tvary[1] : tvary[2];
+    return cislo(n) + NBSP + tvar;
+  }
+
+  /* ── Potvrzení, dotaz a „Vrátit“ ────────────────────────────────────
+   * Instead of confirm() / prompt() / alert(). Those are the browser's own
+   * grey boxes: different on every phone, foreign inside the Google Play
+   * app, unstyled, and they freeze the page (the persona harness had to
+   * stub them out). Live products had a dozen of them. CI now refuses them
+   * in a product's HTML and JS (kontrola_manifestu.py).
+   *
+   *   SimteGen.potvrd(text, {popis, ano, ne, nebezpecne})  → Promise<boolean>
+   *   SimteGen.zeptej(text, {popis, popisek, hodnota, typ, ano, ne}) → Promise<string|null>
+   *   SimteGen.vratitelne(text, vratit, {ms})  → toast „… · Vrátit“; vratit() may return a Promise
+   *
+   * Prefer vratitelne: do the thing at once and offer to take it back for a
+   * few seconds — the question "are you sure?" is answered "yes" by reflex
+   * and only slows down the 99 % who meant it. potvrd with nebezpecne is
+   * for what cannot be taken back (deleting the account); the safe button
+   * then has the focus, so Enter never destroys anything.
+   */
+  var otevrenyDialog = null;
+  var dialogu = 0;
+
+  function dialog(volby) {
+    return new Promise(function (hotovo) {
+      if (otevrenyDialog) otevrenyDialog();  // a newer question replaces the open one
+      var predtim = doc.activeElement;
+      var bg = prvek("div", "panel-pozadi");
+      var okno = prvek("div", "panel sg-dialog");
+      var id = "sg-dialog-" + (++dialogu);
+      okno.setAttribute("role", volby.nebezpecne ? "alertdialog" : "dialog");
+      okno.setAttribute("aria-modal", "true");
+      okno.setAttribute("aria-labelledby", id);
+      var nadpis = prvek("h2", "", volby.text);
+      nadpis.id = id;
+      okno.appendChild(nadpis);
+      if (volby.popis) okno.appendChild(prvek("p", "", volby.popis));
+      var vstup = null;
+      if (volby.pole) {
+        var pole = prvek("div", "pole");
+        var popisek = prvek("label", "", volby.pole.popisek || "Odpověď");
+        vstup = doc.createElement("input");
+        vstup.id = id + "-pole";
+        vstup.type = volby.pole.typ || "text";
+        vstup.value = volby.pole.hodnota == null ? "" : String(volby.pole.hodnota);
+        popisek.setAttribute("for", vstup.id);
+        pole.appendChild(popisek);
+        pole.appendChild(vstup);
+        okno.appendChild(pole);
+      }
+      var akce = prvek("div", "radka sg-dialog-akce");
+      var ano = prvek("button", volby.nebezpecne ? "tlacitko varovne" : "tlacitko",
+        volby.ano || (vstup ? "Uložit" : "Pokračovat"));
+      var ne = prvek("button", "tlacitko vedlejsi", volby.ne || "Zrušit");
+      ano.type = "button";
+      ne.type = "button";
+      akce.appendChild(ano);
+      akce.appendChild(ne);
+      okno.appendChild(akce);
+
+      var hotov = false;
+      function konec(vysledek) {
+        if (hotov) return;
+        hotov = true;
+        otevrenyDialog = null;
+        if (bg.parentNode) bg.parentNode.removeChild(bg);
+        if (okno.parentNode) okno.parentNode.removeChild(okno);
+        if (predtim && predtim.focus) predtim.focus();
+        hotovo(vysledek);
+      }
+      var zrus = function () { konec(vstup ? null : false); };
+      otevrenyDialog = zrus;
+      ano.addEventListener("click", function () { konec(vstup ? vstup.value.trim() : true); });
+      ne.addEventListener("click", zrus);
+      bg.addEventListener("click", zrus);
+      okno.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { e.preventDefault(); zrus(); return; }
+        if (e.key === "Enter" && e.target === vstup) { e.preventDefault(); ano.click(); return; }
+        // Keep Tab inside: behind the panel is a page that cannot be used now.
+        if (e.key === "Tab") {
+          var prvky = okno.querySelectorAll("button, input");
+          var prvni = prvky[0], posledni = prvky[prvky.length - 1];
+          if (e.shiftKey && doc.activeElement === prvni) { e.preventDefault(); posledni.focus(); }
+          else if (!e.shiftKey && doc.activeElement === posledni) { e.preventDefault(); prvni.focus(); }
+        }
+      });
+      doc.body.appendChild(bg);
+      doc.body.appendChild(okno);
+      (vstup || (volby.nebezpecne ? ne : ano)).focus();
+    });
+  }
+
+  function potvrd(text, volby) {
+    volby = volby || {};
+    return dialog({ text: text, popis: volby.popis, ano: volby.ano, ne: volby.ne, nebezpecne: !!volby.nebezpecne });
+  }
+
+  function zeptej(text, volby) {
+    volby = volby || {};
+    return dialog({ text: text, popis: volby.popis, ano: volby.ano, ne: volby.ne,
+      pole: { popisek: volby.popisek, hodnota: volby.hodnota, typ: volby.typ } });
+  }
+
+  function vratitelne(text, vratit, volby) {
+    var ms = (volby && volby.ms) || 6000;
+    var stary = doc.querySelector(".sg-vratit");
+    if (stary && stary.parentNode) stary.parentNode.removeChild(stary);
+    var t = prvek("div", "toast sg-vratit");
+    t.setAttribute("role", "status");
+    var zprava = prvek("span", "", text);
+    var tlacitko = prvek("button", "", "Vrátit");
+    tlacitko.type = "button";
+    t.appendChild(zprava);
+    t.appendChild(tlacitko);
+    var casovac = null;
+    function pryc() { if (t.parentNode) t.parentNode.removeChild(t); }
+    // A hand on the button (hover, focus) holds the toast; leaving restarts the clock.
+    function odpocet() { clearTimeout(casovac); casovac = setTimeout(pryc, ms); }
+    function drz() { clearTimeout(casovac); }
+    t.addEventListener("mouseenter", drz);
+    t.addEventListener("mouseleave", odpocet);
+    tlacitko.addEventListener("focus", drz);
+    tlacitko.addEventListener("blur", odpocet);
+    tlacitko.addEventListener("click", function () {
+      drz();
+      tlacitko.disabled = true;
+      Promise.resolve().then(vratit).then(function () {
+        zprava.textContent = "Vráceno";
+        tlacitko.hidden = true;
+        casovac = setTimeout(pryc, 1500);
+      }, function () {
+        zprava.textContent = "Vrátit se nepodařilo — zkuste to prosím znovu.";
+        tlacitko.disabled = false;
+        odpocet();
+      });
+    });
+    doc.body.appendChild(t);
+    odpocet();
+    return { zavri: pryc };
+  }
+
+  /* ── Doporučit kolegovi ─────────────────────────────────────────────
+   * <button class="tlacitko vedlejsi" data-doporucit="ucet">Doporučit kolegovi</button>
+   * A craftsman's colleague is the best next customer, and the phone's own
+   * share sheet (WhatsApp, SMS, mail) is where that recommendation happens.
+   * The link carries utm_source=doporuceni&utm_campaign=<the attribute> —
+   * the template middleware already labels a new account by its first
+   * source, so Metriky counts accounts and payments from recommendations
+   * with no new code and nothing stored about either person. Without a
+   * share sheet the link goes to the clipboard; without that, it is shown
+   * in a panel to copy by hand.
+   *   SimteGen.doporucit("ucet") → Promise "sdileno" | "zruseno" | "zkopirovano" | "ukazano"
+   */
+  function oznam(text) {
+    var t = prvek("div", "toast", text);
+    t.setAttribute("role", "status");
+    doc.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4000);
+  }
+
+  function doporucit(kde) {
+    var kampan = String(kde || "aplikace").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30) || "aplikace";
+    var odkaz = location.origin + "/?utm_source=doporuceni&utm_campaign=" + kampan;
+    var text = "Doporučuji " + (nazev || "tuhle aplikaci") + ".";
+    function ukaz() {
+      return zeptej("Pošlete kolegovi tento odkaz", { popisek: "Odkaz", hodnota: odkaz, ano: "Hotovo", ne: "Zavřít" })
+        .then(function () { return "ukazano"; });
+    }
+    function zkopiruj() {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) return ukaz();
+      return navigator.clipboard.writeText(text + " " + odkaz).then(function () {
+        oznam("Odkaz je zkopírovaný — vložte ho kolegovi do zprávy.");
+        return "zkopirovano";
+      }, ukaz);
+    }
+    if (navigator.share) {
+      return navigator.share({ title: nazev || doc.title, text: text, url: odkaz }).then(function () {
+        return "sdileno";
+      }, function (e) {
+        // Closing the share sheet is a choice, not a failure.
+        return e && e.name === "AbortError" ? "zruseno" : zkopiruj();
+      });
+    }
+    return zkopiruj();
+  }
+
+  doc.addEventListener("click", function (e) {
+    var tlacitko = e.target && e.target.closest ? e.target.closest("[data-doporucit]") : null;
+    if (!tlacitko) return;
+    e.preventDefault();
+    doporucit(tlacitko.getAttribute("data-doporucit"));
+  });
+
+  window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno, tisk: tisk,
+    cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet,
+    potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit };
+
   /* Google Play v aplikaci — nákup předplatného a „Vyzkoušet ukázku“ —
    * žije v play.js: jen v produktu s modulem aplikace (<html data-aplikace>)
    * a jen když stránka má co obsloužit, ať statické stránky nic nenačítají. */

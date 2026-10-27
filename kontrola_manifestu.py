@@ -266,6 +266,28 @@ def _zkontroluj_produkt_css() -> list[str]:
     return chyby
 
 
+# The browser's own dialogs: grey boxes outside the design, foreign in the
+# Google Play app, blocking the page. simtegen.js has SimteGen.potvrd /
+# zeptej / vratitelne instead. obj.confirm( (a library method) is not one.
+_NATIVNI_DIALOG = re.compile(r"(?<![\w.$])(?:window\.)?(confirm|prompt|alert)\s*\(")
+# Infrastructure scripts are ours and refreshed every build.
+_SKRIPTY_SABLONY = {"simtegen.js", "play.js", "sw.js"}
+
+
+def _nativni_dialogy() -> list[str]:
+    chyby: list[str] = []
+    for path in sorted(list(WEB.glob("*.html")) + list(WEB.glob("*.js"))):
+        if path.name in PRAVNI_STRANKY or path.name in _SKRIPTY_SABLONY:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        nalezy = sorted({m.group(1) for m in _NATIVNI_DIALOG.finditer(text)})
+        if nalezy:
+            chyby.append(f"{path}: {', '.join(n + '()' for n in nalezy)} — okno prohlížeče mimo design; "
+                         "použij SimteGen.potvrd / SimteGen.zeptej, u mazání raději SimteGen.vratitelne "
+                         "(viz DESIGN.md, Potvrzení a vrácení).")
+    return chyby
+
+
 def _barvy_v_html(text: str) -> list[str]:
     nalezy: list[str] = []
     for m in list(_STYL_ATRIBUT.finditer(text)) + list(_SVG_BARVA.finditer(text)):
@@ -279,18 +301,20 @@ def _barvy_v_html(text: str) -> list[str]:
 
 
 def _zkontroluj_design() -> list[str]:
-    """The deterministic part of the design bar (v2). The taste part — one
-    main action, the four states, detail that carries information — is the
-    reviewer's, from screenshots."""
+    """The deterministic part of the design bar (v3). The taste part — the
+    four states, detail that carries information, a tool screen that is
+    really a drawing — is the reviewer's, from screenshots; one main
+    action and readable text are measured by vizualni_kontrola.py."""
     chyby: list[str] = []
     for rel in NAVRH_SOUBORY:
         if not Path(rel).exists():
-            chyby.append(f"{rel} chybí — návrhový systém v2 je součást každého produktu "
+            chyby.append(f"{rel} chybí — návrhový systém v3 je součást každého produktu "
                          "(stavitel ho obnovuje ze šablony).")
     styl = WEB / "styl.css"
-    if styl.exists() and "simtegen-navrh v2" not in styl.read_text(encoding="utf-8")[:200]:
-        chyby.append("web/styl.css není návrhový systém v2 — v produktu se neupravuje, obnoví ho stavba.")
+    if styl.exists() and "simtegen-navrh v3" not in styl.read_text(encoding="utf-8")[:200]:
+        chyby.append("web/styl.css není návrhový systém v3 — v produktu se neupravuje, obnoví ho stavba.")
     chyby += _zkontroluj_produkt_css()
+    chyby += _nativni_dialogy()
     for path in sorted(WEB.glob("*.html")):
         if path.name in PRAVNI_STRANKY or path.name == "offline.html":
             continue
@@ -372,8 +396,10 @@ def _zkontroluj_vzhled() -> list[str]:
 
 def _zkontroluj_aplikaci(manifest: dict) -> list[str]:
     """The installable-app module (vykresli_aplikaci.py): off without an
-    `aplikace` section; on, every generated file must equal the generator."""
-    if "aplikace" not in manifest:
+    `aplikace` section; on, every generated file must equal the generator.
+    Sample data (play/ukazka.json) are checked and published without the
+    app too — the first-login empty state loads them."""
+    if "aplikace" not in manifest and not (Path("play") / "ukazka.json").exists():
         return []
     try:
         import vykresli_aplikaci

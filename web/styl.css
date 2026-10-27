@@ -1,4 +1,4 @@
-/* simtegen-navrh v2 — „Mřížka a papír“. NEUPRAVOVAT V PRODUKTU.
+/* simtegen-navrh v3 — „Papír a výkres“. NEUPRAVOVAT V PRODUKTU.
  *
  * Společný návrhový systém všech appek SimteGen. Stavitel ho při každé
  * stavbě přepíše aktuální verzí ze šablony (stejně jako generátor zásad),
@@ -6,9 +6,16 @@
  * rozložení konkrétní obrazovky třídy níž.
  *
  * Proč takhle (v1 → v2): appky vypadaly jako první, co vygeneruje AI.
- * v2 nese firemní podpis: teplý papír s tečkovou mřížkou, vlasové linky
- * a pravítko, číslované sekce v Plex Mono, obří čísla ze Schibsted
- * Grotesk, černá hlavní akce, barva produktu jen jako ukazatel.
+ * v2 přidala firemní podpis: teplý papír, vlasové linky, Plex Mono,
+ * obří čísla, černá hlavní akce, barva produktu jen jako ukazatel.
+ *
+ * Proč v3: v2 vynucovala všechny vrstvy podpisu naráz — tečky, ořezové
+ * značky, mono štítky velkými písmeny, číslované sekce, obří číslo — a
+ * zákazníci appky četli jako nepřehledné. Podpis teď nesou logo, úvodní
+ * obrazovka, papír, černá akce a barva produktu; text je obyčejné písmo
+ * ve větách, mono jen na rozměry a kódy. Přibyl druhý typ obrazovky,
+ * „nástroj“ (.nastroj, .platno) — výkres přes celou plochu, protože
+ * u produktů, kde zákazník něco skládá, je výkres ta hodnota, ne číslo.
  *
  * Tři šířky, jeden soubor:
  *   telefon  < 768 px   jeden sloupec, menu dole, hlavní akce v dosahu palce
@@ -74,12 +81,14 @@
   --pismo: "Schibsted Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
   --pismo-mono: "Plex Mono", ui-monospace, Consolas, monospace;
 
-  --velikost-obri: clamp(5.5rem, 22vw, 11rem); /* hlavní číslo */
+  /* v2 had 5.5–11 rem: the number outshouted the screen it was meant to
+     summarise. Nothing below 13 px — vizualni_kontrola.py measures it. */
+  --velikost-obri: clamp(3.25rem, 13vw, 5.5rem); /* hlavní číslo */
   --velikost-1: 1.625rem;  /* nadpis obrazovky */
   --velikost-2: 1.125rem;  /* nadpis sekce */
   --velikost-3: 1rem;      /* text */
   --velikost-4: 0.875rem;  /* popisky */
-  --velikost-5: 0.6875rem; /* mono štítky */
+  --velikost-5: 0.8125rem; /* nejmenší text: mono rozměry, kódy */
 
   --mezera-1: 0.25rem;
   --mezera-2: 0.5rem;
@@ -129,11 +138,11 @@
 /* ── Základ ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* Plain paper. The dot grid lives on the splash and the store graphics,
+   where it is the firm's signature — under content it was noise. */
 body {
   margin: 0; min-height: 100dvh;
   background-color: var(--barva-papir);
-  background-image: radial-gradient(circle, var(--barva-tecka) 1px, transparent 1.3px);
-  background-size: 24px 24px; background-position: 12px 12px;
   color: var(--barva-inkoust);
   font-family: var(--pismo); font-size: var(--velikost-3); line-height: 1.5;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
@@ -148,17 +157,17 @@ a:hover { color: var(--barva-produktu); }
 :focus-visible { outline: 2px solid var(--barva-produktu); outline-offset: 2px; }
 code, kbd, .mono { font-family: var(--pismo-mono); }
 
-/* Mono popisky a číslované sekce — podpis systému. */
-.stitek, .sekce-titulek {
-  font-family: var(--pismo-mono); font-size: var(--velikost-5); font-weight: 400;
-  letter-spacing: 0.16em; text-transform: uppercase; color: var(--barva-tuzka);
-}
+/* Labels and section titles are plain words. v2 set them in spaced mono
+   capitals; a whole screen of those read as one grey texture, and the
+   eye found no place to start. Mono stays for what is measured or coded. */
+.stitek { font-size: var(--velikost-4); font-weight: 500; color: var(--barva-tuzka); }
 .sekce-titulek {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--mezera-3);
-  padding-bottom: var(--mezera-2); border-bottom: 1px solid var(--barva-inkoust);
+  padding-bottom: var(--mezera-2); border-bottom: 1px solid var(--barva-linka);
+  font-size: var(--velikost-2); font-weight: 700; letter-spacing: -0.02em; color: var(--barva-inkoust);
 }
-.sekce-titulek a { color: var(--barva-inkoust); font-weight: 500; text-decoration: none; }
-.rozmer { font-family: var(--pismo-mono); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--barva-tuzka); }
+.sekce-titulek a { color: var(--barva-inkoust); font-size: var(--velikost-4); font-weight: 500; letter-spacing: 0; }
+.rozmer { font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); }
 
 /* ── Kostra aplikace ──────────────────────────────────────────────── */
 .appka { min-height: 100dvh; display: flex; flex-direction: column; }
@@ -264,7 +273,7 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 .tlacitko.ikona { width: var(--dotyk); min-height: var(--dotyk); padding: 0; justify-content: center; background: var(--barva-list); color: var(--barva-inkoust); border-color: var(--barva-linka); }
 .tlacitko.ikona:hover { background: var(--barva-plocha-2); color: var(--barva-inkoust); }
 .tlacitko.plne { width: 100%; }
-.tlacitko kbd { font-size: 0.6875rem; padding: 2px 6px; border: 1px solid currentColor; opacity: 0.6; }
+.tlacitko kbd { font-size: var(--velikost-5); padding: 2px 6px; border: 1px solid currentColor; opacity: 0.6; }
 
 /* Nahlásit chybu — povinně na každé obrazovce, vždy po ruce. */
 .nahlasit-chybu {
@@ -280,7 +289,7 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 
 /* ── Formuláře ────────────────────────────────────────────────────── */
 .pole { display: flex; flex-direction: column; gap: var(--mezera-1); }
-.pole label, label.stitek { font-family: var(--pismo-mono); font-size: var(--velikost-5); letter-spacing: 0.12em; text-transform: uppercase; color: var(--barva-tuzka); }
+.pole label, label.stitek { font-size: var(--velikost-4); font-weight: 500; color: var(--barva-inkoust); }
 .pole input, .pole select, .pole textarea {
   min-height: 48px; padding: 0 var(--mezera-4); width: 100%;
   font: inherit; font-size: var(--velikost-3); color: var(--barva-inkoust);
@@ -296,20 +305,12 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 
 /* ── Plochy ───────────────────────────────────────────────────────── */
 .karta { background: var(--barva-list); border: 1px solid var(--barva-linka); padding: var(--mezera-5); display: flex; flex-direction: column; gap: var(--mezera-3); }
-/* Ořezové značky jako na výkresu — pro kartu s tím nejdůležitějším. */
-.vykres { position: relative; }
-.vykres::before {
-  content: ""; position: absolute; inset: -7px; pointer-events: none;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M0 7h14M7 0v14' stroke='%23141414' stroke-width='1'/%3E%3C/svg%3E") left top / 14px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M0 7h14M7 0v14' stroke='%23141414' stroke-width='1'/%3E%3C/svg%3E") right top / 14px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M0 7h14M7 0v14' stroke='%23141414' stroke-width='1'/%3E%3C/svg%3E") left bottom / 14px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M0 7h14M7 0v14' stroke='%23141414' stroke-width='1'/%3E%3C/svg%3E") right bottom / 14px no-repeat;
-}
-@media (prefers-color-scheme: dark) { .vykres::before { filter: invert(1); } }
+/* The one card that matters most: an ink edge instead of v2's crop marks,
+   which sat outside the card and collided with everything next to it. */
+.vykres { border-color: var(--barva-inkoust); }
 
-/* Obří číslo — to, na čem na obrazovce záleží nejvíc. */
-.cislo-obri { font-weight: 700; font-size: var(--velikost-obri); letter-spacing: -0.07em; line-height: 0.76; font-variant-numeric: tabular-nums; }
+/* Hlavní číslo — jen tam, kde nese informaci (počet, částka, stav). */
+.cislo-obri { font-weight: 700; font-size: var(--velikost-obri); letter-spacing: -0.05em; line-height: 0.9; font-variant-numeric: tabular-nums; }
 .cislo-radek { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--mezera-4); }
 .cislo-radek p { text-align: right; font-size: var(--velikost-4); line-height: 1.4; }
 
@@ -319,7 +320,7 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 .stupnice-rysky::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 6px; background-image: repeating-linear-gradient(90deg, var(--barva-inkoust) 0 1px, transparent 1px 10%); opacity: 0.3; }
 .stupnice-rysky::after { content: ""; position: absolute; inset: 0; background-image: repeating-linear-gradient(90deg, var(--barva-inkoust) 0 1px, transparent 1px 25%); }
 .stupnice-plneni { height: 2px; width: var(--hodnota, 0%); background: var(--barva-produktu); }
-.stupnice-popisky { display: flex; justify-content: space-between; font-family: var(--pismo-mono); font-size: 0.625rem; color: var(--barva-tuzka); }
+.stupnice-popisky { display: flex; justify-content: space-between; font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); }
 
 /* Rozpad celku: segmenty ve stupních šedi + legenda (data, ne ozdoba). */
 .segmenty { display: flex; height: 8px; gap: 2px; }
@@ -327,7 +328,7 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 .segmenty > :nth-child(1) { background: var(--barva-inkoust); }
 .segmenty > :nth-child(2) { background: var(--barva-tuzka-2); }
 .segmenty > :nth-child(3) { background: var(--barva-linka-2); }
-.legenda { display: flex; flex-wrap: wrap; gap: var(--mezera-2) var(--mezera-4); font-family: var(--pismo-mono); font-size: var(--velikost-5); letter-spacing: 0.06em; text-transform: uppercase; color: var(--barva-tuzka); margin: 0; padding: 0; list-style: none; }
+.legenda { display: flex; flex-wrap: wrap; gap: var(--mezera-2) var(--mezera-4); font-size: var(--velikost-4); color: var(--barva-tuzka); margin: 0; padding: 0; list-style: none; }
 .legenda > * { display: flex; align-items: center; gap: 6px; }
 .legenda > *::before { content: ""; width: 8px; height: 8px; background: var(--barva-linka-2); }
 .legenda > :nth-child(1)::before { background: var(--barva-inkoust); }
@@ -335,7 +336,7 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 
 /* Týden: 7 dní, počet v každém, dnešek orámovaný, volno čárkovaně. */
 .tyden { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.tyden > * { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--barva-linka); font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); min-width: 0; }
+.tyden > * { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--barva-linka); font-size: var(--velikost-5); color: var(--barva-tuzka); min-width: 0; }
 .tyden > * strong { font-family: var(--pismo); font-size: 1.125rem; font-weight: 700; color: var(--barva-inkoust); }
 .tyden > .dnes { border-color: var(--barva-inkoust); background: var(--barva-list); color: var(--barva-inkoust); }
 .tyden > .dnes strong { color: var(--barva-produktu); }
@@ -348,22 +349,92 @@ code, kbd, .mono { font-family: var(--pismo-mono); }
 .radek .poradi { font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); width: 1.5rem; flex-shrink: 0; }
 .radek .hlavni { flex: 1; min-width: 0; }
 .radek .hlavni strong { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.radek .hlavni span { display: block; font-family: var(--pismo-mono); font-size: 0.75rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--barva-tuzka); }
+.radek .hlavni span { display: block; font-size: var(--velikost-4); color: var(--barva-tuzka); }
 .radek .vpravo { font-size: var(--velikost-4); font-weight: 500; white-space: nowrap; }
 .radek .vpravo.dnes, .dnes-text { color: var(--barva-produktu); font-weight: 700; }
 a.radek:hover { background: var(--barva-list); }
 .tabulka-obal { overflow-x: auto; }
 .tabulka { width: 100%; border-collapse: collapse; font-size: var(--velikost-3); }
-.tabulka th { text-align: left; font-family: var(--pismo-mono); font-size: var(--velikost-5); font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase; color: var(--barva-tuzka); padding: 0 var(--mezera-4) var(--mezera-2) 0; border-bottom: 1px solid var(--barva-inkoust); white-space: nowrap; }
+.tabulka th { text-align: left; font-size: var(--velikost-4); font-weight: 500; color: var(--barva-tuzka); padding: 0 var(--mezera-4) var(--mezera-2) 0; border-bottom: 1px solid var(--barva-linka-2); white-space: nowrap; }
 .tabulka td { padding: var(--mezera-4) var(--mezera-4) var(--mezera-4) 0; border-bottom: 1px solid var(--barva-linka); vertical-align: middle; }
-.tabulka .poradi, .tabulka .rozmer-bunka { font-family: var(--pismo-mono); font-size: 0.75rem; color: var(--barva-tuzka); }
-.kod { display: inline-block; font-family: var(--pismo-mono); font-size: 0.75rem; letter-spacing: 0.04em; padding: 3px 7px; background: var(--barva-list); border: 1px solid var(--barva-linka); color: var(--barva-inkoust); }
+.tabulka .poradi, .tabulka .rozmer-bunka { font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); }
+.kod { display: inline-block; font-family: var(--pismo-mono); font-size: var(--velikost-5); padding: 3px 7px; background: var(--barva-list); border: 1px solid var(--barva-linka); color: var(--barva-inkoust); }
 .ukazatel { display: inline-block; width: 8px; height: 8px; background: var(--barva-produktu); }
 
 /* Deník (krátký výpis událostí v mono). */
-.denik { margin: 0; padding: 0; list-style: none; font-family: var(--pismo-mono); font-size: 0.75rem; }
+.denik { margin: 0; padding: 0; list-style: none; font-size: var(--velikost-4); }
 .denik > * { display: grid; grid-template-columns: 3.25rem minmax(0, 1fr) auto; gap: var(--mezera-3); padding: var(--mezera-3) 0; border-bottom: 1px solid var(--barva-linka); }
-.denik time { color: var(--barva-tuzka); }
+.denik time { font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); }
+
+/* ── Nástroj: výkres přes celou plochu ─────────────────────────────── */
+/* Second screen type (DESIGN.md, „Obrazovka typu nástroj“). Where the
+   customer composes something — a kitchen wall, a layout, a plan — the
+   drawing is what they pay for, so it gets the room and the controls
+   shrink to one toolbar. A dashboard layout put the drawing in a card
+   between numbers and lists, and the first customer asked for "an app
+   where I can just put it together quickly".
+     <section class="obrazovka nastroj">
+       .nastroj-lista   zpět, nadpis, .rozmer, .nahlasit-chybu
+       .platno          <svg> s .stena, .dil, .detail, .otvor, .kota
+       .nastroje        3–5 × .nastroj-tlacitko (aria-pressed)
+       .vlastnosti      pole vybraného dílu (hidden, když nic)
+       .lista-dole      jedna .tlacitko
+   Drawing units: 1 = 1 cm, drawing 300–400 wide, so a 13-unit dimension
+   reads as ~13 px on a phone. Lines keep their weight at any zoom
+   (non-scaling-stroke). The material colour a customer picks is data:
+   JS sets it as --barva-dilu on the .dil (CI forbids colours in HTML). */
+.obrazovka.nastroj.aktivni { gap: 0; }
+.nastroj-lista { display: flex; align-items: center; gap: var(--mezera-3); min-height: 52px; padding-bottom: var(--mezera-2); border-bottom: 1px solid var(--barva-linka); }
+.nastroj-lista h2 { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zpet { display: inline-flex; align-items: center; gap: 2px; min-height: var(--dotyk); min-width: var(--dotyk); color: var(--barva-inkoust); text-decoration: none; font-size: var(--velikost-4); }
+.zpet::before { content: ""; width: 18px; height: 18px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / contain no-repeat; }
+.platno {
+  position: relative; min-height: 52dvh; margin: var(--mezera-3) 0; overflow: hidden; touch-action: none;
+  background-color: var(--barva-list); border: 1px solid var(--barva-linka);
+  /* Drafting grid, 10 cm at the recommended scale — it measures, so it stays. */
+  background-image: linear-gradient(var(--barva-plocha-2) 1px, transparent 1px), linear-gradient(90deg, var(--barva-plocha-2) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+/* Capped: SVG text scales with the drawing, and a 13-unit dimension drawn
+   across a notebook column came out at 24 px, louder than the title. */
+.platno > svg { position: absolute; inset: 0; margin: auto; width: 100%; height: 100%; max-width: 32rem; }
+/* Not inherited: set on every shape, or a part drawn as <g><rect> scales its outline. */
+.platno svg * { vector-effect: non-scaling-stroke; }
+.platno .stena { fill: var(--barva-plocha-2); stroke: var(--barva-inkoust); stroke-width: 1; }
+.platno .dil { fill: var(--barva-dilu, var(--barva-list)); stroke: var(--barva-inkoust); stroke-width: 1.5; cursor: pointer; }
+.platno .dil.vybrany { stroke: var(--barva-produktu); stroke-width: 3; }
+.platno .detail { fill: none; stroke: var(--barva-tuzka); stroke-width: 1; }
+.platno .otvor { fill: var(--barva-list); stroke: var(--barva-tuzka); stroke-width: 1; stroke-dasharray: 4 3; }
+.platno .kota line, .platno .kota path { stroke: var(--barva-produktu); stroke-width: 1; }
+.platno .kota text { fill: var(--barva-produktu); font-family: var(--pismo-mono); font-size: 13px; text-anchor: middle; }
+.platno .popis-dilu { fill: var(--barva-tuzka); font-family: var(--pismo); font-size: 13px; text-anchor: middle; pointer-events: none; }
+.nastroje { display: flex; gap: var(--mezera-1); overflow-x: auto; padding: var(--mezera-1) 0; scrollbar-width: none; }
+.nastroj-tlacitko {
+  flex: 1 0 auto; min-width: 64px; min-height: 56px; padding: 4px 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: none; border: 1px solid transparent; color: var(--barva-tuzka); cursor: pointer;
+  font: inherit; font-size: var(--velikost-5);
+}
+.nastroj-tlacitko svg { width: 22px; height: 22px; }
+.nastroj-tlacitko:hover { color: var(--barva-inkoust); }
+.nastroj-tlacitko[aria-pressed="true"] { color: var(--barva-inkoust); background: var(--barva-list); border-color: var(--barva-inkoust); }
+.vlastnosti { display: flex; flex-direction: column; gap: var(--mezera-3); padding: var(--mezera-4) 0; border-top: 1px solid var(--barva-linka); }
+.vlastnosti .radka > .pole { flex: 1 1 7rem; }
+/* Material swatches: a button per colour, aria-label with its name. */
+.barvy { display: flex; flex-wrap: wrap; gap: var(--mezera-2); margin: 0; padding: 0; list-style: none; }
+.barvy button { width: var(--dotyk); height: var(--dotyk); padding: 0; cursor: pointer; background: var(--barva-dilu, var(--barva-list)); border: 1px solid var(--barva-linka-2); }
+.barvy button[aria-pressed="true"] { outline: 2px solid var(--barva-inkoust); outline-offset: 2px; }
+
+/* Phone: the drawing needs the height more than the menu does — a tool
+   screen has its own way back (.zpet) and its own report button. */
+@media (max-width: 767px) {
+  .appka:has(.obrazovka.nastroj.aktivni) > .navigace,
+  .appka:has(.obrazovka.nastroj.aktivni) > .hlavicka { display: none; }
+  .obsah:has(.obrazovka.nastroj.aktivni) { padding-top: calc(var(--mezera-2) + env(safe-area-inset-top)); padding-bottom: 0; }
+  .nastroj .lista-dole { margin: 0 calc(-1 * var(--mezera-5)); }
+}
 
 /* ── Stavy obrazovky (prázdný, načítání, chyba, úspěch) ───────────── */
 .prazdno { display: flex; flex-direction: column; align-items: flex-start; gap: var(--mezera-3); padding: var(--mezera-6) var(--mezera-5); border: 1px dashed var(--barva-linka-2); background: var(--barva-papir); }
@@ -379,6 +450,11 @@ a.radek:hover { background: var(--barva-list); }
 .toast { position: fixed; left: 50%; bottom: calc(5rem + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50; padding: var(--mezera-3) var(--mezera-5); background: var(--barva-inkoust); color: var(--barva-papir); font-size: var(--velikost-4); animation: obrazovka-in var(--prechod) both; }
 .panel-pozadi { position: fixed; inset: 0; background: rgba(20, 20, 20, 0.4); z-index: 40; }
 .panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-height: 85dvh; overflow: auto; background: var(--barva-papir); border-top: 1px solid var(--barva-inkoust); padding: var(--mezera-5) var(--mezera-5) calc(var(--mezera-5) + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: var(--mezera-4); animation: obrazovka-in var(--prechod) both; }
+/* Potvrzení a dotaz (SimteGen.potvrd / zeptej) and the undo toast
+   (SimteGen.vratitelne) — drawn by simtegen.js instead of confirm()/prompt(). */
+.sg-dialog-akce .tlacitko { flex: 1 1 9rem; }
+.sg-vratit { display: flex; align-items: center; gap: var(--mezera-4); max-width: calc(100vw - 2rem); padding-right: var(--mezera-2); }
+.sg-vratit button { min-height: var(--dotyk); padding: 0 var(--mezera-3); background: none; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 /* ── Úvodní obrazovka s logem (vkládá ji web/simtegen.js) ─────────── */
 .sg-start {
@@ -417,11 +493,35 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
 .sg-play-cena { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.03em; color: var(--barva-inkoust); }
 .sg-ukazka-pruh { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mezera-2) var(--mezera-3); padding: var(--mezera-3) var(--mezera-4); padding-top: calc(var(--mezera-3) + env(safe-area-inset-top)); background: var(--barva-list); border-bottom: 1px solid var(--barva-inkoust); font-size: var(--velikost-4); color: var(--barva-inkoust); }
 
+/* ── Zkušební období a ukázková data (vkládá web/simtegen.js) ─────── */
+/* Pruh nad obsahem, ne přes něj: odjede se stránkou a nic nezakrývá.
+   Klidný, dokud zbývá víc než týden; varování v posledních 7 dnech,
+   chyba po vypršení. Tlačítko ukazuje cestu k platbě, kterou má produkt. */
+.sg-pruhy { display: flex; flex-direction: column; gap: var(--mezera-2); }
+.sg-pruhy--nahore { padding: calc(var(--mezera-2) + env(safe-area-inset-top)) var(--mezera-4) 0; }
+.sg-pruh {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mezera-2) var(--mezera-4);
+  padding: var(--mezera-2) var(--mezera-2) var(--mezera-2) var(--mezera-4);
+  background: var(--barva-list); border: 1px solid var(--barva-linka); border-left: 3px solid var(--barva-produktu);
+  color: var(--barva-inkoust); animation: obrazovka-in var(--prechod) both;
+}
+.sg-pruh-text { flex: 1 1 14rem; color: inherit; font-size: var(--velikost-4); }
+.sg-pruh .tlacitko { flex: 0 0 auto; }
+.sg-pruh--brzy { background: var(--barva-varovani-pozadi); color: var(--barva-varovani); border-color: currentColor; }
+.sg-pruh--konec { background: var(--barva-chyba-pozadi); color: var(--barva-chyba); border-color: currentColor; }
+.sg-pruh--ukazka { border-left-color: var(--barva-inkoust); border-style: dashed; border-left-style: solid; }
+/* No connection (SimteGen.offline): a warning, not an error — nothing is
+   lost, it just cannot load right now. */
+.sg-pruh--offline { background: var(--barva-varovani-pozadi); color: var(--barva-varovani); border-color: currentColor; }
+/* „Naplnit ukázkovými daty“ jen tam, kde to jde (/api/ja to řekne
+   hlavičkou) — jinak by tlačítko slibovalo něco, co produkt nemá. */
+html:not(.sg-ukazkova-nabidka) [data-ukazkova-data] { display: none !important; }
+
 /* ── Pomocné ──────────────────────────────────────────────────────── */
 [hidden] { display: none !important; }
 .titulek-velky { font-size: clamp(2.25rem, 8vw, 3.75rem); font-weight: 700; letter-spacing: -0.05em; line-height: 0.98; }
 .titulek-cena { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.035em; color: var(--barva-inkoust); }
-.paticka { display: flex; flex-wrap: wrap; gap: var(--mezera-2) var(--mezera-4); padding: var(--mezera-5) var(--mezera-5) calc(var(--mezera-5) + env(safe-area-inset-bottom)); border-top: 1px solid var(--barva-linka); font-family: var(--pismo-mono); font-size: var(--velikost-5); letter-spacing: 0.08em; text-transform: uppercase; }
+.paticka { display: flex; flex-wrap: wrap; gap: var(--mezera-2) var(--mezera-4); padding: var(--mezera-5) var(--mezera-5) calc(var(--mezera-5) + env(safe-area-inset-bottom)); border-top: 1px solid var(--barva-linka); font-size: var(--velikost-4); }
 .paticka a { color: var(--barva-tuzka); text-decoration: none; }
 .paticka a:hover { color: var(--barva-inkoust); }
 .radka { display: flex; align-items: center; gap: var(--mezera-3); flex-wrap: wrap; }
@@ -447,8 +547,8 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
   .navigace .znacka .znacka-slovo { display: none; }
   .navigace .znacka .znacka-ctverec { width: 40px; height: 40px; }
   .navigace .mezera { display: block; flex: 1; }
-  .navigace .verze { display: block; text-align: center; font-family: var(--pismo-mono); font-size: 0.625rem; letter-spacing: 0.1em; color: var(--barva-tuzka); }
-  .navigace .nahlasit-chybu { display: flex; border: 0; background: none; flex-direction: column; font-size: 0.75rem; color: var(--barva-tuzka); min-height: 64px; }
+  .navigace .verze { display: block; text-align: center; font-family: var(--pismo-mono); font-size: var(--velikost-5); color: var(--barva-tuzka); }
+  .navigace .nahlasit-chybu { display: flex; border: 0; background: none; flex-direction: column; font-size: var(--velikost-5); color: var(--barva-tuzka); min-height: 64px; }
   .hlavicka { padding: 1.6rem 2.5rem 0.9rem; border-bottom: 1px solid var(--barva-inkoust); }
   .hlavicka h1 { font-size: 1.625rem; }
   .hlavicka .nahlasit-chybu { display: none; }
@@ -462,7 +562,24 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
   .jen-siroke { display: revert; }
   .jen-telefon { display: none !important; }
   .toast { bottom: 2rem; }
+  .nastroj-tlacitko { flex: 0 0 auto; min-width: 84px; }
   .panel { left: auto; right: 0; top: 0; width: min(28rem, 100%); max-height: none; border-top: 0; border-left: 1px solid var(--barva-inkoust); }
+  /* A question is not a side sheet: centred, as tall as its content. */
+  .panel.sg-dialog { inset: 0; margin: auto; width: min(28rem, calc(100% - 2rem)); height: fit-content; border: 1px solid var(--barva-inkoust); }
+}
+
+/* ── Nástroj ≥ 1000 px: výkres vlevo, vlastnosti a akce vpravo ────── */
+/* Not from 768: beside the icon rail a narrow tablet left the drawing a
+   strip 290 px wide — stacked, it gets the whole width instead. */
+@media (min-width: 1000px) {
+  .obrazovka.nastroj.aktivni { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; grid-template-rows: auto auto minmax(0, 1fr) auto; column-gap: var(--mezera-6); }
+  .nastroj > * { grid-column: 1; }
+  .nastroj > .nastroj-lista { grid-column: 1 / -1; }
+  .nastroj > .platno { grid-row: 2 / span 2; min-height: 68dvh; margin-top: var(--mezera-4); }
+  .nastroj > .nastroje { grid-row: 4; }
+  .nastroj > .vlastnosti { grid-column: 2; grid-row: 2; margin-top: var(--mezera-4); border-top: 0; padding-top: 0; }
+  .nastroj > .lista-dole { grid-column: 2; grid-row: 3; align-self: start; padding-top: var(--mezera-4); }
+  .nastroj > .lista-dole .tlacitko { min-width: 0; width: 100%; }
 }
 
 /* ── Notebook ≥ 1200 px: boční menu s textem ──────────────────────── */
@@ -481,4 +598,43 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
   .navigace .verze { text-align: left; padding: 0.5rem 0.75rem 0; }
   .hlavicka { padding: 2rem 3.5rem 1rem; }
   .obsah { padding: 2rem 3.5rem 3.5rem; }
+}
+
+/* ── Tisk a PDF ───────────────────────────────────────────────────── */
+/* Printing is how a drawing reaches the customer's table and a cut list
+   the workshop — and "Uložit jako PDF" in every browser is the same path.
+   Without these rules a print was the phone layout with the menu, the
+   sticky bars and the dark scheme's colours. Last in the file, so it wins
+   over the width layouts above. [data-tisk] buttons (simtegen.js) print
+   the screen or, with data-tisk="#id", only that element. */
+@media print {
+  :root {
+    --barva-papir: #ffffff; --barva-list: #ffffff; --barva-inkoust: #000000;
+    --barva-tuzka: #3d3b37; --barva-tuzka-2: #6b6862; --barva-tuzka-3: #8a877f;
+    --barva-linka: #c9c4b8; --barva-linka-2: #a9a59c; --barva-plocha-2: #f1efe9;
+  }
+  @page { margin: 12mm; }
+  body { background: #ffffff; font-size: 11pt; }
+  .appka { display: block; min-height: 0; }
+  .navigace, .lista-dole, .paticka, .toast, .panel, .panel-pozadi, .sg-start, .sg-pruhy,
+  .sg-ukazka-pruh, .nahlasit-chybu, .nastroje, .vlastnosti, .zpet, .tlacitko, .barvy,
+  [data-tisk], [data-netisknout] { display: none !important; }
+  /* The product's name heads the page — also on a tool screen, whose
+     phone layout hides the header (paper is narrower than 768 px). */
+  .hlavicka, .appka:has(.obrazovka.nastroj.aktivni) > .hlavicka { display: flex !important; position: static; padding: 0 0 4mm; border-bottom: 1px solid #000000; }
+  .obsah { max-width: none; padding: 4mm 0 0; }
+  .obrazovka.aktivni { animation: none; }
+  .platno { min-height: 0; margin: 0; border: 0; background: none; break-inside: avoid; }
+  .platno > svg { position: static; width: 100%; height: auto; max-width: none; max-height: 240mm; }
+  .platno .dil.vybrany { stroke: var(--barva-inkoust); stroke-width: 1.5; }  /* a selection is not part of the design */
+  .platno, .barvy button, .stupnice-plneni, .segmenty > *, .ukazatel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .karta, .radek, .tabulka tr, .cislo-radek, .sekce-titulek { break-inside: avoid; }
+  .sekce-titulek { break-after: avoid; }
+  .tabulka-obal { overflow: visible; }
+  a { color: inherit; text-decoration: none; }
+  /* One element only (data-tisk="#kusovnik"): the rest of the page stays
+     in the flow but out of sight, the element starts at the top. */
+  html.sg-tisk-vyber body * { visibility: hidden; }
+  html.sg-tisk-vyber .sg-tisk-cil, html.sg-tisk-vyber .sg-tisk-cil * { visibility: visible; }
+  html.sg-tisk-vyber .sg-tisk-cil { position: absolute; left: 0; top: 0; width: 100%; }
 }

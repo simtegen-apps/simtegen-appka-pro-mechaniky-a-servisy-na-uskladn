@@ -37,6 +37,9 @@ from pathlib import Path
 VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js",
                        "functions/api/odhlaseni.js", "functions/api/navsteva.js",
                        "functions/api/nahlasit.js",
+                       # The firm's answer to a report (SimteGen, odpovedi.py): no
+                       # session — a signature of the answer key, verified inside.
+                       "functions/api/schranka-odpoved.js",
                        # Vyzkoušet ukázku (module play, SimteGen): a throwaway
                        # demo account — the reviewer and the visitor have none.
                        "functions/api/ukazka.js",
@@ -52,7 +55,9 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # (export and delete over every table with uzivatel_id). Only there, and only
 # as a quoted identifier "${...}", is interpolation allowed.
 IDENTIFIKATORY_SMI = {"spolecne.js", "functions/api/ucet/export.js",
-                      "functions/api/ucet/smazat.js", "functions/api/ukazka.js"}
+                      "functions/api/ucet/smazat.js", "functions/api/ukazka.js",
+                      # Sample data: snapshot and removal over the same catalogue.
+                      "functions/api/ukazka-uctu.js"}
 
 _STRAZ = re.compile(r"!\s*(?:context\.)?(?:data\.)?uzivatel\b|vyzadujUzivatele\s*\(|vyzadujPredplatne\s*\(")
 
