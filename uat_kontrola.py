@@ -247,6 +247,11 @@ def _zkontroluj_scenare(root: Path) -> tuple[list[dict], list[str]]:
                     or "ocekavam" not in k):
                 chyby.append(f"{SCENARE.as_posix()}: „{s['nazev']}“ krok {j}: potřebuje „jako“ (A/B/nikdo), "
                              "„pozadavek“ („GET /api/…“) a „ocekavam“ (kód nebo seznam kódů).")
+        # A regression test of a reported bug names its report (SimteGen's
+        # support agent, "H" + the incident number): the firm checks it
+        # fails on the version before the fix.
+        if "oprava" in s and not re.fullmatch(r"H\d+", str(s.get("oprava"))):
+            chyby.append(f"{SCENARE.as_posix()}: „{s['nazev']}“: „oprava“ je číslo hlášení ve tvaru „H123“.")
     return scenare, chyby
 
 
@@ -381,11 +386,30 @@ def api_produktu(root: Path, npx: str):
             _pohrbi(server)
         if log is not None:
             log.close()
-        for _ in range(10):
+        # workerd on Windows lets go of the local D1 files seconds after the
+        # tree is killed; 5 s left a copy of the product behind per run, and
+        # the reviewer now starts this for every build.
+        for _ in range(30):
             shutil.rmtree(prac, ignore_errors=True)
             if not prac.exists():
                 break
             time.sleep(0.5)
+
+
+def jen_scenare(root: Path, scenare: list[dict], npx: str) -> dict[str, list[str]]:
+    """Run only these scenarios against the product at `root` (accounts A
+    and B logged in) — scenario name → what failed ([] = passed). SimteGen
+    runs a fix's regression scenarios against the version BEFORE the fix:
+    a test that passes there does not catch the bug. Raises Prostredi /
+    ApiNenabehlo like api_produktu."""
+    with api_produktu(root, npx) as zaklad:
+        klienti = {"nikdo": Klient(zaklad, "nikdo")}
+        for kdo, email in UCTY.items():
+            klienti[kdo] = Klient(zaklad, kdo)
+            chyba = klienti[kdo].prihlas(email)
+            if chyba:
+                raise ApiNenabehlo(f"přihlášení účtu {kdo} nefunguje: {chyba}")
+        return {s["nazev"]: _spust_scenare([s], klienti) for s in scenare}
 
 
 def spust_ukazku(root: Path, klient: Klient) -> list[str]:
