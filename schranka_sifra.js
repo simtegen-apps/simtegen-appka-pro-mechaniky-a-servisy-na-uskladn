@@ -62,12 +62,46 @@ export function ocistiKontext(kontext) {
   };
 }
 
+// Who wrote it, without saying who: a pseudonymous fingerprint of the account
+// (stable per product, no e-mail, no id the firm could look up), whether it
+// pays, and how old it is. Inside the cipher only. The firm's support agent
+// weighs reports by it — two "customers" asking for the same thing must not
+// be one person with two trial accounts, and a paying customer who cannot
+// work comes first. Declared in the manifest (GitHub, zásady). A product
+// without accounts (static template) or a missing table just sends nothing.
+async function ucetHlaseni(env, id) {
+  if (!env.DB || !Number.isInteger(id)) return null;
+  try {
+    // The report row names its own account (hlaseni.uzivatel_id).
+    const u = await env.DB.prepare(
+      "SELECT h.uzivatel_id, u.vytvoreno FROM hlaseni h JOIN uzivatele u ON u.id = h.uzivatel_id WHERE h.id = ?"
+    ).bind(id).first();
+    if (!u) return null;
+    const ted = Math.floor(Date.now() / 1000);
+    let plati = false;
+    try {
+      const p = await env.DB.prepare("SELECT plati_do FROM predplatne WHERE uzivatel_id = ?")
+        .bind(u.uzivatel_id).first();
+      plati = Boolean(p && p.plati_do && p.plati_do > ted);
+    } catch {
+      plati = false; // a product without the subscription module
+    }
+    const digest = await crypto.subtle.digest(
+      "SHA-256", new TextEncoder().encode(`${env.GITHUB_REPO || ""}:ucet:${u.uzivatel_id}`));
+    const otisk = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+    return { otisk, plati, dni: Math.max(0, Math.floor((ted - u.vytvoreno) / 86400)) };
+  } catch {
+    return null;
+  }
+}
+
 export async function zrcadliHlaseni(env, nadpis, obsah) {
   // Both come from the deploy workflow (org secret + repository name). A
   // preview deployment has neither, so test reports never reach the firm.
   if (!env.GITHUB_ISSUES_TOKEN || !env.GITHUB_REPO) return null;
   try {
-    const sifra = await zasifruj(obsah);
+    const ucet = obsah && obsah.id ? await ucetHlaseni(env, obsah.id) : null;
+    const sifra = await zasifruj(ucet ? { ...obsah, ucet } : obsah);
     const telo = sifra
       ? `Hlášení z aplikace. Text je šifrovaný — číst ho umí jen SimteGen.\n\n${sifra}`
       : "Hlášení z aplikace. Text zůstal jen v aplikaci (produkt ještě nemá klíč schránky).";

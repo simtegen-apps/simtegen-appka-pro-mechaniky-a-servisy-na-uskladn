@@ -42,7 +42,7 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # Aggregates the template ships itself (migration 0910, visits per source):
 # the privacy policy describes them on its own (vykresli_zasady), so the
 # product's manifest need not — but they are still held to "numbers only".
-SABLONOVE_AGREGATY = {"zdroje_navstev"}
+SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek"}
 
 # Column names that make a table personal data. An aggregate table (manifest
 # `agregaty`) may live without uzivatel_id only if none of these appear —
@@ -266,6 +266,28 @@ def _zkontroluj_produkt_css() -> list[str]:
     return chyby
 
 
+# The browser's own dialogs: grey boxes outside the design, foreign in the
+# Google Play app, blocking the page. simtegen.js has SimteGen.potvrd /
+# zeptej / vratitelne instead. obj.confirm( (a library method) is not one.
+_NATIVNI_DIALOG = re.compile(r"(?<![\w.$])(?:window\.)?(confirm|prompt|alert)\s*\(")
+# Infrastructure scripts are ours and refreshed every build.
+_SKRIPTY_SABLONY = {"simtegen.js", "play.js", "sw.js"}
+
+
+def _nativni_dialogy() -> list[str]:
+    chyby: list[str] = []
+    for path in sorted(list(WEB.glob("*.html")) + list(WEB.glob("*.js"))):
+        if path.name in PRAVNI_STRANKY or path.name in _SKRIPTY_SABLONY:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        nalezy = sorted({m.group(1) for m in _NATIVNI_DIALOG.finditer(text)})
+        if nalezy:
+            chyby.append(f"{path}: {', '.join(n + '()' for n in nalezy)} — okno prohlížeče mimo design; "
+                         "použij SimteGen.potvrd / SimteGen.zeptej, u mazání raději SimteGen.vratitelne "
+                         "(viz DESIGN.md, Potvrzení a vrácení).")
+    return chyby
+
+
 def _barvy_v_html(text: str) -> list[str]:
     nalezy: list[str] = []
     for m in list(_STYL_ATRIBUT.finditer(text)) + list(_SVG_BARVA.finditer(text)):
@@ -279,18 +301,20 @@ def _barvy_v_html(text: str) -> list[str]:
 
 
 def _zkontroluj_design() -> list[str]:
-    """The deterministic part of the design bar (v2). The taste part — one
-    main action, the four states, detail that carries information — is the
-    reviewer's, from screenshots."""
+    """The deterministic part of the design bar (v3). The taste part — the
+    four states, detail that carries information, a tool screen that is
+    really a drawing — is the reviewer's, from screenshots; one main
+    action and readable text are measured by vizualni_kontrola.py."""
     chyby: list[str] = []
     for rel in NAVRH_SOUBORY:
         if not Path(rel).exists():
-            chyby.append(f"{rel} chybí — návrhový systém v2 je součást každého produktu "
+            chyby.append(f"{rel} chybí — návrhový systém v3 je součást každého produktu "
                          "(stavitel ho obnovuje ze šablony).")
     styl = WEB / "styl.css"
-    if styl.exists() and "simtegen-navrh v2" not in styl.read_text(encoding="utf-8")[:200]:
-        chyby.append("web/styl.css není návrhový systém v2 — v produktu se neupravuje, obnoví ho stavba.")
+    if styl.exists() and "simtegen-navrh v3" not in styl.read_text(encoding="utf-8")[:200]:
+        chyby.append("web/styl.css není návrhový systém v3 — v produktu se neupravuje, obnoví ho stavba.")
     chyby += _zkontroluj_produkt_css()
+    chyby += _nativni_dialogy()
     for path in sorted(WEB.glob("*.html")):
         if path.name in PRAVNI_STRANKY or path.name == "offline.html":
             continue
@@ -325,6 +349,22 @@ def _zkontroluj_bezpecnost(manifest: dict, preskocit: set[Path]) -> list[str]:
     import bezpecnostni_kontrola
 
     return [f"bezpečnost: {c}" for c in bezpecnostni_kontrola.zkontroluj(Path.cwd(), manifest, preskocit)]
+
+
+def _zkontroluj_migrace() -> list[str]:
+    """kontrola_migraci.py: a migration that deletes or rewrites data runs
+    only with the owner's approval, signed on SimteGen's mini PC. Here, in
+    CI, before the deploy step applies migrations to production."""
+    if not Path("db/migrace").exists():
+        return []
+    if not Path("kontrola_migraci.py").exists():
+        return ["chybí kontrola_migraci.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
+    import kontrola_migraci
+
+    chyby, varovani = kontrola_migraci.zkontroluj(Path.cwd())
+    for v in varovani:
+        print("Upozornění:", v)
+    return [f"migrace: {c}" for c in chyby]
 
 
 def _zkontroluj_uat() -> list[str]:
@@ -395,6 +435,19 @@ def _zkontroluj_seo(manifest: dict) -> list[str]:
     return vykresli_seo.zkontroluj(manifest)
 
 
+def _zkontroluj_napovedu() -> list[str]:
+    """The help page (vykresli_napovedu.py): when napoveda.json exists,
+    valid, and web/napoveda.html plus the footer link equal to the
+    generator. Without it nothing — SimteGen's pre-check asks the builder."""
+    if not Path("napoveda.json").exists():
+        return []
+    try:
+        import vykresli_napovedu
+    except ImportError:
+        return ["chybí vykresli_napovedu.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
+    return vykresli_napovedu.zkontroluj(Path.cwd())
+
+
 def _bez_seo(path: Path, text: str) -> str:
     """web/index.html without the generated SEO block, for the network
     scan: its canonical <link href="https://…"> is not a request, and
@@ -429,8 +482,9 @@ def main() -> int:
     chyby = (_zkontroluj_sit(manifest) + _zkontroluj_uloziste(manifest)
              + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest)
              + _zkontroluj_design() + _zkontroluj_aplikaci(manifest) + _zkontroluj_seo(manifest)
-             + _zkontroluj_bezpecnost(manifest, _PRESKOCIT) + _zkontroluj_vzhled()
-             + _zkontroluj_uat())
+             + _zkontroluj_napovedu()
+             + _zkontroluj_bezpecnost(manifest, _PRESKOCIT) + _zkontroluj_migrace()
+             + _zkontroluj_vzhled() + _zkontroluj_uat())
     if chyby:
         print("Kód se rozešel s data-manifest.json:")
         for chyba in chyby:

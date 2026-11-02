@@ -36,7 +36,13 @@ from pathlib import Path
 # in front of the reviewer, never a silent exception.
 VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js",
                        "functions/api/odhlaseni.js", "functions/api/navsteva.js",
+                       # Script errors, counted (P9): a tally like navsteva —
+                       # the login screen breaks too, no session to ask for.
+                       "functions/api/chyba-stranky.js",
                        "functions/api/nahlasit.js",
+                       # The firm's answer to a report (SimteGen, odpovedi.py): no
+                       # session — a signature of the answer key, verified inside.
+                       "functions/api/schranka-odpoved.js",
                        # Vyzkoušet ukázku (module play, SimteGen): a throwaway
                        # demo account — the reviewer and the visitor have none.
                        "functions/api/ukazka.js",

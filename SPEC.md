@@ -109,3 +109,41 @@ play/co_je_noveho.txt: „Aplikace je přehlednější. Na každé obrazovce je 
 - Účet B — pokusí se vrátit objednávku (akce planovano) a sadu (akce vratit) účtu A — musí dostat 404 a u účtu A se objednávka ani sada nezmění.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě buildu 12 oproti specifikaci změnilo
+
+1. **Scénář „vypršelé předplatné + Vrátit výdeje“ není v `uat/scenare.json`.**
+   API nemá cestu, jak účtu nastavit `plati_do` do minulosti, a UAT běží jen
+   přes API. Výjimku v `functions/api/sady/[id].js` (akce `vratit` do
+   15 minut po výdeji projde bez předplatného) ověří člověk ručně podle
+   bodu 2 validace (`UPDATE predplatne SET plati_do = unixepoch() - 1`
+   na náhledové D1). Ostatních pět scénářů v UAT je.
+2. **Vrátit výdeje zachová datum příjmu.** Specifikace mluvila jen
+   o průchodu bez předplatného. Výdej omylem ale sadu nikdy neodnesl, proto
+   `vratit` do 15 minut po výdeji nepřepisuje `datum_prijmu`. V deníku je
+   řádek „Příjem na sklad — výdej vrácen“. Vrácení o sezónu později
+   funguje jako dřív.
+3. **Manifest se změnil, i když specifikace psala, že ne.** Šablona
+   přinesla migraci `0006_navstevy.sql` (počítadlo návštěv úvodu). Bez
+   `agregaty: ["navstevy"]` v manifestu by kontrola build shodila. Přibyl
+   i `popis` pro vyhledávač (pravidlo stavby). Nic osobního se neukládá
+   navíc.
+4. **Tisk štítku na Zebru se zapíná třídou `html.tisk-stitku`.** Stará
+   pravidla `@media print` schovávala celou appku při každém tisku. Nový
+   „Vytisknout seznam k obvolání“ (`data-tisk`, styl.css) by tak vytiskl
+   prázdnou stránku 100 × 50 mm. Velikost stránky štítku se teď nastaví jen
+   při tisku štítku a po něm se vrátí. Třída štítku se přejmenovala na
+   `.stitek-sady`, aby se nemíchala s `.stitek` návrhového systému.
+5. **Nápověda (`napoveda.json`) je nová** a odkaz „Nápověda“ v patičce je
+   zapsaný ručně přesně v tvaru generátoru. Generátor by odkaz vložil
+   k prvnímu výskytu `zasady.html`, a to je věta ve fakturační objednávce
+   na obrazovce Předplatné, ne patička.
+6. **Navíc Vrátit i u „Zaplaceno“ v sezónním přehledu a u nahrání
+   ukázkových dat.** Obojí stojí na existujícím API a chová se stejně
+   jako ostatní vratné akce.
+7. **Pruh předplatného na Dnes zůstává produktový** (`#pruh-predplatne`).
+   simtegen.js v3 ho pozná a druhý pruh nekreslí.
+8. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
+   `vykresli_napovedu.py`, `vykresli_seo.py`) ani kontroly stavitel
+   nespustil.** Prostředí spuštění Pythonu i Node odmítá. Musí je pustit
+   člověk před CI. Do generovaných souborů se ručně nesahalo.

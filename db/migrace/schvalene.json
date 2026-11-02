@@ -1,0 +1,10 @@
+{
+  "_": "GENEROVANÝ SOUBOR — schválení migrací, které mažou nebo přepisují data. Píše ho jen SimteGen (podpis klíčem z mini PC); úprava ručně nebo stavitelem schválení zneplatní.",
+  "schvaleno": [
+    {
+      "soubor": "db/migrace/0004_provoz_a_tym.sql",
+      "sha256": "c60f60e662b66eabfffbe67950fad9742e8f88b929257a66131bf1a7b4246906",
+      "podpis": "W574yD31mcn0cVbiSERGa3+odxYWQVZwYew/0UYxVwNztOJwdi885YH8X5hX1Eo7BxiYs2oHCkjhCYyOaExIkmWqLSmI3DE5vcMzvpmw1joqhm0nOlUzsp3xl8vC8jwI/XsXCXUcF9iW/tIY3UEXRFskPfCcu4d1DCXo9Wroca9vDpCkVSpVuBIPVadM3uiKVrKE1jZY/HPHl1PSoUz4Y41sOw2y3OgOp+XuBaigA/GCFAGpJMhX2bT/87CcI8bD5DiNYffBpS2CY0OeuMSgD38J7Mdc2CTfqesFl6gg1+XupMZoJWUq5+S30w9CrU5wJGzr7aY2OIIvFROsWA6NpEDLdjbpfPd00b/YspLvzGHu22dno1EQlyAQ0RlZY2CnwMfwCjNk+/en35kZDFp1Ans+mteAec2/DKnF2CCIA/kNVop+UHxkJe5MB+EJMw2ltxLcMxwnuXMO8t1IvjuOlGjWlstAAiLlCyfMknS/rgPOToIjxYT3235a3wv7DVbm"
+    }
+  ]
+}

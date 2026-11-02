@@ -1,0 +1,38 @@
+{
+  "uvod": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, vozidlo, rozměr, hloubku dezénu a místo v regálu, vytisknete štítek a v objednávkách uvidíte, která kola máte zítra připravit.",
+  "temata": [
+    {
+      "nadpis": "Jak uskladnit sadu a vytisknout štítek",
+      "text": "Na obrazovce Dnes nebo Sklad klepněte na Nová sada. Průvodce má čtyři kroky: čí jsou kola, vozidlo a pneu, hloubka dezénu a místo ve skladu s cenou.\n\nPo uložení sada dostane kód. Stejným tlačítkem dole pak vytisknete štítek. Formát štítku (role 100 × 50 mm nebo archy A4) a údaje, které se na něj tisknou, nastavíte v Nastavení."
+    },
+    {
+      "nadpis": "Jak najít sadu",
+      "text": "Do hledání na obrazovce Dnes nebo Sklad napište kód sady, registrační značku, jméno, telefon nebo místo v regálu. Stačí část. Čtečka čárových kódů napíše kód ze štítku sama.\n\nVe Skladu můžete zaškrtnout víc sad a vytisknout štítky najednou."
+    },
+    {
+      "nadpis": "Objednávky a příprava kol na zítřek",
+      "text": "V Objednávkách zapíšete, kdo kdy přijede a co se bude dělat. U objednávky vyberete uskladněnou sadu, takže aplikace ví, která kola k ní patří.\n\nNa obrazovce Dnes klepněte na Připravit kola: uvidíte seznam kol na zítřek i s místem v regálu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu."
+    },
+    {
+      "nadpis": "Vydání sady zákazníkovi",
+      "text": "Otevřete sadu a klepněte na Vydat. Když se kola za sezónu vrátí, klepněte u téže sady na Vrátit na sklad a zadejte místo v regálu. Kód sady i její historie zůstávají."
+    },
+    {
+      "nadpis": "Co dělat, když něco smažete nebo zrušíte omylem",
+      "text": "Po zrušení objednávky, vydání nebo přesunu sady, smazání zákazníka, odebrání kolegy a podobných krocích se dole na několik sekund objeví tlačítko Vrátit. Klepnutím vše vrátíte, jak to bylo.\n\nNa otázku se aplikace ptá jen u kroků, které vrátit nejde, například u smazání celého účtu."
+    },
+    {
+      "nadpis": "Sezónní přehled",
+      "text": "Z obrazovky Dnes vede odkaz Sezóna. Najdete tam zákazníky, kteří u vás mají kola a ještě se neobjednali, sady s dezénem pod 4 mm a nezaplacené uskladnění. Seznam k obvolání si můžete vytisknout."
+    },
+    {
+      "nadpis": "Kolegové v týmu",
+      "text": "Správce v Nastavení otevře Tým a přidá kolegu jeho e-mailem. Kolega se přihlásí stejně jako vy, odkazem z e-mailu. Oprávnění jsou tři: správce může všechno, mechanik dělá běžnou práci bez nastavení a jen čtení se ničeho nedotkne."
+    },
+    {
+      "nadpis": "Stažení dat a smazání účtu",
+      "text": "V Nastavení otevřete Účet a data. Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Tamtéž můžete účet se všemi daty smazat. Tento krok je nevratný, proto se vás aplikace ještě zeptá."
+    }
+  ],
+  "otazky": []
+}

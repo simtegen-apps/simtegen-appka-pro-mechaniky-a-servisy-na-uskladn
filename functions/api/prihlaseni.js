@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
     body: JSON.stringify({
       from: env.EMAIL_ODESILATEL,
       to: [email],
-      subject: "Váš přihlašovací odkaz",
+      subject: context.data.produkt ? `${context.data.produkt}: přihlašovací odkaz` : "Váš přihlašovací odkaz",
       text:
         "Dobrý den,\n\npro přihlášení otevřete tento odkaz (platí 1 hodinu):\n"
         + `${odkaz}\n\nPokud jste o přihlášení nežádali, e-mail ignorujte.\n`,
