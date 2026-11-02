@@ -31,6 +31,37 @@ export function json(telo, status = 200, hlavicky = {}) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Public tally endpoints (/api/navsteva, /api/chyba-stranky)
+// ---------------------------------------------------------------------------
+// They write without a login, so two cheap fences: the request must come
+// from our own page (a browser sends Origin on every POST; Sec-Fetch-Site
+// covers the few that do not), and one address gets a handful of writes per
+// hour. The counter lives in the worker's memory only — per isolate, gone on
+// restart, never stored: rough, but it turns a script's million writes into
+// a few dozen, which is what protects the D1 write quota the logins need.
+export function zeStejneStranky(request) {
+  const origin = request.headers.get("Origin");
+  if (origin) return origin === new URL(request.url).origin;
+  return request.headers.get("Sec-Fetch-Site") === "same-origin";
+}
+
+const HRUBE_LIMITY = new Map();
+
+export function hrubyLimit(request, klic, max, oknoS) {
+  const adresa = request.headers.get("CF-Connecting-IP") || "neznama";
+  const nyni = Date.now();
+  if (HRUBE_LIMITY.size > 5000) HRUBE_LIMITY.clear();
+  const k = `${klic}|${adresa}`;
+  const zaznam = HRUBE_LIMITY.get(k);
+  if (!zaznam || nyni - zaznam.od > oknoS * 1000) {
+    HRUBE_LIMITY.set(k, { od: nyni, pocet: 1 });
+    return true;
+  }
+  zaznam.pocet += 1;
+  return zaznam.pocet <= max;
+}
+
 export function ctiCookie(request, nazev) {
   const cookies = request.headers.get("Cookie") || "";
   for (const kus of cookies.split(";")) {
@@ -297,13 +328,16 @@ export function bezDiakritiky(text) {
 // why /api/ucet/smazat stays correct without changes.
 //
 // Priority when both exist: the account's OWN shop wins over any invitation.
-// An invitation is an offer, not a claim on somebody else's warehouse.
+// An invitation is an offer, not a claim on somebody else's warehouse — and
+// it counts only once the invited person accepted it themselves (clenove.
+// prijato, migration 0008). An address typed in by a správce alone moves
+// nobody anywhere.
 export const ROLE = ["spravce", "mechanik", "cteni"];
 
 // Does this account run a shop of its own? nastaveni_servisu deliberately does
 // not count: nactiNastaveni() creates that row on first read, so every account
 // has one and it proves nothing. Only records a person actually entered do.
-async function maVlastniData(env, uzivatelId) {
+export async function maVlastniData(env, uzivatelId) {
   const radek = await env.DB.prepare(
     "SELECT (EXISTS(SELECT 1 FROM sady WHERE uzivatel_id = ?) " +
     "OR EXISTS(SELECT 1 FROM zakaznici WHERE uzivatel_id = ?) " +
@@ -315,13 +349,18 @@ async function maVlastniData(env, uzivatelId) {
 export async function nactiKontext(env, uzivatel) {
   if (!uzivatel) return null;
 
+  // mimo-uzivatele: membership is looked up by the signed-in person's own
+  // address across shops — that is what the row is for.
   const clenstvi = await env.DB.prepare(
-    "SELECT uzivatel_id, role FROM clenove WHERE email = ? ORDER BY id LIMIT 1"
-  ).bind(uzivatel.email).first();
+    "SELECT uzivatel_id, role FROM clenove WHERE email = ? AND prijato = 1 " +
+    "AND uzivatel_id != ? ORDER BY id LIMIT 1"
+  ).bind(uzivatel.email, uzivatel.id).first();
 
-  // No invitation, or one pointing back at this very account: own shop.
-  // Checking membership first keeps the ordinary case at a single query.
-  if (!clenstvi || clenstvi.uzivatel_id === uzivatel.id) {
+  // No accepted membership elsewhere: own shop. A row pointing back at this
+  // very account is skipped by the query, so nobody can be demoted inside
+  // their own shop. Checking membership first keeps the ordinary case at a
+  // single query.
+  if (!clenstvi) {
     return { id: uzivatel.id, role: "spravce", vlastni: true };
   }
 

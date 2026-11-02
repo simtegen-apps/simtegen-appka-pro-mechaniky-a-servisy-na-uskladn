@@ -516,6 +516,43 @@
       ]
     },
     {
+      "nazev": "Pozvánka do týmu platí až po přijetí pozvaným, cizí účet ji nepřijme",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "pridat", "email": "uat-pozvany-mu@example.cz", "role": "spravce" },
+          "ocekavam": 200,
+          "obsahuje": ["pozvano", "\"prijato\":0"],
+          "uloz": { "pozvanka_id": "clen.id" }
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "neobsahuje": ["uat-pozvany-mu@example.cz"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "obsahuje": ["uat-pozvany-mu@example.cz", "\"prijato\":0"]
+        }
+      ]
+    },
+    {
       "nazev": "Účet B nevrátí objednávku ani sadu účtu A",
       "kroky": [
         {

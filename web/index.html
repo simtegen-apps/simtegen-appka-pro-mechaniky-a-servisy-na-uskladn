@@ -321,6 +321,10 @@
              v cestě ranní práci. -->
         <button class="hlaska pruh-predplatne" id="pruh-predplatne" type="button" hidden></button>
 
+        <!-- Pozvánka do cizího servisu: platí, až ji tady přihlášený sám
+             přijme. Vykresluje vykresliPozvanky(). -->
+        <div id="pozvanky" class="pod-sebou" hidden></div>
+
         <!-- Nový účet bez jediné sady: věta, co sem patří, a cesta dál.
              Hlavní akcí zůstává „Nová sada na uskladnění“ dole v liště. -->
         <div class="prazdno" id="dnes-prazdno" hidden>
@@ -876,6 +880,13 @@
             <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-naplnit" type="button">Naplnit ukázkovými daty</button>
             <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-smazat" type="button">Smazat ukázková data</button>
           </div>
+        </div>
+
+        <div class="sekce" id="ucet-odejit-blok" hidden>
+          <h2 class="sekce-titulek"><span>Odejít ze servisu</span></h2>
+          <p class="popisek">Pracujete v servisu, který patří jinému účtu. Odejdete-li,
+          přístup k jeho evidenci ztratíte, dokud vás správce znovu nepozve.</p>
+          <button class="tlacitko vedlejsi" id="ucet-odejit" type="button">Odejít ze servisu</button>
         </div>
 
         <div class="sekce">
@@ -2807,6 +2818,7 @@
       // protože nákup se připíše na účet toho, kdo ho udělal.
       document.body.classList.toggle("vlastnik",
         role === "spravce" && !!stav.nastaveni && stav.nastaveni.vlastni_ucet !== false);
+      $("ucet-odejit-blok").hidden = !stav.nastaveni || stav.nastaveni.vlastni_ucet !== false;
     }
 
     $("nast-format").querySelectorAll("button").forEach((b) =>
@@ -3130,7 +3142,7 @@
       kontejner.innerHTML = data.clenove.map((c) =>
         `<div class="radek">
           <span class="hlavni"><strong>${bezpecne(c.email)}</strong>
-            <span>${NAZVY_ROLI[c.role] || c.role}</span></span>
+            <span>${NAZVY_ROLI[c.role] || c.role}${c.prijato ? "" : " · čeká na přijetí pozvánky"}</span></span>
         </div>
         <div class="radek-akce">
           <button class="tlacitko vedlejsi tym-zmenit" data-id="${c.id}" type="button"
@@ -3181,6 +3193,54 @@
         chipy($("tym-role"), "role", tymRole);
       }));
 
+    // Pozvánky do cizího servisu pro přihlášeného. Přijetí je jediná cesta,
+    // jak se pozvánka stane přístupem (functions/api/clenove.js) — nikdo
+    // jiný nikoho do svého servisu nepřesune.
+    async function nactiPozvanky() {
+      const blok = $("pozvanky");
+      const { ok, data } = await api("/api/clenove", "GET");
+      const pozvanky = (ok && data.pozvanky) || [];
+      blok.hidden = !pozvanky.length;
+      blok.innerHTML = pozvanky.map((p) => `
+        <div class="karta">
+          <p>Servis <strong>${bezpecne(p.servis)}</strong> vás zve do týmu
+          (${bezpecne(NAZVY_ROLI[p.role] || p.role)}). Po přijetí uvidíte jeho
+          evidenci místo své. Neznáte-li ho, pozvánku odmítněte.</p>
+          <div class="radka">
+            <button class="tlacitko vedlejsi pozvanka-prijmout" data-id="${p.id}" type="button">Přijmout</button>
+            <button class="tlacitko vedlejsi pozvanka-odmitnout" data-id="${p.id}" type="button">Odmítnout</button>
+          </div>
+        </div>`).join("") + '<div id="pozvanky-zprava" class="zprava" aria-live="polite"></div>';
+      blok.querySelectorAll(".pozvanka-prijmout").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "prijmout", id: Number(b.dataset.id) });
+          if (!o) return zprava("pozvanky-zprava", d.chyba || "Pozvánku se nepodařilo přijmout.", true);
+          // Jiný servis = jiná evidence: celé načtení znovu, od Dnes.
+          location.reload();
+        }));
+      blok.querySelectorAll(".pozvanka-odmitnout").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "odmitnout", id: Number(b.dataset.id) });
+          if (!o) return zprava("pozvanky-zprava", d.chyba || "Nepovedlo se.", true);
+          nactiPozvanky();
+        }));
+    }
+
+    // Odejít může každý pozvaný sám — nesmí zůstat v cizím servisu jen proto,
+    // že ho správce neodebere. Vrátit to sám nemůže, proto otázka.
+    $("ucet-odejit").addEventListener("click", async () => {
+      const odejit = await SimteGen.potvrd("Odejít z tohoto servisu?", {
+        popis: "Přístup k jeho evidenci ztratíte, dokud vás správce znovu nepozve.",
+        ano: "Odejít ze servisu", nebezpecne: true,
+      });
+      if (!odejit) return;
+      const { ok, data } = await api("/api/clenove", "POST", { akce: "odejit" });
+      if (!ok) return zprava("ucet-zprava", data.chyba || "Nepovedlo se.", true);
+      location.reload();
+    });
+
     $("tym-pridat").addEventListener("click", async () => {
       zprava("tym-zprava", "Přidávám…");
       const { ok, data } = await api("/api/clenove", "POST", {
@@ -3188,7 +3248,10 @@
       });
       if (!ok) return zprava("tym-zprava", data.chyba || "Nepovedlo se.", true);
       $("tym-email").value = "";
-      zprava("tym-zprava", "Hotovo — kolega se přihlásí svým e-mailem.");
+      // Pozvánka platí, až ji kolega sám přijme: přihlásí se svým e-mailem
+      // a na obrazovce Dnes klepne na Přijmout.
+      zprava("tym-zprava", "Pozvánka je připravená. Kolega se přihlásí svým e-mailem "
+        + "a na obrazovce Dnes ji přijme.");
       nactiTym();
     });
 
@@ -3472,6 +3535,7 @@
       history.replaceState({ obrazovka: "obrazovka-dnes" }, "");
       ukaz("obrazovka-dnes");
       nactiDnes();
+      nactiPozvanky();
       // First arrival on this account: show the walkthrough over the home
       // screen, so the tour describes something the shop can already see.
       if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();

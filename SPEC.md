@@ -143,7 +143,33 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
    jako ostatní vratné akce.
 7. **Pruh předplatného na Dnes zůstává produktový** (`#pruh-predplatne`).
    simtegen.js v3 ho pozná a druhý pruh nekreslí.
-8. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
+8. **Opravy po bezpečnostní recenzi.**
+   - *Tým:* řádek v `clenove` je nově jen pozvánka (`prijato = 0`,
+     migrace `0008_clenove_prijeti.sql`, pouze ADD COLUMN). Přístupem se
+     stane, až ji pozvaný přihlášený stejnou adresou přijme na Dnes.
+     `nactiKontext` čte jen přijaté řádky a nikdy řádek ukazující na vlastní
+     účet. Vlastní evidence má dál přednost. Adresa majitele servisu se do
+     jeho týmu vložit nedá (ani pozvaným správcem). Odpověď na pozvání je
+     vždy stejná a důvody odmítnutí vidí jen pozvaný při přijetí, takže
+     formulář neprozradí, kdo kde pracuje. Limit je 10 pozvánek za hodinu
+     na servis (dvě čísla v `nastaveni_servisu`). Člen může ze servisu sám
+     odejít (Účet a data). Stávající členové mají `prijato = 1` (DEFAULT),
+     o přístup nepřijdou. Vrátit po odebrání kolegu znovu pozve a ten
+     pozvánku přijme znovu.
+   - *Přihlášení odkazem:* `GET /api/overeni` nejdřív ukáže „Přihlásit se
+     jako …?“. Relace vznikne až druhým GET z té stránky s jednorázovým
+     kódem v cookie SameSite=Strict. GET zůstal kvůli šablonovému
+     middlewaru, který zdroj nového účtu zapisuje jen u GET → 303.
+     Vývojová nasazení bez odesílání e-mailů přihlašují dál jedním krokem,
+     protože tak se přihlašují UAT a vizuální kontrola.
+   - *Počítadla `/api/navsteva` a `/api/chyba-stranky`:* zapisují jen
+     požadavky z vlastní stránky (Origin, případně Sec-Fetch-Site) a nejvýš
+     20, resp. 30 za hodinu z jedné adresy. Počítá se v paměti workeru, nic
+     se neukládá.
+   - `overeni.js`, `navsteva.js` a `chyba-stranky.js` jsou soubory šablony.
+     Opravy je potřeba převzít i do šablony, jinak je příští obnova
+     přepíše.
+9. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
    `vykresli_napovedu.py`, `vykresli_seo.py`) ani kontroly stavitel
    nespustil.** Prostředí spuštění Pythonu i Node odmítá. Musí je pustit
    člověk před CI. Do generovaných souborů se ručně nesahalo.
