@@ -380,6 +380,348 @@
     otevri();
   }, true);
 
+  /* ── Zkušební období a ukázková data ───────────────────────────────
+   * Pruh nad obsahem: kolik zbývá ze zkušebního období, v posledních
+   * 7 dnech a po vypršení výrazněji a s tlačítkem „Předplatit“, které
+   * otevře platbu tak, jak ji produkt má — v prohlížeči fakturační
+   * objednávku, v aplikaci z Google Play nákup přes Google Play (styl.css
+   * a play.js tam objednávku schovávají; tady se jen vybere první viditelný
+   * cíl, takže pravidla Google Play platí i pro pruh). Odkaz z upomínky
+   * (?platba) otevře totéž po načtení.
+   *
+   * Ukázková data: tlačítko [data-ukazkova-data] v prázdném stavu produktu
+   * nahraje do vlastního účtu vymyšlená data (functions/api/ukazka-uctu.js)
+   * a pruh je pak jedním klepnutím odstraní. Tlačítko je vidět jen tam, kde
+   * to jde (třída sg-ukazkova-nabidka na <html>, podle hlavičky z /api/ja).
+   *
+   * Proč tady: tenhle soubor se obnovuje v každém produktu, takže to dojde
+   * i do produktů, které vznikly dřív. Produkt, který má vlastní pruh
+   * (#pruh-predplatne), nedostane druhý. Nic se neukládá v prohlížeči.
+   */
+  var koren = doc.documentElement;
+  var UKAZKOVY_UCET = /@ukazka\.invalid$/;
+  var HACKY_PLATBY = "[data-predplatne-play], [data-objednavka], #predplatne-karta, [data-pruh-predplatneho], " +
+    "[data-ukazkova-data], [data-platba]";
+
+  function dny(n) {
+    return n === 1 ? "den" : (n >= 2 && n <= 4 ? "dny" : "dní");
+  }
+
+  function datumKratce(unix) {
+    var d = new Date(unix * 1000);
+    return d.getDate() + ". " + (d.getMonth() + 1) + ".";
+  }
+
+  // Hidden by the product or by the Google Play rule — but an inactive
+  // screen does not count: ukaz() opens it.
+  function viditelny(el) {
+    for (var e = el; e && e !== doc.body; e = e.parentElement) {
+      if (e.classList && e.classList.contains("obrazovka")) return true;
+      if (e.hidden || getComputedStyle(e).display === "none") return false;
+    }
+    return true;
+  }
+
+  function otevriPlatbu() {
+    // A product's own way in wins: [data-platba], or the bar it drew itself.
+    var vlastni = doc.querySelector("[data-platba]") || doc.getElementById("pruh-predplatne");
+    if (vlastni && viditelny(vlastni) && /^(A|BUTTON)$/.test(vlastni.tagName)) {
+      vlastni.click();
+      return;
+    }
+    var cil = null;
+    var vyber = ["[data-objednavka]", "[data-predplatne-play]", "#predplatne-karta"];
+    for (var i = 0; i < vyber.length && !cil; i++) {
+      cil = Array.prototype.filter.call(doc.querySelectorAll(vyber[i]), viditelny)[0] || null;
+    }
+    if (!cil) return;
+    var obrazovka = cil.closest(".obrazovka");
+    if (obrazovka && !obrazovka.classList.contains("aktivni") && typeof window.ukaz === "function") {
+      try { window.ukaz(obrazovka.id); } catch (e) { /* the product's router: best effort */ }
+    }
+    setTimeout(function () {
+      var karta = cil.closest(".karta") || cil;
+      karta.style.scrollMarginTop = "6rem";  // clear of the sticky header
+      // A jump, not a glide: a smooth scroll is cancelled by any layout the
+      // product still does, and needs no reduced-motion exception.
+      karta.scrollIntoView({ block: "start" });
+      if (!karta.hasAttribute("tabindex")) karta.setAttribute("tabindex", "-1");
+      try { karta.focus({ preventScroll: true }); } catch (e) { karta.focus(); }
+    }, 80);
+  }
+
+  var pruhy = null;
+  function vlozPruh(pruh) {
+    if (!pruhy) {
+      pruhy = prvek("div", "sg-pruhy");
+      var slot = doc.querySelector("[data-pruh-predplatneho]");
+      var obsah = doc.querySelector(".obsah") || doc.querySelector("main");
+      if (slot) slot.appendChild(pruhy);
+      else if (obsah) obsah.insertBefore(pruhy, obsah.firstChild);
+      else {
+        // Nothing to sit in: the very top, clear of the notch.
+        pruhy.classList.add("sg-pruhy--nahore");
+        doc.body.insertBefore(pruhy, doc.body.firstChild);
+      }
+    }
+    pruhy.appendChild(pruh);
+  }
+
+  function pruh(trida, text, akce, priKliku) {
+    var p = prvek("div", "sg-pruh" + (trida ? " sg-pruh--" + trida : ""));
+    p.setAttribute("role", "status");
+    p.appendChild(prvek("p", "sg-pruh-text", text));
+    var t = prvek("button", "tlacitko vedlejsi", akce);
+    t.type = "button";
+    t.addEventListener("click", function () { priKliku(t); });
+    p.appendChild(t);
+    return p;
+  }
+
+  // The bar for one subscription state, or null. Pure on purpose (state and
+  // clock in, text out): tests/test_konverze.py runs it in Node.
+  function obsahPruhu(p, nyni) {
+    if (!p || p.platce === false) return null;
+    if (p.stav === "vyprselo") {
+      return { trida: "konec", akce: "Předplatit",
+               text: "Předplatné vypršelo. Data máte dál uložená — stáhnout si je, napsat nám i smazat účet " +
+                     "můžete i teď. Pokračovat v práci půjde po zaplacení." };
+    }
+    if (p.stav !== "zkusebni") return null;
+    var konec = Number(p.zkusebni_do || p.plati_do) || 0;
+    var zbyva = Number(p.dni_zbyva) || 0;
+    if (zbyva > 7) {
+      return { trida: "", akce: "Předplatné",
+               text: "Zkušební období: zbývá " + zbyva + " " + dny(zbyva) +
+                     (konec ? " (do " + datumKratce(konec) + ")" : "") + "." };
+    }
+    var kdy;
+    if (konec) {
+      // Calendar days, not 24-hour blocks: "zítra" must mean tomorrow.
+      var dnes = new Date(nyni);
+      dnes.setHours(0, 0, 0, 0);
+      var den = new Date(konec * 1000);
+      den.setHours(0, 0, 0, 0);
+      var rozdil = Math.round((den - dnes) / 86400000);
+      kdy = rozdil <= 0 ? "dnes" : rozdil === 1 ? "zítra" : "za " + rozdil + " " + dny(rozdil) +
+        " (" + datumKratce(konec) + ")";
+    } else {
+      kdy = "za " + zbyva + " " + dny(zbyva);
+    }
+    return { trida: "brzy", akce: "Předplatit", text: "Zkušební období končí " + kdy + "." };
+  }
+
+  function dosad(hodnota, ulozene) {
+    if (typeof hodnota === "string") {
+      return hodnota.replace(/\{(\w+)\}/g, function (cele, jmeno) {
+        return Object.prototype.hasOwnProperty.call(ulozene, jmeno) ? String(ulozene[jmeno]) : cele;
+      });
+    }
+    if (Array.isArray(hodnota)) return hodnota.map(function (h) { return dosad(h, ulozene); });
+    if (hodnota && typeof hodnota === "object") {
+      var vysledek = {};
+      Object.keys(hodnota).forEach(function (k) { vysledek[k] = dosad(hodnota[k], ulozene); });
+      return vysledek;
+    }
+    return hodnota;
+  }
+
+  function vyberHodnotu(data, cesta) {
+    return String(cesta).split(".").reduce(function (d, klic) {
+      if (d === null || d === undefined) return undefined;
+      return d[/^\d+$/.test(klic) ? Number(klic) : klic];
+    }, data);
+  }
+
+  function apiJson(cesta, metoda, telo) {
+    var nastaveni = { method: metoda, credentials: "same-origin", headers: {} };
+    if (telo !== undefined) {
+      nastaveni.headers["Content-Type"] = "application/json";
+      nastaveni.body = JSON.stringify(telo);
+    }
+    return fetch(cesta, nastaveni).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: r.ok, status: r.status, data: data, hlavicky: r.headers };
+      });
+    });
+  }
+
+  // The same replay as play.js (the demo account) and uat_kontrola.py.
+  // Duplicated, not shared: play.js reaches a product only with a build,
+  // this file also with the template refresh — a shared helper would leave
+  // one of them calling something that is not there yet.
+  function prehrajKroky(kroky) {
+    var ulozene = {};
+    return kroky.reduce(function (cesta, krok) {
+      return cesta.then(function () {
+        var casti = String(krok.pozadavek || "").split(" ");
+        return apiJson(dosad(casti.slice(1).join(" "), ulozene), casti[0], dosad(krok.telo, ulozene))
+          .then(function (r) {
+            Object.keys(krok.uloz || {}).forEach(function (jmeno) {
+              var hodnota = vyberHodnotu(r.data, krok.uloz[jmeno]);
+              if (hodnota !== undefined) ulozene[jmeno] = hodnota;
+            });
+          });
+      });
+    }, Promise.resolve());
+  }
+
+  function nahrajUkazku(tlacitko) {
+    var puvodni = tlacitko.textContent;
+    tlacitko.disabled = true;
+    tlacitko.textContent = "Připravuji ukázková data…";
+    apiJson("/api/ukazka-uctu", "POST", { akce: "nahrat" }).then(function (r) {
+      if (!r.ok) throw new Error(r.data.chyba || "Ukázková data teď nejde nahrát.");
+      // The range is closed whatever the steps did: removal must work even
+      // after a step that failed.
+      return prehrajKroky(r.data.kroky || []).catch(function () { return null; }).then(function () {
+        return apiJson("/api/ukazka-uctu", "POST", { akce: "hotovo" });
+      });
+    }).then(function () {
+      location.reload();
+    }).catch(function (e) {
+      tlacitko.disabled = false;
+      tlacitko.textContent = puvodni;
+      var zprava = prvek("p", "zprava chyba", e.message || "Ukázková data teď nejde nahrát.");
+      zprava.setAttribute("role", "status");
+      if (tlacitko.parentNode) tlacitko.parentNode.insertBefore(zprava, tlacitko.nextSibling);
+    });
+  }
+
+  function pruhUkazkovychDat() {
+    return pruh("ukazka", "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
+      "v provozu. Až si zapíšete vlastní, ukázku odstraňte.", "Odstranit ukázková data", function (t) {
+      t.disabled = true;
+      t.textContent = "Odstraňuji…";
+      apiJson("/api/ukazka-uctu", "POST", { akce: "odstranit" }).then(function (r) {
+        if (!r.ok) throw new Error(r.data.chyba);
+        location.reload();
+      }).catch(function () {
+        t.disabled = false;
+        t.textContent = "Nepovedlo se — zkusit znovu";
+      });
+    });
+  }
+
+  // Wait until the product has drawn its first real screen (and, in an app
+  // product, until play.js has said web or app) — opening the payment
+  // before that would be overwritten by the product's own start.
+  function azBudeAplikace(fn) {
+    var zacatekCekani = Date.now();
+    (function zkus() {
+      var aktivni = doc.querySelector(".obrazovka.aktivni");
+      var hotova = !doc.querySelector(".obrazovka") || (aktivni && !/nacitani/.test(aktivni.id));
+      var playRozhodl = !koren.hasAttribute("data-aplikace") ||
+        koren.classList.contains("sg-web") || koren.classList.contains("sg-v-aplikaci");
+      if ((hotova && playRozhodl) || Date.now() - zacatekCekani > 6000) { fn(); return; }
+      setTimeout(zkus, 120);
+    })();
+  }
+
+  function bezParametru(jmeno) {
+    try {
+      var url = new URL(location.href);
+      url.searchParams.delete(jmeno);
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    } catch (e) { /* the link still works, it only stays in the address */ }
+  }
+
+  doc.addEventListener("click", function (e) {
+    var cil = e.target && e.target.closest ? e.target.closest("[data-ukazkova-data]") : null;
+    if (!cil || cil.disabled) return;
+    e.preventDefault();
+    nahrajUkazku(cil);
+  });
+
+  doc.addEventListener("DOMContentLoaded", function () {
+    // Only pages of a product with accounts: the hooks above, or a product
+    // that draws its empty state from script (the button is in the source).
+    var veSkriptu = Array.prototype.some.call(doc.scripts, function (s) {
+      return !s.src && s.textContent.indexOf("data-ukazkova-data") >= 0;
+    });
+    if (!doc.querySelector(HACKY_PLATBY) && !veSkriptu) return;
+    var chciPlatbu = /[?&]platba(?:[=&]|$)/.test(location.search);
+    apiJson("/api/ja", "GET").then(function (r) {
+      var ja = r.data || {};
+      if (!r.ok || !ja.prihlasen || UKAZKOVY_UCET.test(ja.email || "")) return;
+      var ukazka = r.hlavicky.get("X-SimteGen-Ukazkova-Data");
+      if (ukazka === "nabidka") koren.classList.add("sg-ukazkova-nabidka");
+      if (ukazka === "nahrana") vlozPruh(pruhUkazkovychDat());
+      var obsah = doc.getElementById("pruh-predplatne") ? null : obsahPruhu(ja.predplatne, Date.now());
+      if (obsah) vlozPruh(pruh(obsah.trida, obsah.text, obsah.akce, otevriPlatbu));
+      if (chciPlatbu && ja.predplatne && ja.predplatne.platce !== false) {
+        bezParametru("platba");
+        azBudeAplikace(otevriPlatbu);
+      }
+    }).catch(function () { /* offline or no accounts: nothing to say */ });
+  });
+
+  /* ── Connection: offline is not signed out ──────────────────────────
+   * A mechanic in a garage with one bar of signal must not look signed
+   * out. Pages used to show the login screen on ANY failed /api/ja, so a
+   * signed-in customer asked for a new login link and wondered where the
+   * data went. Signed out is only what the server says: 200 with
+   * prihlasen:false, or 401/403. Everything else — fetch throws, 5xx, a 404
+   * of a broken deploy, a captive portal's HTML instead of JSON — means
+   * "we don't know", and "we don't know" keeps the last screen.
+   *
+   *   SimteGen.kdoJsem()       → Promise {stav: "prihlasen"|"odhlasen"|"offline", ja, status}
+   *   SimteGen.offline(znovu)  → bar with "Zkusit znovu"; znovu() also runs on
+   *                              the browser's `online` event
+   *   SimteGen.spojeno()       → bar gone
+   *
+   * Here and not only in index.html: this file is refreshed in every
+   * product on its next build (stavitel._NAVRH_V2), index.html is the
+   * product's own and the template never touches it again. The template's
+   * obnov() is the pattern the builder copies.
+   */
+  function kdoJsem() {
+    return apiJson("/api/ja", "GET").then(function (r) {
+      var ja = r.data || {};
+      if (r.status === 401 || r.status === 403) return { stav: "odhlasen", ja: {}, status: r.status };
+      if (r.ok && typeof ja.prihlasen === "boolean") {
+        return { stav: ja.prihlasen ? "prihlasen" : "odhlasen", ja: ja, status: r.status };
+      }
+      return { stav: "offline", ja: {}, status: r.status };
+    }, function () {
+      return { stav: "offline", ja: {}, status: 0 };
+    });
+  }
+
+  var offlinePruh = null;
+  var offlineZnovu = null;
+  function offline(znovu) {
+    // Without a callback the safest retry is the whole page: the product's
+    // own start runs again.
+    offlineZnovu = typeof znovu === "function" ? znovu : function () { location.reload(); };
+    if (offlinePruh) {
+      // A retry that failed again: the same bar, the button usable again.
+      var t = offlinePruh.querySelector("button");
+      if (t) { t.disabled = false; t.textContent = "Zkusit znovu"; }
+      return;
+    }
+    offlinePruh = pruh("offline", "Nejde se spojit se serverem — nejspíš slabý signál nebo výpadek " +
+      "internetu. Data zůstávají uložená; až se spojení vrátí, načteme je znovu.", "Zkusit znovu", function (t) {
+      t.disabled = true;
+      t.textContent = "Zkouším…";
+      offlineZnovu();
+    });
+    // An alert, not a status: the page did not change, so nothing else
+    // would tell a screen reader why the tap did nothing.
+    offlinePruh.setAttribute("role", "alert");
+    vlozPruh(offlinePruh);
+  }
+
+  function spojeno() {
+    if (offlinePruh && offlinePruh.parentNode) offlinePruh.parentNode.removeChild(offlinePruh);
+    offlinePruh = null;
+  }
+
+  window.addEventListener("online", function () {
+    if (offlinePruh && offlineZnovu) offlineZnovu();
+  });
+  window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno };
+
   /* Google Play v aplikaci — nákup předplatného a „Vyzkoušet ukázku“ —
    * žije v play.js: jen v produktu s modulem aplikace (<html data-aplikace>)
    * a jen když stránka má co obsloužit, ať statické stránky nic nenačítají. */

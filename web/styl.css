@@ -417,6 +417,30 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
 .sg-play-cena { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.03em; color: var(--barva-inkoust); }
 .sg-ukazka-pruh { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mezera-2) var(--mezera-3); padding: var(--mezera-3) var(--mezera-4); padding-top: calc(var(--mezera-3) + env(safe-area-inset-top)); background: var(--barva-list); border-bottom: 1px solid var(--barva-inkoust); font-size: var(--velikost-4); color: var(--barva-inkoust); }
 
+/* ── Zkušební období a ukázková data (vkládá web/simtegen.js) ─────── */
+/* Pruh nad obsahem, ne přes něj: odjede se stránkou a nic nezakrývá.
+   Klidný, dokud zbývá víc než týden; varování v posledních 7 dnech,
+   chyba po vypršení. Tlačítko ukazuje cestu k platbě, kterou má produkt. */
+.sg-pruhy { display: flex; flex-direction: column; gap: var(--mezera-2); }
+.sg-pruhy--nahore { padding: calc(var(--mezera-2) + env(safe-area-inset-top)) var(--mezera-4) 0; }
+.sg-pruh {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mezera-2) var(--mezera-4);
+  padding: var(--mezera-2) var(--mezera-2) var(--mezera-2) var(--mezera-4);
+  background: var(--barva-list); border: 1px solid var(--barva-linka); border-left: 3px solid var(--barva-produktu);
+  color: var(--barva-inkoust); animation: obrazovka-in var(--prechod) both;
+}
+.sg-pruh-text { flex: 1 1 14rem; color: inherit; font-size: var(--velikost-4); }
+.sg-pruh .tlacitko { flex: 0 0 auto; }
+.sg-pruh--brzy { background: var(--barva-varovani-pozadi); color: var(--barva-varovani); border-color: currentColor; }
+.sg-pruh--konec { background: var(--barva-chyba-pozadi); color: var(--barva-chyba); border-color: currentColor; }
+.sg-pruh--ukazka { border-left-color: var(--barva-inkoust); border-style: dashed; border-left-style: solid; }
+/* No connection (SimteGen.offline): a warning, not an error — nothing is
+   lost, it just cannot load right now. */
+.sg-pruh--offline { background: var(--barva-varovani-pozadi); color: var(--barva-varovani); border-color: currentColor; }
+/* „Naplnit ukázkovými daty“ jen tam, kde to jde (/api/ja to řekne
+   hlavičkou) — jinak by tlačítko slibovalo něco, co produkt nemá. */
+html:not(.sg-ukazkova-nabidka) [data-ukazkova-data] { display: none !important; }
+
 /* ── Pomocné ──────────────────────────────────────────────────────── */
 [hidden] { display: none !important; }
 .titulek-velky { font-size: clamp(2.25rem, 8vw, 3.75rem); font-weight: 700; letter-spacing: -0.05em; line-height: 0.98; }

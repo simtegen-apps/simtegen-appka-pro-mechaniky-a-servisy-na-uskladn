@@ -52,7 +52,9 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # (export and delete over every table with uzivatel_id). Only there, and only
 # as a quoted identifier "${...}", is interpolation allowed.
 IDENTIFIKATORY_SMI = {"spolecne.js", "functions/api/ucet/export.js",
-                      "functions/api/ucet/smazat.js", "functions/api/ukazka.js"}
+                      "functions/api/ucet/smazat.js", "functions/api/ukazka.js",
+                      # Sample data: snapshot and removal over the same catalogue.
+                      "functions/api/ukazka-uctu.js"}
 
 _STRAZ = re.compile(r"!\s*(?:context\.)?(?:data\.)?uzivatel\b|vyzadujUzivatele\s*\(|vyzadujPredplatne\s*\(")
 

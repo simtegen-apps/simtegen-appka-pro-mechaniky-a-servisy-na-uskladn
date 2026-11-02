@@ -91,7 +91,10 @@ CO_JE_NOVEHO = Path("play") / "co_je_noveho.txt"
 CO_JE_NOVEHO_DELKA = 500          # Google's limit for release notes
 UKAZKA = Path("play") / "ukazka.json"
 # Published for "Vyzkoušet ukázku" (functions/api/ukazka.js + web/play.js):
-# the same invented data the screenshots show — public on purpose.
+# the same invented data the screenshots show — public on purpose. Also for
+# products without the app: the first-login empty state loads the same data
+# into the customer's own account (functions/api/ukazka-uctu.js), so it is
+# published whenever play/ukazka.json exists.
 UKAZKA_WEB = Path("web") / "ukazka.json"
 UKAZKA_KROKU = 60
 
@@ -1029,10 +1032,19 @@ def _chyby_konfigurace(manifest: dict) -> list[str]:
     return chyby
 
 
+def _zapis_ukazku() -> list[str]:
+    zapsano = []
+    for cesta, text in _ukazka_web().items():
+        cesta.parent.mkdir(parents=True, exist_ok=True)
+        cesta.write_text(text, encoding="utf-8", newline="\n")
+        zapsano.append(str(cesta))
+    return zapsano
+
+
 def vykresli(manifest: dict) -> list[str]:
-    """Write every output. Returns the paths written (empty = module off)."""
+    """Write every output. Returns the paths written (empty = nothing to do)."""
     if "aplikace" not in manifest:
-        return []
+        return _zapis_ukazku()
     chyby = _chyby_konfigurace(manifest)
     if chyby:
         raise SystemExit("Modul aplikace: " + " ".join(chyby))
@@ -1069,10 +1081,19 @@ def generovane_soubory(manifest: dict) -> set[Path]:
     return {WEB / "sw.js", WEB / "offline.html"}
 
 
+def _chyby_ukazky_webu() -> list[str]:
+    chyby = []
+    for cesta, text in _ukazka_web().items():
+        if not cesta.exists() or cesta.read_text(encoding="utf-8").replace("\r\n", "\n") != text:
+            chyby.append(f"{cesta} neodpovídá play/ukazka.json — spusť `python vykresli_aplikaci.py` (ručně se needituje).")
+    return chyby
+
+
 def zkontroluj(manifest: dict) -> list[str]:
     """CI: the configuration is valid and every output equals the generator."""
     if "aplikace" not in manifest:
-        return []
+        # Sample data without the app (empty state): valid and published.
+        return (_chyby_ukazky() + _chyby_ukazky_webu()) if UKAZKA.exists() else []
     chyby = _chyby_konfigurace(manifest)
     if chyby:
         return chyby
@@ -1100,8 +1121,9 @@ def main() -> int:
         return 1
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     zapsano = vykresli(manifest)
-    if not zapsano:
-        print("Modul aplikace není zapnutý (v manifestu chybí sekce `aplikace`) — nic k vykreslení.")
+    if "aplikace" not in manifest:
+        print("Modul aplikace není zapnutý (v manifestu chybí sekce `aplikace`)"
+              + (" — zveřejněna jen ukázková data: " + ", ".join(zapsano) if zapsano else " — nic k vykreslení."))
         return 0
     print("Aplikace vykreslena:", ", ".join(zapsano))
     if not manifest["aplikace"].get("otisky"):

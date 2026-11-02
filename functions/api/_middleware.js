@@ -19,6 +19,21 @@
 // request. Before the
 // 0910_zdroje migration exists the columns are missing and every write
 // fails — silently, by the same rule.
+//
+// The same file carries the trial (migration 0920_konverze), for the same
+// reason — it reaches every product without touching the product's code:
+//
+//   GET /api/ja → the trial end the PRODUCT computed (context.data.predplatne,
+//                 set by its own session middleware) goes into zkusebni_doba,
+//                 for the Upominky workflow and the metrics; and the answer
+//                 gets a header X-SimteGen-Ukazkova-Data saying whether this
+//                 account may load sample data (nabidka) or has them (nahrana),
+//                 so web/simtegen.js knows without a second request.
+//
+// Trial end is copied, never recomputed: the products differ (14-day trial,
+// a trial owned by the shop rather than the person), and only their own
+// predplatne.js knows. A member who does not pay for the subscription is
+// marked platce: false by the product and is left out.
 
 const ZNAK = /[^a-z0-9._-]/g;
 
@@ -82,6 +97,57 @@ async function zapis(context, kopie, odkaz, odpoved) {
   }
 }
 
+const UKAZKOVY_UCET = "@ukazka.invalid";
+
+async function zapisZkusebni(context) {
+  const { env, data } = context;
+  const p = data.predplatne;
+  if (!p || p.stav !== "zkusebni" || p.platce === false) return;
+  // The template answers the trial end in plati_do, a product with a
+  // separate trial date in zkusebni_do (Pneusklad); either is unix seconds.
+  const konec = Math.floor(Number(p.zkusebni_do || p.plati_do));
+  if (!Number.isFinite(konec) || konec <= 0) return;
+  // Written only when it changed: one cheap no-op on every other /api/ja.
+  await env.DB.prepare(
+    "INSERT INTO zkusebni_doba (uzivatel_id, konec, zapsano) VALUES (?, ?, unixepoch()) " +
+    "ON CONFLICT(uzivatel_id) DO UPDATE SET konec = excluded.konec, zapsano = excluded.zapsano " +
+    "WHERE zkusebni_doba.konec != excluded.konec"
+  ).bind(data.uzivatel.id, konec).run();
+}
+
+async function stavUkazky(context) {
+  const { env, data, request } = context;
+  const radek = await env.DB.prepare(
+    "SELECT po FROM ukazkova_data WHERE uzivatel_id = ?"
+  ).bind(data.uzivatel.id).first();
+  if (radek) return "nahrana";
+  // Offered only where the product ships sample data (play/ukazka.json,
+  // published as /ukazka.json). The product itself decides WHEN to show the
+  // button — in its empty state; this only says whether it can work.
+  const soubor = await env.ASSETS.fetch(new URL("/ukazka.json", request.url));
+  return soubor.ok ? "nabidka" : null;
+}
+
+async function sJa(context, odpoved) {
+  const { data } = context;
+  if (!data.uzivatel || String(data.uzivatel.email || "").endsWith(UKAZKOVY_UCET)) return odpoved;
+  try {
+    await zapisZkusebni(context);
+  } catch {
+    // Before the 0920 migration, or a product state of an odd shape.
+  }
+  let ukazka = null;
+  try {
+    ukazka = await stavUkazky(context);
+  } catch {
+    // Same: no table yet means no sample data, not a broken /api/ja.
+  }
+  if (!ukazka) return odpoved;
+  const nova = new Response(odpoved.body, odpoved);
+  nova.headers.set("X-SimteGen-Ukazkova-Data", ukazka);
+  return nova;
+}
+
 export async function onRequest(context) {
   const { request } = context;
   const cesta = new URL(request.url).pathname;
@@ -101,6 +167,13 @@ export async function onRequest(context) {
     await zapis(context, kopie, odkaz, odpoved);
   } catch {
     // See the header: never the customer's problem.
+  }
+  if (request.method === "GET" && cesta === "/api/ja" && odpoved.ok) {
+    try {
+      return await sJa(context, odpoved);
+    } catch {
+      // The product's answer, untouched, rather than none.
+    }
   }
   return odpoved;
 }
