@@ -168,7 +168,23 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
      se neukládá.
    - `overeni.js`, `navsteva.js` a `chyba-stranky.js` jsou soubory šablony.
      Opravy je potřeba převzít i do šablony, jinak je příští obnova
-     přepíše.
+     přepíše. U `chyba-stranky.js` se to po první opravě skutečně stalo.
+   - *Druhé kolo recenze:* pojistky pro veřejné zapisující endpointy
+     (`/api/navsteva`, `/api/chyba-stranky`, `/api/prihlaseni`) teď drží
+     i produktový `functions/_middleware.js`, který obnova šablony
+     nepřepisuje. `/api/prihlaseni` navíc přijímá jen požadavek z vlastní
+     stránky a nejvýš 10 požadavků za hodinu z jedné IP adresy, a to tam,
+     kde se e-maily skutečně posílají. Vývojové nasazení posílá odkaz
+     v odpovědi, takže z něj spam nevznikne. Celkový denní strop odkazů
+     jsem nepřidal: jeden útočník by jím zablokoval přihlášení všem.
+   - *Staré řádky týmu:* migrace `0009_clenove_bez_prihlaseni.sql` vrací na
+     pozvánku řádky adres, které se nikdy nepřihlásily (`UPDATE … WHERE
+     email NOT IN (SELECT email FROM uzivatele)`). **Mění existující data,
+     proto ji musí podepsat majitel** (`py main.py --schval-migraci 0009`
+     nebo ARGO). Bez podpisu CI nepustí PR dál. Recenzentovu alternativu
+     bez UPDATE (porovnat `clenove.vytvoreno` s `uzivatele.vytvoreno`) jsem
+     nepoužil: útočníkův řádek vzniká dřív, než se oběť poprvé přihlásí,
+     takže by jí prošel.
 9. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
    `vykresli_napovedu.py`, `vykresli_seo.py`) ani kontroly stavitel
    nespustil.** Prostředí spuštění Pythonu i Node odmítá. Musí je pustit

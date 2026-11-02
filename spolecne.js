@@ -331,7 +331,8 @@ export function bezDiakritiky(text) {
 // An invitation is an offer, not a claim on somebody else's warehouse — and
 // it counts only once the invited person accepted it themselves (clenove.
 // prijato, migration 0008). An address typed in by a správce alone moves
-// nobody anywhere.
+// nobody anywhere — for rows written before 0008 that holds once 0009 (the
+// owner-approved clean-up of rows for addresses that never signed in) ran.
 export const ROLE = ["spravce", "mechanik", "cteni"];
 
 // Does this account run a shop of its own? nastaveni_servisu deliberately does

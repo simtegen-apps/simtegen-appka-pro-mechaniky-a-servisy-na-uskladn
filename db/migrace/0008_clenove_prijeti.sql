@@ -9,8 +9,9 @@
 -- rows only.
 --
 -- DEFAULT 1 on purpose: the colleagues who already work in a shop keep their
--- access without an UPDATE of existing rows. Only rows inserted from now on
--- carry prijato = 0, written explicitly by the handler.
+-- access. Only rows inserted from now on carry prijato = 0, written
+-- explicitly by the handler. Old rows for addresses that never signed in are
+-- turned back into invitations by 0009 (owner-approved, it rewrites data).
 ALTER TABLE clenove ADD COLUMN prijato INTEGER NOT NULL DEFAULT 1;
 
 -- A fixed one-hour window of invitations per shop (functions/api/clenove.js):

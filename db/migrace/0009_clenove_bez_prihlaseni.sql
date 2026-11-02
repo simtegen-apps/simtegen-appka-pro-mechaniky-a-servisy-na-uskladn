@@ -1,0 +1,14 @@
+-- Old team rows that nobody ever confirmed become invitations again.
+--
+-- 0008 added clenove.prijato with DEFAULT 1, so every row written before it
+-- counts as accepted — including a row a správce typed in for an address
+-- whose owner has never signed in. Under the old code such a row would move
+-- that person into the správce's shop at their very first login, without
+-- them agreeing to anything. A colleague who already signed in has an
+-- account (uzivatele) and keeps working as before; for everyone else the
+-- row becomes an invitation that they accept themselves on the Dnes screen
+-- (POST /api/clenove {akce: "prijmout"}).
+--
+-- Rewrites existing data, so it runs only with the owner's signature
+-- (kontrola_migraci.py, db/migrace/schvalene.json).
+UPDATE clenove SET prijato = 0 WHERE email NOT IN (SELECT email FROM uzivatele);
