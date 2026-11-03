@@ -185,7 +185,16 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
      bez UPDATE (porovnat `clenove.vytvoreno` s `uzivatele.vytvoreno`) jsem
      nepoužil: útočníkův řádek vzniká dřív, než se oběť poprvé přihlásí,
      takže by jí prošel.
-9. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
+9. **Limit e-mailů z aplikace (třetí kolo recenze).** „Poslat si seznam
+   e-mailem“ (`POST /api/priprava`) jde nejvýš 5× za den na provozovnu.
+   Pevné okno je ve dvou nových sloupcích `nastaveni_servisu`, migrace
+   `0010_limit_pripravy.sql` jen přidává sloupce. Pokus se počítá ještě
+   před odesláním, aby limit nešel obejít neúspěšným odesíláním.
+   Objednávka předplatného (`POST /api/objednavka`, dva e-maily) jde nejvýš
+   3× za 24 hodin na provozovnu, zrušené se počítají také. Nad limit
+   vrací 429 s českou větou. Vývojová nasazení bez odesílání e-mailů
+   seznam přípravy jen ukážou, nic neposílají a nic nepočítají.
+10. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
    `vykresli_napovedu.py`, `vykresli_seo.py`) ani kontroly stavitel
    nespustil.** Prostředí spuštění Pythonu i Node odmítá. Musí je pustit
    člověk před CI. Do generovaných souborů se ručně nesahalo.

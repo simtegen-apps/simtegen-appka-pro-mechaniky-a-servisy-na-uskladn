@@ -277,6 +277,47 @@ odmítne. Místo nich `simtegen.js`:
 Nadpis panelu je otázka nebo věta, tlačítko říká, co udělá („Smazat účet“,
 ne „OK“).
 
+## Formuláře
+
+Formulář je `<form data-formular>` (nebo `SimteGen.formular(form)`), pole
+je `.pole` s `<label>` nad vstupem. Pravidla jsou obyčejné HTML:
+`required`, `type="email"`, `min`/`max`, `minlength`, `pattern`, `step`.
+Vlastní věta jde do `data-chyba`. O zbytek se postará `simtegen.js`:
+
+- chyba se ukáže, až zákazník pole **opustí**, a to **pod polem**
+  (`.pole.chybne` + `.chyba`, čtečka ji přečte). Při psaní nikoho
+  neokřikuje, oprava chybu smaže hned;
+- odeslání s chybou nic nepošle, kurzor skočí na **první chybné pole**
+  a nic z vyplněného nezmizí. Vlastní obsluha `submit` se zavolá jen pro
+  platný formulář;
+- chybu ze serveru ukaž u pole, kterého se týká:
+
+  ```js
+  const form = document.getElementById("nova-zakazka");
+  const f = SimteGen.formular(form);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const odpoved = await fetch("/api/zakazky", { method: "POST", body: … });
+    if (odpoved.status === 409) return f.chyba("kod", "Tenhle kód už má jiná zakázka.");
+    f.hotovo();          // smaže koncept a značky chyb
+  });
+  ```
+
+**Koncept** (rozepsané se neztratí): `<form data-formular data-koncept="zakazka">`.
+`simtegen.js` drží rozepsaný obsah v prohlížeči a při dalším otevření ho
+vrátí (nejvýš 30 dní); hesla, soubory a pole s `data-bez-konceptu` nikdy.
+Je to ukládání v prohlížeči, takže patří do manifestu — CI `data-koncept`
+bez něj odmítne:
+
+```json
+"uloziste_v_prohlizeci": [{"nazev": "koncept-zakazka", "typ": "localStorage",
+  "ucel": "rozepsaný formulář se drží v zařízení, aby se při zavření aplikace nebo výpadku signálu neztratil",
+  "trvani": "do odeslání formuláře, nejvýš 30 dní"}]
+```
+
+Koncept patří k delším formulářům, které se vyplňují v terénu (zakázka,
+měření, protokol). Přihlášení, hledání a krátká pole ho nepotřebují.
+
 ## Doporučit kolegovi
 
 Nejlepší další zákazník je kolega z oboru. Produkt s účty má na obrazovce
@@ -371,6 +412,8 @@ co uvidí zákazník, ne jen kód.
 - Přeplácaná obrazovka: víc prvků, než potřebuje jedna věc, kvůli které
   existuje; ozdoby, štítky nad nadpisy, karta v kartě, stěna tlačítek a polí.
 - Chybějící stav (prázdný, načítání, chyba, úspěch).
+- Formulář, který chybu ukáže až po odeslání, nad stránkou místo u pole,
+  nebo po chybě smaže, co zákazník vyplnil (viz Formuláře).
 - Detail bez informace (dekorace, vymyšlená čísla, číslo jen pro efekt).
 - Produkt, kde zákazník něco skládá, a výkres je malý obrázek v kartě
   místo obrazovky typu nástroj — nebo výkres bez kót.

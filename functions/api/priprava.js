@@ -13,6 +13,9 @@ import {
 } from "../../spolecne.js";
 import { vyzadujPredplatne } from "../../predplatne.js";
 
+// E-mails with the preparation list per shop per day (see onRequestPost).
+const SEZNAMU_ZA_DEN = 5;
+
 const NAZVY_UKONU = {
   prezuti: "přezutí",
   uskladneni: "uskladnění",
@@ -90,6 +93,23 @@ export async function onRequestPost(context) {
       upozorneni: "Odesílání e-mailů není na tomto nasazení nastavené — "
         + "níže je náhled toho, co by přišlo do e-mailu.",
     });
+  }
+
+  // At most SEZNAMU_ZA_DEN mails per shop in a fixed one-day window
+  // (migration 0010): counted before sending, so a failed send still counts
+  // — a loop must not get around it by making Resend fail.
+  const nyni = ted();
+  const okno = await env.DB.prepare(
+    "UPDATE nastaveni_servisu SET " +
+    "priprava_pocet = CASE WHEN priprava_od > ? THEN priprava_pocet + 1 ELSE 1 END, " +
+    "priprava_od = CASE WHEN priprava_od > ? THEN priprava_od ELSE ? END " +
+    "WHERE uzivatel_id = ? RETURNING priprava_pocet"
+  ).bind(nyni - DEN, nyni - DEN, nyni, data.servis.id).first();
+  if (okno && okno.priprava_pocet > SEZNAMU_ZA_DEN) {
+    return json({
+      chyba: `Seznam jste dnes poslali už ${SEZNAMU_ZA_DEN}×. Další půjde odeslat zítra; `
+        + "do té doby ho máte tady na obrazovce nebo v připomínce do kalendáře.",
+    }, 429);
   }
 
   const odpoved = await fetch("https://api.resend.com/emails", {

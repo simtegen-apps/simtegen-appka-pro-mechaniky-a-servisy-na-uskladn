@@ -10,7 +10,9 @@
  * než obsah. Když člověk do aplikace přichází zvenku, logo se poskládá
  * animací (1,75 s); mezi stránkami produktu už jen hotová značka. Zmizí po
  * načtení stránky, nejdřív po animaci, jinak za 700 ms (aby nebliklo),
- * a nejpozději za 2,5 s (pojistka, kdyby se něco zaseklo). Nic neukládá;
+ * a nejpozději za 2,5 s (pojistka, kdyby se něco zaseklo). Nic neukládá
+ * (jedinou výjimkou je koncept formuláře, o který si produkt výslovně řekne
+ * atributem data-koncept a má ho v manifestu — viz Formuláře níž);
  * posílá jen hlášení chyby, které zákazník sám odešle (níž), a to jen na
  * vlastní /api/ produktu. Název produktu a verze se čtou z <meta>:
  *   <meta name="application-name" content="Pneusklad">
@@ -1038,9 +1040,223 @@
     doporucit(tlacitko.getAttribute("data-doporucit"));
   });
 
+  /* ── Formuláře ─────────────────────────────────────────────────────
+   * SimteGen.formular(form), nebo jen <form data-formular>. Chyba patří
+   * k poli, ne do okna nad stránkou: pole se kontroluje, až ho zákazník
+   * opustí (dřív by ho okřikovalo uprostřed psaní), chyba je pod ním
+   * a čtečka ji přečte (aria-describedby, aria-invalid), oprava ji smaže
+   * hned při psaní. Odeslání s chybou nic nepošle, skočí na první chybné
+   * pole a nic z vyplněného nezmizí. Pravidla jsou obyčejné HTML
+   * (required, type, min, max, minlength, maxlength, pattern, step);
+   * vlastní věta jde do data-chyba. Chybu ze serveru ukáže f.chyba(jmeno,
+   * text) u pole, kterého se týká.
+   *
+   * Koncept: jen <form data-koncept="zakazka">. Rozepsaný obsah se drží
+   * v prohlížeči (localStorage), aby ho nesmazalo zavření aplikace ani
+   * výpadek signálu, a vrátí se při dalším otevření — nejvýš 30 dní. Je to
+   * ukládání v prohlížeči, takže ho produkt musí mít v manifestu
+   * (uloziste_v_prohlizeci): CI data-koncept bez deklarace odmítne. Hesla,
+   * soubory a pole s data-bez-konceptu se neukládají nikdy. Po úspěšném
+   * uložení na server f.hotovo() koncept smaže.
+   */
+  var KONCEPT_DNI = 30;
+
+  function hlaskaPole(pole) {
+    var v = pole.validity;
+    if (v.customError) return pole.validationMessage;
+    var vlastni = pole.getAttribute("data-chyba");
+    if (v.valueMissing) {
+      if (vlastni) return vlastni;
+      if (pole.type === "checkbox") return "Zaškrtněte prosím.";
+      if (pole.tagName === "SELECT" || pole.type === "radio") return "Vyberte prosím.";
+      return "Vyplňte prosím.";
+    }
+    if (vlastni) return vlastni;
+    if (v.typeMismatch && pole.type === "email") return "Zadejte e-mail ve tvaru jmeno@firma.cz.";
+    if (v.typeMismatch && pole.type === "url") return "Zadejte celou webovou adresu.";
+    if (v.badInput) return pole.type === "number" ? "Zadejte číslo." : "Zkontrolujte hodnotu.";
+    if (v.tooShort) return "Aspoň " + pole.minLength + " znaků.";
+    if (v.tooLong) return "Nejvýš " + pole.maxLength + " znaků.";
+    if (v.rangeUnderflow) return "Nejméně " + cislo(pole.min) + ".";
+    if (v.rangeOverflow) return "Nejvýš " + cislo(pole.max) + ".";
+    if (v.stepMismatch) {
+      var krok = Number(pole.step);
+      return krok === 1 ? "Zadejte celé číslo." : "Zadejte násobek " + cislo(krok) + ".";
+    }
+    if (v.patternMismatch) return "Zkontrolujte tvar.";
+    return "Zkontrolujte hodnotu.";
+  }
+
+  var poradiChyby = 0;
+
+  function ukazChybu(pole, text) {
+    var obal = pole.closest(".pole") || pole.parentNode;
+    var hlaska = obal.querySelector(".chyba[data-sg-chyba]");
+    if (!text) {
+      if (hlaska) hlaska.parentNode.removeChild(hlaska);
+      if (obal.classList) obal.classList.remove("chybne");
+      pole.removeAttribute("aria-invalid");
+      var zbyle = (pole.getAttribute("aria-describedby") || "").split(" ").filter(function (id) {
+        return id && id.indexOf("sg-chyba-") !== 0;
+      });
+      if (zbyle.length) pole.setAttribute("aria-describedby", zbyle.join(" "));
+      else pole.removeAttribute("aria-describedby");
+      return;
+    }
+    if (!hlaska) {
+      hlaska = prvek("p", "chyba");
+      hlaska.setAttribute("data-sg-chyba", "");
+      hlaska.setAttribute("aria-live", "polite");
+      hlaska.id = "sg-chyba-" + (++poradiChyby);
+      obal.appendChild(hlaska);
+      var popis = (pole.getAttribute("aria-describedby") || "").split(" ").filter(Boolean);
+      popis.push(hlaska.id);
+      pole.setAttribute("aria-describedby", popis.join(" "));
+    }
+    hlaska.textContent = text;
+    if (obal.classList) obal.classList.add("chybne");
+    pole.setAttribute("aria-invalid", "true");
+  }
+
+  function poleFormulare(form) {
+    return Array.prototype.filter.call(form.elements, function (el) {
+      return el.willValidate && !el.disabled && el.type !== "submit" && el.type !== "button";
+    });
+  }
+
+  function zkontrolujPole(pole) {
+    var ok = pole.checkValidity();
+    ukazChybu(pole, ok ? "" : hlaskaPole(pole));
+    return ok;
+  }
+
+  function klicKonceptu(form) {
+    return "sg-koncept:" + location.pathname + ":" + form.getAttribute("data-koncept");
+  }
+
+  function doKonceptu(el) {
+    return el.name && !el.disabled && !el.hasAttribute("data-bez-konceptu") &&
+      ["password", "file", "hidden", "submit", "button", "reset"].indexOf(el.type) < 0;
+  }
+
+  function ulozKoncept(form) {
+    var data = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!doKonceptu(el)) return;
+      if (el.type === "checkbox") data[el.name + (el.value && el.value !== "on" ? "=" + el.value : "")] = el.checked;
+      else if (el.type === "radio") { if (el.checked) data[el.name] = el.value; }
+      else data[el.name] = el.value;
+    });
+    try {
+      localStorage.setItem(klicKonceptu(form), JSON.stringify({ kdy: Date.now(), data: data }));
+    } catch (e) { /* full or blocked storage: the draft is a nicety */ }
+  }
+
+  function obnovKoncept(form) {
+    var ulozeno = null;
+    try { ulozeno = JSON.parse(localStorage.getItem(klicKonceptu(form)) || "null"); } catch (e) { ulozeno = null; }
+    if (!ulozeno || !ulozeno.data) return false;
+    if (Date.now() - (ulozeno.kdy || 0) > KONCEPT_DNI * 86400000) {
+      zahodKoncept(form);
+      return false;
+    }
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!doKonceptu(el)) return;
+      var klic = el.type === "checkbox" && el.value && el.value !== "on" ? el.name + "=" + el.value : el.name;
+      if (!(klic in ulozeno.data)) return;
+      if (el.type === "checkbox") el.checked = !!ulozeno.data[klic];
+      else if (el.type === "radio") el.checked = ulozeno.data[klic] === el.value;
+      else el.value = ulozeno.data[klic];
+      // The product's own listeners (live totals, previews) see the value.
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    return true;
+  }
+
+  function zahodKoncept(form) {
+    try { localStorage.removeItem(klicKonceptu(form)); } catch (e) { /* nothing to drop */ }
+  }
+
+  function formular(form) {
+    if (!form || form.tagName !== "FORM") return null;
+    if (form.sgFormular) return form.sgFormular;
+    form.noValidate = true;
+    var koncept = form.hasAttribute("data-koncept");
+    var casovac = null;
+
+    function kontroluj() {
+      var prvniChybne = null;
+      poleFormulare(form).forEach(function (pole) {
+        if (!zkontrolujPole(pole) && !prvniChybne) prvniChybne = pole;
+      });
+      if (prvniChybne) {
+        prvniChybne.focus();
+        if (prvniChybne.scrollIntoView) prvniChybne.scrollIntoView({ block: "center" });
+      }
+      return !prvniChybne;
+    }
+
+    form.addEventListener("focusout", function (e) {
+      var pole = e.target;
+      if (!pole.willValidate || pole.type === "submit" || pole.type === "button") return;
+      pole.setAttribute("data-sg-opusteno", "");
+      zkontrolujPole(pole);
+    });
+    function priZmene(e) {
+      var pole = e.target;
+      if (pole.validity && pole.validity.customError) pole.setCustomValidity("");
+      if (pole.hasAttribute && pole.hasAttribute("aria-invalid")) zkontrolujPole(pole);
+      else if (e.type === "change" && pole.hasAttribute && pole.hasAttribute("data-sg-opusteno")) zkontrolujPole(pole);
+      if (koncept) {
+        clearTimeout(casovac);
+        casovac = setTimeout(function () { ulozKoncept(form); }, 400);
+      }
+    }
+    form.addEventListener("input", priZmene);
+    form.addEventListener("change", priZmene);
+    // Capture: at the form itself a capturing listener runs before the
+    // product's own submit handler, so an invalid form never reaches it.
+    form.addEventListener("submit", function (e) {
+      if (!kontroluj()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    var api = {
+      kontroluj: kontroluj,
+      chyba: function (jmeno, text) {
+        var pole = form.elements[jmeno];
+        if (!pole || !pole.setCustomValidity) return false;
+        pole.setCustomValidity(text);
+        ukazChybu(pole, text);
+        pole.focus();
+        return true;
+      },
+      hotovo: function () {
+        clearTimeout(casovac);
+        zahodKoncept(form);
+        poleFormulare(form).forEach(function (pole) {
+          pole.removeAttribute("data-sg-opusteno");
+          ukazChybu(pole, "");
+        });
+      },
+      obnoveno: koncept ? obnovKoncept(form) : false,
+    };
+    form.sgFormular = api;
+    return api;
+  }
+
+  function napojFormulare() {
+    Array.prototype.forEach.call(doc.querySelectorAll("form[data-formular], form[data-koncept]"), formular);
+  }
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", napojFormulare);
+  else napojFormulare();
+
   window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno, tisk: tisk,
     cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet,
-    potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit };
+    potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular };
 
   /* Google Play v aplikaci — nákup předplatného a „Vyzkoušet ukázku“ —
    * žije v play.js: jen v produktu s modulem aplikace (<html data-aplikace>)

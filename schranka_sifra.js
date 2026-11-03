@@ -80,11 +80,17 @@ async function ucetHlaseni(env, id) {
     const ted = Math.floor(Date.now() / 1000);
     let plati = false;
     try {
-      const p = await env.DB.prepare("SELECT plati_do FROM predplatne WHERE uzivatel_id = ?")
-        .bind(u.uzivatel_id).first();
+      // Paying = a running subscription AND at least one payment. A row in
+      // predplatne alone is not money: an extended trial, a tariff carried
+      // over when subscriptions came in, and every demo account have one —
+      // and the support agent weighs a paying customer's report most.
+      const p = await env.DB.prepare(
+        "SELECT p.plati_do FROM predplatne p WHERE p.uzivatel_id = ? " +
+        "AND EXISTS (SELECT 1 FROM platby x WHERE x.uzivatel_id = p.uzivatel_id)"
+      ).bind(u.uzivatel_id).first();
       plati = Boolean(p && p.plati_do && p.plati_do > ted);
     } catch {
-      plati = false; // a product without the subscription module
+      plati = false; // a product without the subscription or payment module
     }
     const digest = await crypto.subtle.digest(
       "SHA-256", new TextEncoder().encode(`${env.GITHUB_REPO || ""}:ucet:${u.uzivatel_id}`));

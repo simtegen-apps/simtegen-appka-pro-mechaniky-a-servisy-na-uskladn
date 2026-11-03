@@ -67,6 +67,9 @@ ULOZISTE_VZORY = (
     "sessionStorage",
     "indexedDB",
     "document.cookie",
+    # A form draft simtegen.js keeps in the browser (SimteGen.formular):
+    # the product asks for it with this attribute, so the product declares it.
+    "data-koncept",
 )
 
 _CREATE_TABLE = re.compile(
@@ -116,6 +119,11 @@ def _zkontroluj_uloziste(manifest: dict) -> list[str]:
         return []
     chyby: list[str] = []
     for path in _soubory(WEB, (".html", ".htm", ".js", ".mjs")):
+        # simtegen.js (template infra) stores only the drafts a product asks
+        # for with data-koncept — that attribute is what the scan looks for
+        # in the product's own files.
+        if path.name == "simtegen.js":
+            continue
         for number, line in enumerate(
             path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
         ):
