@@ -177,14 +177,20 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
      kde se e-maily skutečně posílají. Vývojové nasazení posílá odkaz
      v odpovědi, takže z něj spam nevznikne. Celkový denní strop odkazů
      jsem nepřidal: jeden útočník by jím zablokoval přihlášení všem.
-   - *Staré řádky týmu:* migrace `0009_clenove_bez_prihlaseni.sql` vrací na
-     pozvánku řádky adres, které se nikdy nepřihlásily (`UPDATE … WHERE
-     email NOT IN (SELECT email FROM uzivatele)`). **Mění existující data,
-     proto ji musí podepsat majitel** (`py main.py --schval-migraci 0009`
-     nebo ARGO). Bez podpisu CI nepustí PR dál. Recenzentovu alternativu
-     bez UPDATE (porovnat `clenove.vytvoreno` s `uzivatele.vytvoreno`) jsem
-     nepoužil: útočníkův řádek vzniká dřív, než se oběť poprvé přihlásí,
-     takže by jí prošel.
+   - *Staré řádky týmu:* první verze migrace `0009` řešila staré řádky
+     přes `UPDATE` a CI ji bez podpisu majitele odmítlo
+     (`kontrola_migraci.py`). Teď `0009_clenove_bez_prihlaseni.sql` nic
+     existujícího nemění. Zapíše čas svého provedení (agregát
+     `stav_migraci`: jen název migrace a čas) a přidá `clenove.prijato_cas`.
+     Pravidlo `CLENSTVI_PRIJATO` ve `spolecne.js` pak bere řádek jako
+     přijatý, jen když ho pozvaný přijal v aplikaci, nebo když jde o starý
+     řádek člověka, jehož účet existoval už při migraci. Výsledek je stejný
+     jako u `UPDATE … WHERE email NOT IN (SELECT email FROM uzivatele)`, ale
+     bez přepisu dat a bez podpisu. Kdo se dřív nikdy nepřihlásil, uvidí
+     starý řádek jako pozvánku na Dnes. Recenzentovu alternativu
+     (porovnat `clenove.vytvoreno` s `uzivatele.vytvoreno`) jsem nepoužil:
+     útočníkův řádek vzniká dřív, než se oběť poprvé přihlásí, takže by
+     jí prošel.
 9. **Limit e-mailů z aplikace (třetí kolo recenze).** „Poslat si seznam
    e-mailem“ (`POST /api/priprava`) jde nejvýš 5× za den na provozovnu.
    Pevné okno je ve dvou nových sloupcích `nastaveni_servisu`, migrace

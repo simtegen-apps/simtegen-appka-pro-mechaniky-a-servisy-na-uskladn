@@ -21,7 +21,8 @@
 // administer.
 
 import {
-  json, maVlastniData, nactiNastaveni, ocisti, odepriSpravu, smiSpravovat, ted, ROLE,
+  json, maVlastniData, nactiNastaveni, ocisti, odepriSpravu, smiSpravovat, ted,
+  CLENSTVI_NEPRIJATO, CLENSTVI_PRIJATO, ROLE,
 } from "../../spolecne.js";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
@@ -43,17 +44,21 @@ export async function onRequestGet(context) {
   const { env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
 
+  // prijato is the EFFECTIVE state (spolecne.CLENSTVI_PRIJATO): an old row
+  // for someone who never signed in shows as waiting, like a new invitation.
   const clenove = await env.DB.prepare(
-    "SELECT id, email, role, prijato, vytvoreno FROM clenove WHERE uzivatel_id = ? ORDER BY email"
+    `SELECT c.id, c.email, c.role, CASE WHEN ${CLENSTVI_PRIJATO} THEN 1 ELSE 0 END AS prijato, ` +
+    "c.vytvoreno FROM clenove c LEFT JOIN uzivatele u ON u.email = c.email " +
+    "WHERE c.uzivatel_id = ? ORDER BY c.email"
   ).bind(data.servis.id).all();
 
   // mimo-uzivatele: the invitations addressed to the signed-in person live
   // in other shops' rows; only the shop's name goes out, nothing else of it.
   const pozvanky = await env.DB.prepare(
-    "SELECT c.id, c.role, n.nazev FROM clenove c " +
+    "SELECT c.id, c.role, n.nazev FROM clenove c JOIN uzivatele u ON u.id = ? " +
     "LEFT JOIN nastaveni_servisu n ON n.uzivatel_id = c.uzivatel_id " +
-    "WHERE c.email = ? AND c.prijato = 0 AND c.uzivatel_id != ? ORDER BY c.id"
-  ).bind(data.uzivatel.email, data.uzivatel.id).all();
+    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO} ORDER BY c.id`
+  ).bind(data.uzivatel.id).all();
 
   return json({
     clenove: clenove.results,
@@ -87,8 +92,9 @@ export async function onRequestPost(context) {
   if (akce === "odmitnout") {
     // mimo-uzivatele: the invitation sits in the inviting shop's rows.
     await env.DB.prepare(
-      "DELETE FROM clenove WHERE id = ? AND email = ? AND prijato = 0 AND uzivatel_id != ?"
-    ).bind(Number(telo.id), data.uzivatel.email, data.uzivatel.id).run();
+      "DELETE FROM clenove WHERE id IN (SELECT c.id FROM clenove c JOIN uzivatele u ON u.id = ? " +
+      `WHERE c.id = ? AND c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO})`
+    ).bind(data.uzivatel.id, Number(telo.id)).run();
     return json({ stav: "odmitnuto" });
   }
   if (akce === "odejit") {
@@ -172,8 +178,9 @@ async function prijmout(env, data, id) {
   // mimo-uzivatele: the invitation is a row of the inviting shop, found by
   // the signed-in person's own address.
   const pozvanka = await env.DB.prepare(
-    "SELECT id, uzivatel_id FROM clenove WHERE id = ? AND email = ? AND prijato = 0 AND uzivatel_id != ?"
-  ).bind(id, data.uzivatel.email, data.uzivatel.id).first();
+    "SELECT c.id, c.uzivatel_id FROM clenove c JOIN uzivatele u ON u.id = ? " +
+    `WHERE c.id = ? AND c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO}`
+  ).bind(data.uzivatel.id, id).first();
   if (!pozvanka) return json({ chyba: "Pozvánka nebyla nalezena." }, 404);
 
   // Own records win (nactiKontext): accepting would change nothing, and
@@ -188,8 +195,9 @@ async function prijmout(env, data, id) {
   // a second one would be silently ignored rather than offering a choice.
   // mimo-uzivatele: memberships of this address in any shop.
   const jinde = await env.DB.prepare(
-    "SELECT id FROM clenove WHERE email = ? AND prijato = 1 AND uzivatel_id != ?"
-  ).bind(data.uzivatel.email, data.uzivatel.id).first();
+    "SELECT c.id FROM clenove c JOIN uzivatele u ON u.id = ? " +
+    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_PRIJATO}`
+  ).bind(data.uzivatel.id).first();
   if (jinde) {
     return json({
       chyba: "Už pracujete v jiném servisu. Nejdřív z něj odejděte (Nastavení → Účet a data).",
@@ -197,7 +205,7 @@ async function prijmout(env, data, id) {
   }
 
   await env.DB.prepare(
-    "UPDATE clenove SET prijato = 1 WHERE uzivatel_id = ? AND id = ? AND email = ?"
-  ).bind(pozvanka.uzivatel_id, pozvanka.id, data.uzivatel.email).run();
+    "UPDATE clenove SET prijato = 1, prijato_cas = ? WHERE uzivatel_id = ? AND id = ? AND email = ?"
+  ).bind(ted(), pozvanka.uzivatel_id, pozvanka.id, data.uzivatel.email).run();
   return json({ stav: "prijato" });
 }

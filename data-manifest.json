@@ -117,7 +117,7 @@
     {
       "entita": "clenove",
       "ucel": "přístup dalších pracovníků servisu do aplikace a jejich oprávnění",
-      "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), zda pracovník pozvánku přijal, čas vytvoření záznamu",
+      "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), zda a kdy pracovník pozvánku přijal, čas vytvoření záznamu",
       "retence": "do odebrání pracovníka v aplikaci nebo do smazání účtu",
       "play_typy": [
         "email"
@@ -224,7 +224,8 @@
     }
   ],
   "agregaty": [
-    "navstevy"
+    "navstevy",
+    "stav_migraci"
   ],
   "sluzby_treti_strany": [
     {

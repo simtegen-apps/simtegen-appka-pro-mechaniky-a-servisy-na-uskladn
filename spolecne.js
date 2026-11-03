@@ -331,9 +331,23 @@ export function bezDiakritiky(text) {
 // An invitation is an offer, not a claim on somebody else's warehouse — and
 // it counts only once the invited person accepted it themselves (clenove.
 // prijato, migration 0008). An address typed in by a správce alone moves
-// nobody anywhere — for rows written before 0008 that holds once 0009 (the
-// owner-approved clean-up of rows for addresses that never signed in) ran.
+// nobody anywhere — rows written before 0008 included (rule below, 0009).
 export const ROLE = ["spravce", "mechanik", "cteni"];
+
+// Is row c (clenove) an accepted membership of person u (uzivatele, the
+// address the row names)? Accepted in the app (prijato_cas), or an old row
+// from before 0008 whose person already had an account when 0009 ran — the
+// colleagues who were working keep working, a row for someone who had
+// never signed in is an invitation like any new one. With u missing (no
+// account yet) the comparison is NULL, i.e. not accepted. Plain SQL,
+// shared by the resolver and functions/api/clenove.js.
+export const CLENSTVI_PRIJATO =
+  "(c.prijato = 1 AND (c.prijato_cas IS NOT NULL OR u.vytvoreno < " +
+  "(SELECT provedeno FROM stav_migraci WHERE nazev = '0009_clenove_bez_prihlaseni')))";
+// The opposite: an invitation still waiting for its person.
+export const CLENSTVI_NEPRIJATO =
+  "(c.prijato = 0 OR (c.prijato_cas IS NULL AND NOT (u.vytvoreno < " +
+  "(SELECT provedeno FROM stav_migraci WHERE nazev = '0009_clenove_bez_prihlaseni'))))";
 
 // Does this account run a shop of its own? nastaveni_servisu deliberately does
 // not count: nactiNastaveni() creates that row on first read, so every account
@@ -353,9 +367,10 @@ export async function nactiKontext(env, uzivatel) {
   // mimo-uzivatele: membership is looked up by the signed-in person's own
   // address across shops — that is what the row is for.
   const clenstvi = await env.DB.prepare(
-    "SELECT uzivatel_id, role FROM clenove WHERE email = ? AND prijato = 1 " +
-    "AND uzivatel_id != ? ORDER BY id LIMIT 1"
-  ).bind(uzivatel.email, uzivatel.id).first();
+    "SELECT c.uzivatel_id, c.role FROM clenove c JOIN uzivatele u ON u.id = ? " +
+    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_PRIJATO} ` +
+    "ORDER BY c.id LIMIT 1"
+  ).bind(uzivatel.id).first();
 
   // No accepted membership elsewhere: own shop. A row pointing back at this
   // very account is skipped by the query, so nobody can be demoted inside
