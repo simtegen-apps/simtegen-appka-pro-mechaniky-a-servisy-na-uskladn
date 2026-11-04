@@ -188,8 +188,36 @@ Na žádné šířce nic nepřetéká vodorovně; tabulky jsou v `.tabulka-obal`
 | `.prazdno`, `.kostra`, `.hlaska`, `.toast`, `.panel` | stavy a překryvy |
 | `.jen-telefon`, `.jen-siroke` | ukázat jen na telefonu / jen na tabletu a výš |
 
-Ikony: inline SVG, tah 1,6, mřížka 24, `stroke="currentColor"`, bez výplně.
-Žádná emoji, žádné ikonové fonty, žádné externí knihovny.
+Ikony: ze sady `web/ikony.svg` (viz Ikony níž).
+
+## Ikony (`web/ikony.svg`)
+
+Jedna sada pro všechny appky, aby stejná věc vypadala všude stejně (Nahlásit
+chybu byla vlajka, bublina i trojúhelník). Mřížka 24, tah 1,6, bez výplně,
+barva textu. Sada je infrastruktura šablony — stavba ji obnoví, v produktu
+se neupravuje.
+
+```html
+<a href="#sklad"><svg aria-hidden="true"><use href="ikony.svg#sklad"/></svg>Sklad</a>
+<button class="tlacitko vedlejsi" type="button"><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#tisk"/></svg>Tisk</button>
+```
+
+`.ikonka` velikost písma vedle textu; navigace, lišta nástrojů a prázdný
+stav (`.ikona-velka`) si ikony velikostí řídí samy. Ikona je vždy
+`aria-hidden` — co tlačítko dělá, říká jeho text (nebo `aria-label`).
+
+| Skupina | Ikony |
+|---|---|
+| Navigace | `prehled` (přehled, domů), `seznam` (seznam), `ucet` (účet), `nastaveni` (nastavení), `nahlasit-chybu` (nahlásit chybu), `napoveda` (nápověda), `odhlasit` (odhlásit), `menu` (menu), `vice` (další volby) |
+| Akce | `pridat` (přidat), `upravit` (upravit), `smazat` (smazat), `hledat` (hledat), `filtr` (filtr), `zavrit` (zavřít), `hotovo` (hotovo, potvrzeno), `zpet` (zpět), `dalsi` (dál, otevřít), `rozbalit` (rozbalit), `obnovit` (obnovit, znovu), `vratit` (vrátit krok), `kopirovat` (kopírovat), `sdilet` (sdílet, doporučit), `stahnout` (stáhnout, export), `nahrat` (nahrát, import), `tisk` (tisk), `foto` (fotka) |
+| Věci | `kalendar` (kalendář, termín), `hodiny` (čas), `sklad` (sklad, krabice), `zakazka` (zakázka), `dokument` (dokument), `penize` (platba, peníze), `graf` (čísla, graf), `telefon` (telefon), `email` (e-mail), `misto` (místo, adresa), `auto` (auto), `naradi` (nářadí, servis), `zamek` (zamčeno, soukromé), `oko` (zobrazit) |
+| Stavy | `varovani` (pozor), `info` (informace), `offline` (bez připojení) |
+
+Co v sadě není (předmět z oboru produktu — pneumatika, skříňka), nakresli
+inline SVG stejným stylem: `viewBox="0 0 24 24" fill="none"
+stroke="currentColor" stroke-width="1.6"`, rovné čáry a kruhy. Žádná emoji,
+žádné ikonové fonty, žádné externí knihovny. CI odmítne odkaz na ikonu,
+která v sadě není (`ikony.svg#neco`).
 
 ## Každá obrazovka má čtyři stavy
 
@@ -200,8 +228,24 @@ Ikony: inline SVG, tah 1,6, mřížka 24, `stroke="currentColor"`, bez výplně.
 3. **Chyba** (`.hlaska.chyba`) — česky, co se stalo a co s tím.
 4. **Úspěch** (`.toast` / `.hlaska.uspech`) — krátce potvrdí.
 
-**První přihlášení** (produkt s účty): prázdný stav hlavní obrazovky má vedle
-hlavní akce `<button type="button" class="tlacitko vedlejsi" data-ukazkova-data>
+**První přihlášení** (produkt s účty): nový účet neotevře prázdnou obrazovku.
+Prázdný stav hlavní obrazovky je **průvodce prvním spuštěním** — dva až čtyři
+(nejlépe tři) kroky z oboru produktu, každý jednou větou a jedním tlačítkem:
+
+```html
+<ol class="pruvodce" data-pruvodce>
+  <li data-krok="servis" aria-current="step">Vyplňte název servisu<button type="button" class="tlacitko">Vyplnit</button></li>
+  <li data-krok="zakaznik">Přidejte prvního zákazníka<button type="button" class="tlacitko">Přidat</button></li>
+  <li data-krok="sada">Uskladněte první sadu pneu<button type="button" class="tlacitko">Uskladnit</button></li>
+</ol>
+```
+
+Které kroky jsou hotové, řekne produkt ze svých dat — `SimteGen.pruvodce(el,
+["servis"])` — nic se neukládá v prohlížeči. Hotové se odškrtnou, aktuální je
+zvýrazněný a jen jeho tlačítko je vidět (jedna hlavní akce — hlídá to už
+`styl.css`, proto má první krok `aria-current="step"` rovnou v HTML); když jsou hotové
+všechny, průvodce zmizí a ukáže se obsah. Pod průvodcem je
+`<button type="button" class="tlacitko vedlejsi" data-ukazkova-data>
 Naplnit ukázkovými daty</button>`. Nahrání dat z `play/ukazka.json`, pruh
 „V účtu máte ukázková data“ a jejich odstranění jedním klepnutím obstará
 `simtegen.js`; tlačítko je vidět, jen když to jde.
@@ -335,10 +379,75 @@ zkopíruje, jinak ho ukáže k ručnímu zkopírování. Nové účty z doporuč
 počítají Metriky (zdroj `doporuceni`), nic se neukládá. Hodnota atributu
 říká, odkud doporučení šlo (`ucet`, `po-ukazce` …).
 
+## Klávesnice a čtečka
+
+Appku musí jít ovládat bez myši a s čtečkou obrazovky — notebook v dílně,
+zákazník, který hůř vidí.
+
+- **Pořadí Tabu je pořadí v HTML**, a to má odpovídat pořadí na obrazovce
+  (shora dolů, zleva doprava). Žádný `tabindex` větší než 0. `tabindex="-1"`
+  jen na prvek, na který skáče fokus skriptem (nadpis obrazovky).
+- **Fokus je vždy vidět.** `styl.css` ho kreslí sám (`:focus-visible`);
+  nikdy `outline: none` bez náhrady. Tab nesmí skončit na neviditelném
+  prvku (skrytý, průhledný, mimo obrazovku).
+- **Panel přes stránku** (detail, filtr, formulář ve vysouvacím panelu)
+  otevírej `SimteGen.panel(el)`. Tab zůstane uvnitř, Escape panel zavře
+  a fokus se vrátí, odkud přišel:
+
+  ```js
+  const p = SimteGen.panel(document.getElementById("detail-sady"), { priZavreni: obnovSeznam });
+  // … p.zavri()
+  ```
+
+  Prvek je vlastní `.panel` produktu s nadpisem; `SimteGen.potvrd`,
+  `zeptej` a hlášení chyby se tak chovají samy.
+- **Výkres čtečkou:** `<svg role="img" aria-label="Kuchyňská linka, stěna 3 600 mm">`
+  a vedle výkresu seznam dílů s rozměry `<ul class="seznam-dilu jen-ctecka">`
+  (`.jen-ctecka` = vidí ho jen čtečka). Seznam se mění s výkresem.
+
+## Rychlost
+
+První obrazovka se na pomalém mobilu (4G na horším konci, 4× pomalejší
+procesor než počítač, prázdná mezipaměť, první návštěva) načte do **2,5 s**.
+Dnešní appky to zvládnou kolem 1,1 s a přenesou 110–150 kB; víc než
+polovinu z toho tvoří písma šablony, takže na vlastní obsah zbývá dost.
+
+- Obrázky v rozměru, ve kterém se ukazují, a komprimované (WebP, SVG).
+  Fotka z telefonu (3–5 MB) na úvodní obrazovce limit sama přetáhne.
+- Co první obrazovka nepotřebuje (výkres, export, tisk, druhá obrazovka),
+  načti až ve chvíli, kdy je potřeba: `<script defer>`, `import()` nebo
+  zvláštní soubor, ne další stovky řádků v `index.html`.
+- Žádná další písma ani knihovny; data ze serveru po stránkách, ne celá
+  historie najednou.
+
+Měří to vizuální kontrola na každé stránce (při každé stavbě); čas
+a přenesené kB vidí i recenzent.
+
+## Texty
+
+Text je půlka rozhraní. Zákazník čte tlačítka a hlášky, ne kód.
+
+- **Tlačítko říká, co udělá:** sloveso a věc — „Uložit zakázku“, „Vydat
+  sadu“, „Stáhnout CSV“. Ne „OK“, „Ano“, „Potvrdit“ bez věci, ne anglicky.
+  U nebezpečné akce věc vždy: „Smazat účet“.
+- **Hláška o chybě = co se stalo + co s tím:** „Zakázku se nepodařilo
+  uložit — zkontrolujte připojení a zkuste to znovu.“ Nikdy „Chyba“,
+  „Něco se pokazilo“, kód (500, 404) ani text z kódu (`undefined`,
+  `null`, `Error: …`).
+- **Zákazníkovi se vyká:** „Vyplňte“, „váš sklad“. Nikdy „Klikni“, „tvůj“.
+- **Žádné interní názvy:** zákazník nezná API, token, build, endpoint,
+  `uzivatel_id`, název tabulky ani obrazovky z kódu. Píše se jeho slovy
+  — „zakázka“, ne „záznam“, pokud tomu tak říká.
+- **Jedna věc jedním slovem** po celé appce: když je to „zakázka“, není to
+  jinde „objednávka“ nebo „úkol“.
+- **Prázdný stav** řekne, co sem patří a jak začít, jednou větou a jedním
+  tlačítkem — ne „Žádná data“.
+- Věta, ne heslo: velké jen první písmeno, bez vykřičníků a bez emoji.
+
 ## Dotyk, čitelnost, pohyb
 
 - Dotykové cíle ≥ 44 px, řádky seznamu ≥ 56 px, mezi cíli ≥ 8 px.
-- Text česky, zákazníkovi se vyká, bez lorem ipsum a bez „Chyba 500“.
+- Text česky podle sekce Texty, bez lorem ipsum.
 - Pohyb jen krátký, na `transform`/`opacity`; `prefers-reduced-motion`
   ho vypne automaticky.
 
@@ -388,6 +497,10 @@ Stránku navíc vykreslí v prohlížeči (`vizualni_kontrola.py`) na šířkác
 - Vodorovné posouvání — jmenuje prvek, který vyčnívá.
 - Pole bez `<label>` (nebo `aria-label`), tlačítko či odkaz bez textu,
   obrázek bez `alt`.
+- Klávesnici (na notebooku skutečným Tabem): prvek, na kterém Tab skončí
+  a není vidět, prvek bez viditelného fokusu, `tabindex` větší než 0.
+- Výkres (`.platno svg`) bez `aria-label` nebo bez `.seznam-dilu` na
+  obrazovce.
 - Dotykový cíl menší než 44 px na telefonu.
 - Text s kontrastem pod 4.5:1 (velký pod 3:1). Na text jen
   `--barva-inkoust` a `--barva-tuzka`; `--barva-tuzka-2/-3` jsou na linky.
@@ -399,6 +512,10 @@ Stránku navíc vykreslí v prohlížeči (`vizualni_kontrola.py`) na šířkác
 - **Větu velkými písmeny** (víc než 24 znaků) **nebo v mono písmu** (víc
   než 40 znaků, převážně písmena).
 - Úvodní obrazovku, která se neukáže nebo nezmizí.
+- Stránku, jejíž první obrazovka se na pomalém mobilu načte déle než 2,5 s
+  (viz Rychlost).
+- Tlačítko „OK“, „Ano“ nebo anglicky, technický text na obrazovce
+  (`undefined`, `null`, `Error`, „Chyba 500“) a tykání (viz Texty).
 - Obrazovku, na které na telefonu není vidět „Nahlásit chybu“ (`.nahlasit-chybu`
   v navigaci, hlavičce, liště nástroje nebo patičce), a tlačítko, které
   neotevře formulář. Formulář i odeslání dělá `simtegen.js` — vlastní
@@ -412,6 +529,12 @@ co uvidí zákazník, ne jen kód.
 - Přeplácaná obrazovka: víc prvků, než potřebuje jedna věc, kvůli které
   existuje; ozdoby, štítky nad nadpisy, karta v kartě, stěna tlačítek a polí.
 - Chybějící stav (prázdný, načítání, chyba, úspěch).
+- Texty proti sekci Texty: hláška bez rady, co dělat, interní názvy, jedna
+  věc pod dvěma jmény.
+- Vlastní kreslená ikona pro něco, co sada `web/ikony.svg` má, nebo ikona
+  v jiném stylu (výplň, jiný tah, emoji).
+- Panel přes stránku, ze kterého Tab uteče za pozadí nebo který Escape
+  nezavře (otevírej ho `SimteGen.panel`).
 - Formulář, který chybu ukáže až po odeslání, nad stránkou místo u pole,
   nebo po chybě smaže, co zákazník vyplnil (viz Formuláře).
 - Detail bez informace (dekorace, vymyšlená čísla, číslo jen pro efekt).

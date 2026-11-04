@@ -105,7 +105,7 @@ def _produkt(manifest: dict) -> str:
 
 
 def _provozovatel(manifest: dict) -> str:
-    return manifest.get("provozovatel") or "SimteGen s.r.o."
+    return manifest.get("provozovatel") or "SimteGen, s.r.o."
 
 
 def _kontakt_html(manifest: dict) -> str:
