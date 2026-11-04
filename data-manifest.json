@@ -1,5 +1,6 @@
 {
   "produkt": "Pneusklad — evidence uskladněných pneu",
+  "popis": "Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.",
   "provozovatel": "SimteGen s.r.o.",
   "kontakt_email": "support@simtegen.com",
   "obsah_zakaznika": "uklada_se",
@@ -40,13 +41,13 @@
       "entita": "relace",
       "ucel": "udržení přihlášení",
       "pole": "otisk tokenu, odkaz na účet, expirace",
-      "retence": "30 dní od přihlášení",
+      "retence": "30 dní od posledního použití aplikace, nejdéle rok od přihlášení",
       "play_typy": []
     },
     {
       "entita": "nastaveni_servisu",
       "ucel": "údaje servisu na štítek a nastavení aplikace",
-      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, otevírací doba a pauza na oběd, počet souběžně odbavovaných zákazníků, čas vytvoření záznamu",
+      "pole": "název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, otevírací doba a pauza na oběd, počet souběžně odbavovaných zákazníků, počet pozvánek do týmu za poslední hodinu a odeslaných seznamů přípravy za poslední den (ochrana proti zneužití), čas vytvoření záznamu",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
         "jmeno",
@@ -116,7 +117,7 @@
     {
       "entita": "clenove",
       "ucel": "přístup dalších pracovníků servisu do aplikace a jejich oprávnění",
-      "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), čas vytvoření záznamu",
+      "pole": "e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), zda a kdy pracovník pozvánku přijal, čas vytvoření záznamu",
       "retence": "do odebrání pracovníka v aplikaci nebo do smazání účtu",
       "play_typy": [
         "email"
@@ -129,7 +130,7 @@
     },
     {
       "entita": "predplatne",
-      "ucel": "evidence zaplaceného období předplatného",
+      "ucel": "evidence zaplaceného období předplatného; upozornění e-mailem týden před koncem předplaceného období (jen při platbě fakturou, nejvýš jednou za období; žádná reklama)",
       "pole": "odkaz na účet, datum konce předplatného, poznámka k platbě, čas poslední změny",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
@@ -198,7 +199,7 @@
     },
     {
       "entita": "upominky",
-      "ucel": "aby každé upozornění na konec zkušebního období odešlo nejvýš jednou",
+      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou",
       "pole": "odkaz na účet, druh upozornění, čas odeslání",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
@@ -222,6 +223,10 @@
       ]
     }
   ],
+  "agregaty": [
+    "navstevy",
+    "stav_migraci"
+  ],
   "sluzby_treti_strany": [
     {
       "nazev": "Cloudflare",
@@ -231,7 +236,7 @@
     },
     {
       "nazev": "Resend",
-      "ucel": "odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi; upozornění na konec zkušebního období",
+      "ucel": "odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi; upozornění na konec zkušebního období; upozornění na konec předplaceného období a odpovědi na hlášení",
       "domena": "api.resend.com",
       "dpa": "https://resend.com/legal/dpa"
     },
@@ -252,7 +257,7 @@
     {
       "nazev": "relace",
       "ucel": "udržení přihlášení (technická, HttpOnly)",
-      "trvani": "30 dní"
+      "trvani": "30 dní od posledního použití, nejdéle rok"
     },
     {
       "nazev": "aplikace",

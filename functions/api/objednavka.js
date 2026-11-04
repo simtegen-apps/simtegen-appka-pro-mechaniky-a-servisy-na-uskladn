@@ -29,6 +29,8 @@ import { json, odepriSpravu, smiSpravovat, ted } from "../../spolecne.js";
 import { cenaObjednavky, variantaPodleKlice } from "../../cenik.js";
 
 const MAX_FAKTURACE = 600;
+// Orders per shop per 24 hours, cancelled ones included (see onRequestPost).
+const OBJEDNAVEK_ZA_DEN = 3;
 
 export async function onRequestGet(context) {
   const { env, data } = context;
@@ -70,6 +72,21 @@ export async function onRequestPost(context) {
   }
   const spotrebitel = Boolean(telo && telo.spotrebitel);
   const souhlas = Boolean(telo && telo.souhlas_zahajeni);
+
+  // Every order sends two e-mails (operator and customer), and "order →
+  // cancel → order" used to be a loop with no end — one that also works
+  // after the subscription expired, on purpose. Three orders a day per shop,
+  // cancelled ones included (zrušení only changes stav, the row stays), is
+  // plenty for a customer who changed their mind twice.
+  const dnes = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM objednavky_predplatneho WHERE uzivatel_id = ? AND vytvoreno > ?"
+  ).bind(data.servis.id, ted() - 24 * 3600).first();
+  if (dnes && dnes.n >= OBJEDNAVEK_ZA_DEN) {
+    return json({
+      chyba: "Za posledních 24 hodin jste objednávali už třikrát. Další objednávku pošlete "
+        + "prosím zítra, nebo nám napište přes Nahlásit chybu.",
+    }, 429);
+  }
 
   const otevrena = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM objednavky_predplatneho " +

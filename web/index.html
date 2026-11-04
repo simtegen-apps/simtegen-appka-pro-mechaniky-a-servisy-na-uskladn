@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="produkt.css">
   <style>
     /* Rozvržení obrazovek tohohle produktu. Barvy, písma ani rozměry tu
-       nejsou — ty nese web/styl.css (návrhový systém v2) a barvu produktu
+       nejsou — ty nese web/styl.css (návrhový systém v3) a barvu produktu
        web/produkt.css. Výjimka je tisk štítku dole: ten musí být černý na
        bílém i tehdy, když má mechanik telefon v tmavém režimu, a je to
        jediné místo, kde se barva zapisuje (pojmenovaná, ne hex). */
@@ -79,7 +79,9 @@
     .radky { display: flex; flex-direction: column; }
     .radky > div { display: flex; justify-content: space-between; align-items: baseline; gap: var(--mezera-4); padding: var(--mezera-2) 0; border-bottom: 1px solid var(--barva-linka); }
     .radky > div:last-child { border-bottom: 0; }
-    .radky .klic { font-family: var(--pismo-mono); font-size: var(--velikost-5); letter-spacing: 0.1em; text-transform: uppercase; color: var(--barva-tuzka); }
+    /* Popisek obyčejnými slovy, hodnota vpravo. Mono jen u hodnot, které
+       se měří nebo kódují (.mono: kód sady, místo v regálu, hloubky). */
+    .radky .klic { font-size: var(--velikost-4); color: var(--barva-tuzka); }
     .radky .hodnota { text-align: right; color: var(--barva-inkoust); }
 
     .nahled { white-space: pre-wrap; font-family: var(--pismo-mono); font-size: 0.75rem; color: var(--barva-inkoust); background: var(--barva-list); border: 1px solid var(--barva-linka); padding: var(--mezera-4); overflow-x: auto; }
@@ -92,21 +94,23 @@
        Bez knihovny a bez závislostí: štítek je HTML, velikost stránky se
        vkládá do #tisk-stranka a s tiskárnou mluví ovladač prohlížeče.
        Cíl je Zebra ZD230 na roli 100×50 mm, archy A4 jsou náhrada pro
-       servisy, které štítkovačku nemají. */
+       servisy, které štítkovačku nemají.
+       Pravidla tisku platí jen s html.tisk-stitku (zapíná ji tiskni()):
+       ostatní tisk (seznam k obvolání, data-tisk) dělá styl.css sám. */
     #tisk { display: none; }
     /* line-height je přišpendlený, ne dědí 1.5 z těla: štítek má pevnou
        výšku a milimetrový rozpočet. Při 1.5 přeteče spodní řádek o milimetr
        a overflow:hidden sní datum příjmu. */
-    .stitek { overflow: hidden; line-height: 1.15; display: flex; flex-direction: column; justify-content: space-between; }
+    .stitek-sady { overflow: hidden; line-height: 1.15; display: flex; flex-direction: column; justify-content: space-between; font-weight: 400; }
     /* Zebra ZD230 tiskne 203 dpi — 8 bodů na milimetr, jeden bod 0,125 mm.
        Každý rozměr je celý počet bodů, protože termohlava půlbod nevykreslí:
        zaokrouhlí, a 0,3 mm linka padne na jednom štítku na 2 body a na
        dalším na 3. Role: jeden štítek na stránku, výška 49,5 mm na 50mm
        štítku — při přesné výšce stránky vyjede kvůli zaokrouhlení druhá
        prázdná stránka, což je na roli jeden zmařený štítek na každou sadu. */
-    #tisk.role .stitek { width: 100mm; height: 49.5mm; padding: 3mm 4mm; break-after: page; break-inside: avoid; }
-    #tisk.role .stitek:last-child { break-after: auto; }
-    #tisk.mriz .stitek { width: 70mm; height: 37mm; padding: 2.5mm 3mm; break-inside: avoid; }
+    #tisk.role .stitek-sady { width: 100mm; height: 49.5mm; padding: 3mm 4mm; break-after: page; break-inside: avoid; }
+    #tisk.role .stitek-sady:last-child { break-after: auto; }
+    #tisk.mriz .stitek-sady { width: 70mm; height: 37mm; padding: 2.5mm 3mm; break-inside: avoid; }
     .s-hlava { display: flex; justify-content: space-between; gap: 2mm; font-size: 2.5mm; font-weight: 700; }
     .s-kod { font-size: 8.5mm; font-weight: 800; line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
     #tisk.mriz .s-kod { font-size: 5.5mm; }
@@ -123,11 +127,12 @@
       /* Pojmenované barvy, jediné v celém produktu: štítek je inkoust na
          papíře ze štítkovačky, ne na obrazovce — s tmavým režimem telefonu
          nemá nic společného. */
-      .appka, .panel, .panel-pozadi, .toast { display: none !important; }
-      #tisk { display: block; background: white; color: black; }
-      #tisk.mriz { display: flex; flex-wrap: wrap; align-content: flex-start; }
-      .stitek { background: white; color: black; }
-      #tisk.mriz .stitek { border: 0.25mm dashed gray; }
+      html.tisk-stitku .appka, html.tisk-stitku .panel, html.tisk-stitku .panel-pozadi,
+      html.tisk-stitku .toast, html.tisk-stitku .sg-pruhy { display: none !important; }
+      html.tisk-stitku #tisk { display: block; background: white; color: black; }
+      html.tisk-stitku #tisk.mriz { display: flex; flex-wrap: wrap; align-content: flex-start; }
+      .stitek-sady { background: white; color: black; }
+      #tisk.mriz .stitek-sady { border: 0.25mm dashed gray; }
       .s-pata { border-top: 0.25mm solid black; }
       .carkod { fill: black; }
     }
@@ -143,6 +148,9 @@
        která je nedovolí vydat, by je držela jako rukojmí naší faktury. */
     body.jen-cteni .jen-role { display: none !important; }
     body:not(.spravce) .jen-spravce { display: none !important; }
+    /* Ukázková data na Dnes: jen účet, který svá data vlastní (ne pozvaný
+       kolega, ten by plnil cizí provozovnu). */
+    body:not(.vlastnik) .jen-vlastnik { display: none !important; }
     body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
     body.spravce .jen-mechanik-zprava { display: none !important; }
     body:not(.prihlasen) .navigace > button[data-obrazovka] { display: none !important; }
@@ -168,16 +176,16 @@
        přepínání obrazovek. Na telefonu je to jeden sloupec jako dosud. */
     .mrizka > .pod-sebou { gap: var(--mezera-5); }
   </style>
-  <style id="tisk-stranka">@page { size: 100mm 50mm; margin: 0; }</style>
+  <style id="tisk-stranka"></style>
   <!-- aplikace: vykresli_aplikaci.py -->
   <link rel="manifest" href="/manifest.webmanifest">
   <!-- SEO: GENEROVÁNO z data-manifest.json (vykresli_seo.py) — needituj ručně -->
-  <meta name="description" content="Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.">
+  <meta name="description" content="Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.">
   <link rel="canonical" href="https://pneusklad.simtegen.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="cs_CZ">
   <meta property="og:title" content="Pneusklad — evidence uskladněných pneu">
-  <meta property="og:description" content="Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.">
+  <meta property="og:description" content="Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.">
   <meta property="og:url" content="https://pneusklad.simtegen.com/">
   <meta property="og:image" content="https://pneusklad.simtegen.com/ikona-512.png">
   <meta name="twitter:card" content="summary">
@@ -233,7 +241,7 @@
     <main class="obsah">
       <!-- ---------------------------- Načítání ---------------------------- -->
       <section id="obrazovka-nacitani" class="obrazovka aktivni" aria-live="polite">
-        <p class="stitek">Načítám evidenci</p>
+        <p class="jen-pro-ctecky">Načítám evidenci</p>
         <div class="kostra vysoka"></div>
         <div class="kostra nizka"></div>
         <div class="kostra nizka"></div>
@@ -242,11 +250,10 @@
       <!-- ------------------------ Úvod a přihlášení ----------------------- -->
       <section id="obrazovka-prihlaseni" class="obrazovka">
         <div class="sekce">
-          <p class="stitek">Pro malé a mobilní pneuservisy</p>
           <p class="titulek-velky">Kde leží čí kola.</p>
-          <p>Evidence uskladněných pneu s tiskem štítků, objednávkový kalendář
-          a ranní seznam kol, která máte sundat z regálu. V telefonu, bez
-          instalace.</p>
+          <p>Pro malé a mobilní pneuservisy: evidence uskladněných pneu
+          s tiskem štítků, objednávkový kalendář a ranní seznam kol, která
+          máte sundat z regálu. V telefonu, bez instalace.</p>
         </div>
 
         <div class="karta vykres" id="uvod-cena" hidden>
@@ -261,20 +268,17 @@
         <p class="popisek" id="uvod-zkusebni"></p>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Co to umí</span></h2>
+          <h2 class="sekce-titulek"><span>Co to umí</span></h2>
           <ul class="seznam">
             <li class="radek">
-              <span class="poradi">01</span>
               <span class="hlavni"><strong>Kód na štítku, pozice v regálu</strong>
                 <span>Příjem sady za minutu · štítek z vaší štítkovačky</span></span>
             </li>
             <li class="radek">
-              <span class="poradi">02</span>
               <span class="hlavni"><strong>Ráno víte, co sundat</strong>
                 <span>Seznam na zítřek i s místy ve skladu</span></span>
             </li>
             <li class="radek">
-              <span class="poradi">03</span>
               <span class="hlavni"><strong>Sezóna, která vydělá</strong>
                 <span>Koho obvolat · sady pod 4 mm · nezaplaceno</span></span>
             </li>
@@ -282,7 +286,7 @@
         </div>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>02 — Přihlášení</span></h2>
+          <h2 class="sekce-titulek"><span>Přihlášení</span></h2>
           <div class="pole">
             <label for="email">E-mail provozovny</label>
             <input id="email" type="email" autocomplete="email" inputmode="email"
@@ -298,10 +302,10 @@
              e-mailovým odkazem nepřihlásí). Dočasný účet a jeho data obsluhuje
              web/play.js; sekce se ukáže, jen když ukázka existuje. -->
         <div class="sekce sekce-ukazka">
-          <h2 class="sekce-titulek"><span>03 — Bez registrace</span></h2>
+          <h2 class="sekce-titulek"><span>Bez registrace</span></h2>
           <p class="popisek">Dočasný účet s vymyšlenými daty na 24 hodin:
           sklad s pozicemi v regálu, objednávky na zítřek i sezónní přehled.</p>
-          <button type="button" class="tlacitko" data-ukazka>Vyzkoušet ukázku</button>
+          <button type="button" class="tlacitko vedlejsi" data-ukazka>Vyzkoušet ukázku</button>
         </div>
 
         <div class="lista-dole">
@@ -317,9 +321,23 @@
              v cestě ranní práci. -->
         <button class="hlaska pruh-predplatne" id="pruh-predplatne" type="button" hidden></button>
 
-        <div class="mrizka">
+        <!-- Pozvánka do cizího servisu: platí, až ji tady přihlášený sám
+             přijme. Vykresluje vykresliPozvanky(). -->
+        <div id="pozvanky" class="pod-sebou" hidden></div>
+
+        <!-- Nový účet bez jediné sady: věta, co sem patří, a cesta dál.
+             Hlavní akcí zůstává „Nová sada na uskladnění“ dole v liště. -->
+        <div class="prazdno" id="dnes-prazdno" hidden>
+          <p>Tady uvidíte, která kola máte zítra sundat z regálu. Začněte
+          první uskladněnou sadou — zapíšete ji tlačítkem dole.</p>
+          <button type="button" class="tlacitko vedlejsi jen-vlastnik jen-zapis"
+                  id="dnes-ukazka">Naplnit ukázkovými daty</button>
+          <div id="dnes-prazdno-zprava" class="zprava" aria-live="polite"></div>
+        </div>
+
+        <div class="mrizka" id="dnes-obsah">
         <div class="sekce s5">
-          <h2 class="sekce-titulek"><span>01 — Stav dne</span>
+          <h2 class="sekce-titulek"><span>Stav dne</span>
             <a href="#prehled" id="dnes-na-prehled">Sezóna →</a></h2>
           <div class="karta vykres">
             <div class="cisla">
@@ -347,7 +365,7 @@
 
         <div class="s7 pod-sebou">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>02 — Najít v evidenci</span>
+          <h2 class="sekce-titulek"><span>Najít v evidenci</span>
             <a href="#zakaznici" id="dnes-na-zakazniky">Zákazníci →</a></h2>
           <div class="pole">
             <label for="hledani-dnes">Kód, SPZ, jméno nebo telefon</label>
@@ -358,7 +376,7 @@
         </div>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>03 — Dnešní objednávky</span>
+          <h2 class="sekce-titulek"><span>Dnešní objednávky</span>
             <a href="#objednavky" id="dnes-na-objednavky">Celý týden →</a></h2>
           <div id="dnes-objednavky" class="seznam"></div>
           <div id="dnes-zprava" class="zprava" aria-live="polite"></div>
@@ -375,7 +393,7 @@
       <section id="obrazovka-sklad" class="obrazovka">
         <div class="mrizka">
         <div class="sekce s4">
-          <h2 class="sekce-titulek"><span>01 — Sklad</span></h2>
+          <h2 class="sekce-titulek"><span>Sklad</span></h2>
           <div class="karta vykres">
             <div class="cislo-radek">
               <span class="cislo-obri" id="sklad-cislo">—</span>
@@ -390,7 +408,7 @@
         </div>
 
         <div class="sekce s8">
-          <h2 class="sekce-titulek"><span>02 — Hledání</span></h2>
+          <h2 class="sekce-titulek"><span>Hledání</span></h2>
           <div class="pole">
             <label for="hledani-sklad">Kód, SPZ, jméno, telefon nebo místo</label>
             <input id="hledani-sklad" type="search" enterkeyhint="search" autocomplete="off"
@@ -409,13 +427,14 @@
       <!-- ---------------------------- Zákazníci --------------------------- -->
       <section id="obrazovka-zakaznici" class="obrazovka">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Kartotéka</span></h2>
+          <h2 class="sekce-titulek"><span>Kartotéka</span></h2>
           <div class="pole">
             <label for="hledani-zakaznici">Jméno nebo telefon</label>
             <input id="hledani-zakaznici" type="search" enterkeyhint="search" autocomplete="off"
                    inputmode="search" placeholder="Novák">
           </div>
           <div id="zakaznici-seznam" class="seznam" aria-live="polite"></div>
+          <div id="zakaznici-zprava" class="zprava" aria-live="polite"></div>
         </div>
         <div class="lista-dole">
           <button class="tlacitko jen-zapis" id="zakaznici-novy" type="button">Nový zákazník</button>
@@ -435,7 +454,7 @@
         </div>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Údaje motoristy</span></h2>
+          <h2 class="sekce-titulek"><span>Údaje motoristy</span></h2>
           <div class="pole"><label for="zak-jmeno">Jméno</label>
             <input id="zak-jmeno" autocomplete="off"></div>
           <div class="pole"><label for="zak-telefon">Telefon</label>
@@ -455,15 +474,13 @@
       </section>
       <!-- --------------------------- Nová sada --------------------------- -->
       <section id="obrazovka-nova-sada" class="obrazovka">
-        <div class="sekce">
-          <div class="kroky" id="krok-ukazatel" aria-hidden="true">
-            <span class="hotovo"></span><span></span><span></span><span></span>
-          </div>
-          <p class="stitek" id="krok-popis">Krok 1 ze 4 — čí jsou kola</p>
+        <!-- Kolikátý je to krok, píše hlavička vedle nadpisu (ukazKrok). -->
+        <div class="kroky" id="krok-ukazatel" aria-hidden="true">
+          <span class="hotovo"></span><span></span><span></span><span></span>
         </div>
 
         <div class="krok aktivni" id="krok-1">
-          <h2 class="sekce-titulek"><span>01 — Čí jsou kola</span></h2>
+          <h2 class="sekce-titulek"><span>Čí jsou kola</span></h2>
           <div class="pole">
             <label for="ns-hledat-zakaznika">Hledat v kartotéce</label>
             <input id="ns-hledat-zakaznika" type="search" autocomplete="off"
@@ -489,7 +506,7 @@
         </div>
 
         <div class="krok" id="krok-2">
-          <h2 class="sekce-titulek"><span>02 — Vozidlo a pneu</span></h2>
+          <h2 class="sekce-titulek"><span>Vozidlo a pneu</span></h2>
           <div class="dvojice">
             <div class="pole"><label for="ns-spz">Registrační značka</label>
               <input id="ns-spz" autocomplete="off" autocapitalize="characters"
@@ -500,7 +517,7 @@
           <div class="pole"><label for="ns-vozidlo">Vozidlo</label>
             <input id="ns-vozidlo" autocomplete="off" placeholder="Škoda Octavia"></div>
           <div class="pole">
-            <label class="stitek" for="ns-rozmer">Rozměr</label>
+            <label for="ns-rozmer">Rozměr</label>
             <input id="ns-rozmer" autocomplete="off" list="seznam-rozmery"
                    inputmode="numeric" autocapitalize="characters" spellcheck="false"
                    placeholder="205/55 R16">
@@ -525,7 +542,7 @@
         </div>
 
         <div class="krok" id="krok-3">
-          <h2 class="sekce-titulek"><span>03 — Hloubka dezénu</span></h2>
+          <h2 class="sekce-titulek"><span>Hloubka dezénu</span></h2>
           <p class="popisek">V milimetrech. Nechte prázdné, pokud jste neměřili —
           do přehledu opotřebení se pak sada nezapočítá.</p>
           <div class="mriz-kol">
@@ -542,7 +559,7 @@
         </div>
 
         <div class="krok" id="krok-4">
-          <h2 class="sekce-titulek"><span>04 — Kam to jde a za kolik</span></h2>
+          <h2 class="sekce-titulek"><span>Kam to jde a za kolik</span></h2>
           <div class="pole"><label for="ns-pozice">Místo ve skladu</label>
             <input id="ns-pozice" autocomplete="off" list="seznam-pozice"
                    autocapitalize="characters" spellcheck="false" placeholder="A1-04">
@@ -554,33 +571,31 @@
         </div>
 
         <div class="krok" id="krok-5">
-          <h2 class="sekce-titulek"><span>Hotovo — uskladněno</span></h2>
+          <h2 class="sekce-titulek"><span>Uskladněno</span></h2>
           <div class="karta vykres">
             <p class="stitek">Kód sady</p>
-            <span class="cislo-obri" id="ns-hotovo-kod"></span>
+            <a class="cislo-obri" id="ns-hotovo-kod" href="#sada"></a>
             <p class="popisek" id="ns-hotovo-popis"></p>
           </div>
-          <div class="pod-sebou">
+          <div class="radka">
             <button class="tlacitko vedlejsi" id="ns-objednat" type="button">Hned objednat přezutí</button>
             <button class="tlacitko vedlejsi" id="ns-dalsi" type="button">Zapsat další sadu</button>
-            <button class="tlacitko vedlejsi" id="ns-detail" type="button">Otevřít detail sady</button>
           </div>
         </div>
 
         <div id="ns-zprava" class="zprava" aria-live="polite"></div>
 
+        <!-- Jedno hlavní tlačítko na celý průvodce: Pokračovat → Uložit sadu
+             → Vytisknout štítek (ukazKrok mění text, obsluha podle kroku). -->
         <div class="lista-dole" id="ns-akce">
           <button class="tlacitko" id="ns-krok-dal" type="button">Pokračovat</button>
           <button class="tlacitko vedlejsi" id="ns-krok-zpet" type="button" hidden>Zpět</button>
-        </div>
-        <div class="lista-dole" id="ns-akce-hotovo" hidden>
-          <button class="tlacitko" id="ns-tisk" type="button">Vytisknout štítek</button>
         </div>
       </section>
 
       <!-- --------------------------- Detail sady -------------------------- -->
       <section id="obrazovka-sada" class="obrazovka">
-        <div id="sada-telo" class="pod-sebou"></div>
+        <div id="sada-telo" class="mrizka"></div>
         <div id="sada-zprava" class="zprava" aria-live="polite"></div>
         <div class="lista-dole">
           <button class="tlacitko" id="sada-tisk" type="button">Tisk štítku</button>
@@ -593,7 +608,7 @@
       <section id="obrazovka-objednavky" class="obrazovka">
         <div class="mrizka">
         <div class="sekce s7">
-          <h2 class="sekce-titulek"><span>01 — Týden</span>
+          <h2 class="sekce-titulek"><span>Týden</span>
             <a href="#dnes" id="obj-dnes">Dnes →</a></h2>
           <div class="karta vykres">
             <ul class="tyden" id="obj-tyden"></ul>
@@ -605,7 +620,7 @@
           </div>
         </div>
         <div class="sekce s5">
-          <h2 class="sekce-titulek"><span>02 — Termíny</span></h2>
+          <h2 class="sekce-titulek"><span>Termíny</span></h2>
           <div id="obj-seznam" class="seznam"></div>
           <div id="obj-zprava" class="zprava" aria-live="polite"></div>
         </div>
@@ -627,7 +642,7 @@
         </div>
 
         <div class="sekce" id="no-hledani-blok">
-          <h2 class="sekce-titulek"><span>01 — Čí kola</span></h2>
+          <h2 class="sekce-titulek"><span>Čí kola</span></h2>
           <div class="pole">
             <label for="no-hledat">Uskladněná sada</label>
             <input id="no-hledat" type="search" autocomplete="off"
@@ -641,7 +656,7 @@
         </div>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>02 — Kdy</span></h2>
+          <h2 class="sekce-titulek"><span>Kdy</span></h2>
           <div class="dvojice">
             <div class="pole"><label for="no-den">Datum</label>
               <input id="no-den" type="date"></div>
@@ -658,7 +673,7 @@
         </div>
 
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>03 — Co se bude dělat</span></h2>
+          <h2 class="sekce-titulek"><span>Co se bude dělat</span></h2>
           <div class="pole">
             <span class="stitek" id="no-ukon-popis">Úkon</span>
             <div class="chipy" id="no-ukon" role="group" aria-labelledby="no-ukon-popis">
@@ -687,7 +702,7 @@
       <!-- --------------------------- Příprava kol ------------------------- -->
       <section id="obrazovka-priprava" class="obrazovka">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Na který den</span></h2>
+          <h2 class="sekce-titulek"><span>Na který den</span></h2>
           <div class="karta vykres">
             <div class="cislo-radek">
               <span class="cislo-obri" id="pripr-cislo">—</span>
@@ -698,7 +713,7 @@
           </div>
         </div>
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>02 — Sundat z regálu</span></h2>
+          <h2 class="sekce-titulek"><span>Sundat z regálu</span></h2>
           <div id="pripr-seznam" class="seznam"></div>
           <div id="pripr-zprava" class="zprava" aria-live="polite"></div>
           <div id="pripr-nahled" class="nahled" hidden></div>
@@ -713,31 +728,21 @@
       <section id="obrazovka-prehled" class="obrazovka">
         <div id="prehled-telo" class="pod-sebou"></div>
         <div id="prehled-zprava" class="zprava" aria-live="polite"></div>
+        <!-- Obvolává se z papíru u telefonu v dílně: tiskne jen sekci
+             „Obvolat na přezutí“ (vzhled tisku dělá styl.css). -->
+        <div class="lista-dole" id="prehled-akce" hidden>
+          <button type="button" class="tlacitko" data-tisk="#prehled-obvolat">Vytisknout seznam k obvolání</button>
+        </div>
       </section>
 
       <!-- ---------------------------- Nastavení --------------------------- -->
+      <!-- Tři věci: co se tiskne na štítek, kdy máte otevřeno, a cesta
+           k účtu (předplatné, tým, data). Tým a data mají vlastní obrazovky,
+           aby tu zůstalo jen jedno hlavní tlačítko: Uložit nastavení. -->
       <section id="obrazovka-nastaveni" class="obrazovka">
-        <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Účet</span></h2>
-          <div class="karta">
-            <div class="radky">
-              <div><span class="klic">Přihlášen</span><span class="hodnota" id="ucet-email">—</span></div>
-              <div><span class="klic">Oprávnění</span><span class="hodnota" id="nast-role">—</span></div>
-              <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno">—</span></div>
-            </div>
-          </div>
-          <button class="radek" id="nast-predplatne" type="button">
-            <span class="hlavni"><strong>Předplatné</strong>
-              <span id="nast-plan">—</span></span>
-            <span class="vpravo" aria-hidden="true">›</span>
-          </button>
-          <p class="hlaska varovani jen-cteni-zprava">Máte přístup jen pro čtení.
-          Zapisovat sady a objednávky může mechanik nebo správce.</p>
-          <button class="tlacitko vedlejsi" id="nast-navod" type="button">Zobrazit návod</button>
-        </div>
-
+        <div class="dva-sloupce">
         <div class="jen-spravce sekce">
-          <h2 class="sekce-titulek"><span>02 — Údaje na štítek</span></h2>
+          <h2 class="sekce-titulek"><span>Štítek</span></h2>
           <div class="pole"><label for="nast-nazev">Název servisu</label>
             <input id="nast-nazev" autocomplete="off" placeholder="Pneuservis Novák"></div>
           <div class="pole"><label for="nast-telefon">Telefon</label>
@@ -757,8 +762,9 @@
             <input id="nast-cena" type="number" inputmode="numeric" min="0" value="800"></div>
         </div>
 
+        <div class="pod-sebou">
         <div class="jen-spravce sekce">
-          <h2 class="sekce-titulek"><span>03 — Provoz</span></h2>
+          <h2 class="sekce-titulek"><span>Provoz</span></h2>
           <p class="popisek">Podle toho vám appka u objednávek napoví, kdy máte
           otevřeno a kdy už je plno.</p>
           <div class="dvojice">
@@ -779,12 +785,56 @@
           <div id="nast-zprava" class="zprava" aria-live="polite"></div>
         </div>
 
-        <div class="jen-spravce sekce">
-          <h2 class="sekce-titulek"><span>04 — Tým</span></h2>
+        <div class="sekce">
+          <h2 class="sekce-titulek"><span>Účet</span></h2>
+          <div class="karta">
+            <div class="radky">
+              <div><span class="klic">Přihlášen</span><span class="hodnota" id="ucet-email">—</span></div>
+              <div><span class="klic">Oprávnění</span><span class="hodnota" id="nast-role">—</span></div>
+              <div><span class="klic">Uskladněno</span><span class="hodnota" id="nast-uskladneno">—</span></div>
+            </div>
+          </div>
+          <div class="seznam">
+            <button class="radek" id="nast-predplatne" type="button">
+              <span class="hlavni"><strong>Předplatné</strong>
+                <span id="nast-plan">—</span></span>
+              <span class="vpravo" aria-hidden="true">›</span>
+            </button>
+            <button class="radek jen-spravce" id="nast-tym" type="button">
+              <span class="hlavni"><strong>Tým</strong>
+                <span>Kolegové s přístupem k vašemu servisu</span></span>
+              <span class="vpravo" aria-hidden="true">›</span>
+            </button>
+            <button class="radek" id="nast-ucet" type="button">
+              <span class="hlavni"><strong>Účet a data</strong>
+                <span>Stažení dat, odhlášení, smazání účtu</span></span>
+              <span class="vpravo" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <p class="hlaska varovani jen-cteni-zprava">Máte přístup jen pro čtení.
+          Zapisovat sady a objednávky může mechanik nebo správce.</p>
+          <button class="tlacitko vedlejsi" id="nast-navod" type="button">Zobrazit návod</button>
+        </div>
+        </div>
+        </div>
+
+        <div class="lista-dole jen-spravce">
+          <button class="tlacitko" id="nast-ulozit" type="button">Uložit nastavení</button>
+        </div>
+      </section>
+
+      <!-- ------------------------------- Tým ------------------------------ -->
+      <section id="obrazovka-tym" class="obrazovka">
+        <div class="dva-sloupce">
+        <div class="sekce">
+          <h2 class="sekce-titulek"><span>Kolegové</span></h2>
           <p class="popisek">Kolega se přihlásí svým e-mailem — stejným odkazem
           jako vy — a uvidí váš servis. Správce může všechno, mechanik dělá
           běžnou práci bez nastavení, „jen čtení“ se nesmí ničeho dotknout.</p>
           <div id="tym-seznam" class="seznam" aria-live="polite"></div>
+        </div>
+        <div class="sekce">
+          <h2 class="sekce-titulek"><span>Přidat kolegu</span></h2>
           <div class="pole"><label for="tym-email">E-mail kolegy</label>
             <input id="tym-email" type="email" inputmode="email" autocomplete="off"
                    placeholder="kolega@email.cz"></div>
@@ -796,28 +846,61 @@
               <button data-role="cteni" aria-pressed="false" type="button">Jen čtení</button>
             </div>
           </div>
-          <button class="tlacitko vedlejsi" id="tym-pridat" type="button">Přidat kolegu</button>
           <div id="tym-zprava" class="zprava" aria-live="polite"></div>
         </div>
-
-        <div class="jen-spravce sekce">
-          <h2 class="sekce-titulek"><span>05 — Ukázková data</span></h2>
-          <p class="popisek">Naplní účet vymyšlenými zákazníky a sadami, abyste si
-          appku mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
-          <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-naplnit" type="button">Naplnit ukázkovými daty</button>
-          <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-smazat" type="button">Smazat ukázková data</button>
         </div>
+        <div class="lista-dole">
+          <button class="tlacitko" id="tym-pridat" type="button">Přidat kolegu</button>
+        </div>
+      </section>
 
+      <!-- --------------------------- Účet a data -------------------------- -->
+      <section id="obrazovka-ucet" class="obrazovka">
+        <div class="dva-sloupce">
+        <div class="pod-sebou">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>06 — Vaše data</span></h2>
-          <button class="tlacitko vedlejsi" id="stahnout-data" type="button">Stáhnout moje data</button>
-          <button class="tlacitko vedlejsi" id="odhlasit" type="button">Odhlásit se</button>
-          <button class="tlacitko varovne" id="smazat-ucet" type="button">Smazat účet a všechna data</button>
+          <h2 class="sekce-titulek"><span>Vaše data</span></h2>
+          <p class="popisek">Celou evidenci sad, zákazníků a objednávek si
+          stáhnete jako soubor. Data jsou v databázi v Evropské unii.</p>
           <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
         </div>
 
-        <div class="lista-dole jen-spravce">
-          <button class="tlacitko" id="nast-ulozit" type="button">Uložit nastavení</button>
+        <div class="karta">
+          <p>Znáte kolegu z oboru, kterému by Pneusklad ušetřil práci?</p>
+          <button type="button" class="tlacitko vedlejsi" data-doporucit="ucet">Doporučit kolegovi</button>
+        </div>
+        </div>
+
+        <div class="pod-sebou">
+        <div class="jen-spravce sekce">
+          <h2 class="sekce-titulek"><span>Ukázková data</span></h2>
+          <p class="popisek">Naplní účet vymyšlenými zákazníky a sadami, abyste si
+          appku mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
+          <div class="radka">
+            <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-naplnit" type="button">Naplnit ukázkovými daty</button>
+            <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-smazat" type="button">Smazat ukázková data</button>
+          </div>
+        </div>
+
+        <div class="sekce" id="ucet-odejit-blok" hidden>
+          <h2 class="sekce-titulek"><span>Odejít ze servisu</span></h2>
+          <p class="popisek">Pracujete v servisu, který patří jinému účtu. Odejdete-li,
+          přístup k jeho evidenci ztratíte, dokud vás správce znovu nepozve.</p>
+          <button class="tlacitko vedlejsi" id="ucet-odejit" type="button">Odejít ze servisu</button>
+        </div>
+
+        <div class="sekce">
+          <h2 class="sekce-titulek"><span>Smazání účtu</span></h2>
+          <p class="popisek">Smaže účet i celou evidenci. Než to uděláte, stáhněte
+          si data — vrátit to nejde.</p>
+          <button class="tlacitko varovne" id="smazat-ucet" type="button">Smazat účet a všechna data</button>
+        </div>
+        </div>
+        </div>
+
+        <div class="lista-dole">
+          <button class="tlacitko" id="stahnout-data" type="button">Stáhnout moje data</button>
+          <button class="tlacitko vedlejsi" id="odhlasit" type="button">Odhlásit se</button>
         </div>
       </section>
 
@@ -837,7 +920,7 @@
 
         <div id="pred-obsah" class="mrizka" hidden>
           <div class="sekce s5">
-            <h2 class="sekce-titulek"><span>01 — Stav účtu</span></h2>
+            <h2 class="sekce-titulek"><span>Stav účtu</span></h2>
             <div class="karta vykres">
               <div class="cislo-radek">
                 <span class="cislo-obri" id="pred-cislo">—</span>
@@ -860,7 +943,7 @@
                sám panel nákupu. Varianty, které tam koupit nejde, by
                ukazovaly k placení jinde. (Úvodní obrazovka ceník ukazuje.) -->
           <div class="sekce" data-objednavka>
-            <h2 class="sekce-titulek"><span>02 — Ceník</span></h2>
+            <h2 class="sekce-titulek"><span>Ceník</span></h2>
             <!-- Přesně podle schválení majitele (cenik.js → /api/ja). -->
             <div class="radky" id="pred-cenik"></div>
             <p class="popisek" id="pred-cenik-obsah"></p>
@@ -872,8 +955,8 @@
           správce účtu. Zaplacené období pak platí pro celý tým.</p>
 
           <div class="jen-spravce sekce">
-            <h2 class="sekce-titulek"><span class="jen-v-aplikaci">02 — Nákup</span><span
-              data-objednavka>03 — Objednávka</span></h2>
+            <h2 class="sekce-titulek"><span class="jen-v-aplikaci">Nákup</span><span
+              data-objednavka>Objednávka</span></h2>
             <!-- V aplikaci z Google Play sem web/play.js vykreslí nákup přes
                  Google Play (cena, automatické obnovení, zrušení). -->
             <div data-predplatne-play></div>
@@ -927,7 +1010,7 @@
           </div>
 
           <div class="sekce" data-objednavka>
-            <h2 class="sekce-titulek"><span>04 — Objednávky provozovny</span></h2>
+            <h2 class="sekce-titulek"><span>Objednávky provozovny</span></h2>
             <div id="pred-historie" class="seznam"></div>
           </div>
           </div>
@@ -940,6 +1023,7 @@
     </main>
 
     <footer class="paticka">
+      <a href="napoveda.html">Nápověda</a>
       <a href="zasady.html">Zásady zpracování údajů</a>
       <!-- Podmínky a formulář odstoupení popisují placení fakturou — v aplikaci
            z Google Play by vedly k placení mimo Google Play, proto
@@ -982,7 +1066,7 @@
                     "obrazovka-objednavky", "obrazovka-nastaveni"];
 
     // Nadpis v hlavičce je jeden pro celou appku a mění se podle obrazovky:
-    // na 390 px není místo na dvě úrovně nadpisů a návrhový systém v2 chce
+    // na 390 px není místo na dvě úrovně nadpisů a návrhový systém chce
     // jeden h1. Hodnota „zpet: true" rozsvítí v hlavičce tlačítko zpět.
     const TITULKY = {
       "obrazovka-nacitani": { titulek: "Pneusklad" },
@@ -998,6 +1082,8 @@
       "obrazovka-priprava": { titulek: "Připravit kola", zpet: true },
       "obrazovka-prehled": { titulek: "Sezónní přehled", zpet: true },
       "obrazovka-nastaveni": { titulek: "Nastavení" },
+      "obrazovka-tym": { titulek: "Tým", zpet: true },
+      "obrazovka-ucet": { titulek: "Účet a data", zpet: true },
       "obrazovka-predplatne": { titulek: "Předplatné", zpet: true },
     };
 
@@ -1030,27 +1116,37 @@
         .replace(/"/g, "&quot;");
     }
 
+    // Čísla, peníze a data píše všude simtegen.js (SimteGen.kc, datum,
+    // pocet…) — jeden tvar ve všech appkách, nezlomitelné mezery uvnitř.
     function mm(desetiny) {
       if (!desetiny) return "—";
-      return `${String(desetiny / 10).replace(".", ",")} mm`;
+      return SimteGen.rozmer(desetiny / 10, "mm");
     }
 
     function korun(n) {
-      return `${Number(n || 0).toLocaleString("cs-CZ")} Kč`;
-    }
-
-    function mena() {
-      return (stav.cenik && stav.cenik.mena) || "Kč";
+      return SimteGen.kc(Number(n || 0));
     }
 
     function varianty() {
       return (stav.cenik && stav.cenik.varianty) || [];
     }
 
+    // S rokem: na štítku a v historii sady se data potkávají přes sezóny.
     function datumCesky(ts) {
       if (!ts) return "—";
-      return new Date(ts * 1000).toLocaleDateString("cs-CZ",
-        { day: "numeric", month: "numeric", year: "numeric" });
+      return SimteGen.datum(ts, { rok: true });
+    }
+
+    const POCTY = {
+      sada: ["sada", "sady", "sad"],
+      zakaznik: ["zákazník", "zákazníci", "zákazníků"],
+      objednavka: ["objednávka", "objednávky", "objednávek"],
+      mesic: ["měsíc", "měsíce", "měsíců"],
+      den: ["den", "dny", "dní"],
+    };
+
+    function pocet(n, co) {
+      return SimteGen.pocet(n, POCTY[co]);
     }
 
     function dnesniDen() {
@@ -1067,18 +1163,24 @@
       return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
     }
 
-    function denCesky(den, sTydnem) {
+    const DNY_TYDNE = ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"];
+    const ZKRATKY_DNU = ["ne", "po", "út", "st", "čt", "pá", "so"];
+
+    // „2026-11-03“ je den kalendáře, ne okamžik: poskládá se v místním čase,
+    // aby se o půlnoci nepřelil do vedlejšího dne.
+    function denJakoDatum(den) {
       const [r, m, d] = den.split("-").map(Number);
-      const volby = { day: "numeric", month: "numeric", timeZone: "UTC" };
-      if (sTydnem) volby.weekday = "long";
-      return new Date(Date.UTC(r, m - 1, d)).toLocaleDateString("cs-CZ", volby);
+      return new Date(r, m - 1, d);
+    }
+
+    function denCesky(den, sTydnem) {
+      const datum = denJakoDatum(den);
+      const text = SimteGen.datum(datum);
+      return sTydnem ? `${DNY_TYDNE[datum.getDay()]} ${text}` : text;
     }
 
     function zkratkaDne(den) {
-      const [r, m, d] = den.split("-").map(Number);
-      return new Date(Date.UTC(r, m - 1, d))
-        .toLocaleDateString("cs-CZ", { weekday: "short", timeZone: "UTC" })
-        .replace(".", "");
+      return ZKRATKY_DNU[denJakoDatum(den).getDay()];
     }
 
     const NAZVY_TYPU = { zimni: "Zimní", letni: "Letní", celorocni: "Celoroční" };
@@ -1117,6 +1219,16 @@
     function prazdno(text, tlacitko) {
       return `<div class="prazdno"><p>${bezpecne(text)}</p>${tlacitko || ""}</div>`;
     }
+
+    // Chyba načtení: česky, co se stalo a co s tím. Ne prázdný seznam —
+    // ten by tvrdil, že nic není.
+    function chybaHtml(text) {
+      return `<p class="hlaska chyba">${bezpecne(text)} Zkontrolujte prosím připojení a zkuste to znovu.</p>`;
+    }
+
+    // Načítání: tvar budoucího seznamu, ne kolečko.
+    const KOSTRA_SEZNAMU = '<div class="kostra nizka"></div>'
+      + '<div class="kostra nizka"></div><div class="kostra nizka"></div>';
 
     async function api(cesta, metoda, telo) {
       const odpoved = await fetch(cesta, {
@@ -1170,6 +1282,8 @@
       "obrazovka-zakaznik": "obrazovka-zakaznici",
       "obrazovka-nova-objednavka": "obrazovka-objednavky",
       "obrazovka-predplatne": "obrazovka-nastaveni",
+      "obrazovka-tym": "obrazovka-nastaveni",
+      "obrazovka-ucet": "obrazovka-nastaveni",
     };
 
     function jdi(id) {
@@ -1184,10 +1298,19 @@
       if (cil === "obrazovka-sklad") nactiSklad();
       if (cil === "obrazovka-objednavky") nactiObjednavky();
       if (cil === "obrazovka-zakaznici") nactiZakazniky();
-      if (cil === "obrazovka-nastaveni") {
-        vykresliNastaveni();
-        if (stav.nastaveni && stav.nastaveni.role === "spravce") nactiTym();
-      }
+      if (cil === "obrazovka-nastaveni") vykresliNastaveni();
+      if (cil === "obrazovka-tym") nactiTym();
+    }
+
+    // Po Vrátit (a po každé změně, která se dá vzít zpět) se překreslí
+    // obrazovka, na kterou se mechanik právě dívá — ať je to kterákoli.
+    function obnovAktivni() {
+      const aktivni = document.querySelector(".obrazovka.aktivni");
+      const id = aktivni && aktivni.id;
+      if (id === "obrazovka-priprava") nactiPripravu();
+      else if (id === "obrazovka-prehled") nactiPrehled();
+      else if (id === "obrazovka-sada" && stav.sada) obnovSadu(stav.sada.id);
+      else nactiHlavni(id);
     }
 
     function zpet() {
@@ -1282,7 +1405,7 @@
       const disky = sada.na_discich ? "na discích" : "bez disků";
       // 10 mm of bar height on the roll, 6.5 mm on the smaller A4 label —
       // both above the 6.35 mm Code 39 wants for a handheld scanner.
-      return `<div class="stitek">
+      return `<div class="stitek-sady">
         <div class="s-hlava">
           <span>${bezpecne(n.nazev || "Pneusklad")}</span>
           <span>${bezpecne(n.telefon || "")}</span>
@@ -1314,8 +1437,17 @@
         : "@page { size: 100mm 50mm; margin: 0; }";
       $("tisk").className = archy ? "mriz" : "role";
       $("tisk").innerHTML = sady.map((s) => stitekHtml(s, archy)).join("");
+      document.documentElement.classList.add("tisk-stitku");
       window.print();
     }
+
+    // Po tisku štítku zpátky normální stránka: jinak by tlačítko
+    // „Vytisknout seznam k obvolání“ dostalo stránku 100×50 mm.
+    window.addEventListener("afterprint", () => {
+      if (!document.documentElement.classList.contains("tisk-stitku")) return;
+      document.documentElement.classList.remove("tisk-stitku");
+      $("tisk-stranka").textContent = "";
+    });
 
     // ---------------------------------------------------------- set renderer
     function sadaHtml(sada, sVyberem) {
@@ -1368,6 +1500,8 @@
     async function nactiDnes() {
       const den = dnesniDen();
       $("hlavicka-znacka").textContent = denCesky(den, true);
+      const seznam = $("dnes-objednavky");
+      if (!seznam.children.length) seznam.innerHTML = KOSTRA_SEZNAMU;
 
       const [objednavky, priprava, prehled] = await Promise.all([
         api(`/api/objednavky?od=${den}&do=${den}`, "GET"),
@@ -1385,22 +1519,75 @@
         ? `${celkem - zbyva} z ${celkem}` : "nic na zítra";
       vykresliPredplatne();
 
-      const seznam = $("dnes-objednavky");
+      // Nový účet: v regálu nic, v kalendáři nic — místo nul věta, co sem
+      // patří, a cesta k první sadě.
+      const novy = prehled.ok && objednavky.ok && priprava.ok
+        && !prehled.data.uskladneno && !objednavky.data.objednavky.length && !celkem;
+      $("dnes-prazdno").hidden = !novy;
+      $("dnes-obsah").hidden = novy;
+
       if (!objednavky.ok) {
-        seznam.innerHTML = prazdno("Objednávky se nepodařilo načíst.");
+        seznam.innerHTML = chybaHtml("Přehled dne se nepodařilo načíst.");
         return;
       }
-      vykresliObjednavky(seznam, objednavky.data.objednavky, false,
+      // Nejbližších pět; celý den a týden je o klepnutí dál („Celý týden →“).
+      vykresliObjednavky(seznam, objednavky.data.objednavky.slice(0, 5), false,
         "Dnes nemáte nic naplánovaného.");
     }
+
+    // Ukázková data z prázdného stavu: vlastní plnění produktu
+    // (/api/ukazkova-data, záznamy s příznakem ukazka) — a stejně snadno pryč.
+    async function naplnUkazku(zpravaId) {
+      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "naplnit" });
+      if (!ok) {
+        zprava(zpravaId, data.chyba || "Ukázková data se nepodařilo nahrát.", true);
+        return false;
+      }
+      await nactiUcet();
+      SimteGen.vratitelne(`Nahráno ${pocet(data.sad, "sada")} a ${pocet(data.objednavek, "objednavka")}`,
+        () => smazUkazku(zpravaId, true));
+      return true;
+    }
+
+    async function smazUkazku(zpravaId, vraceni) {
+      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "smazat" });
+      if (!ok) {
+        if (vraceni) throw new Error(data.chyba || "Nepovedlo se.");
+        zprava(zpravaId, data.chyba || "Ukázková data se nepodařilo smazat.", true);
+        return;
+      }
+      await nactiUcet();
+      obnovAktivni();
+      // Ukázkoví zákazníci, ke kterým jste zapsali vlastní sadu nebo
+      // objednávku, bez ní smazat nejdou — zůstanou, a appka to řekne.
+      zprava(zpravaId, data.ponechani
+        ? `${pocet(data.ponechani, "zakaznik")} z ukázky jsme ponechali — máte u nich `
+          + "vedené vlastní sady nebo objednávky."
+        : "");
+      if (!vraceni) {
+        SimteGen.vratitelne("Ukázková data smazána", async () => {
+          const r = await api("/api/ukazkova-data", "POST", { akce: "naplnit" });
+          if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+          await nactiUcet();
+          obnovAktivni();
+        });
+      }
+    }
+
+    $("dnes-ukazka").addEventListener("click", async () => {
+      $("dnes-ukazka").disabled = true;
+      if (await naplnUkazku("dnes-prazdno-zprava")) nactiDnes();
+      $("dnes-ukazka").disabled = false;
+    });
 
     const hledejDnes = debounce(async (dotaz) => {
       const kontejner = $("dnes-nalezene");
       if (!dotaz) { kontejner.innerHTML = ""; return; }
       const { ok, data } = await api(
         `/api/sady?stav=vse&q=${encodeURIComponent(dotaz)}`, "GET");
-      if (!ok) return;
-      vykresliSady(kontejner, data.sady.slice(0, 8), false, "Nic jsme nenašli.");
+      if (!ok) { kontejner.innerHTML = chybaHtml("Hledání se nepovedlo."); return; }
+      // Pět nejlepších shod; celý výsledek je ve Skladu.
+      vykresliSady(kontejner, data.sady.slice(0, 5), false, "Nic jsme nenašli.");
     }, 250);
 
     $("hledani-dnes").addEventListener("input", (e) => hledejDnes(e.target.value.trim()));
@@ -1431,15 +1618,18 @@
     // ----------------------------------------------------------- Sklad screen
     async function nactiSklad() {
       const dotaz = $("hledani-sklad").value.trim();
+      if (!$("sklad-seznam").children.length) $("sklad-seznam").innerHTML = KOSTRA_SEZNAMU;
       const { ok, data } = await api(
         `/api/sady?stav=${stav.skladStav}&q=${encodeURIComponent(dotaz)}`, "GET");
       if (!ok) {
-        $("sklad-seznam").innerHTML = prazdno("Sklad se nepodařilo načíst.");
+        $("sklad-seznam").innerHTML = chybaHtml("Sklad se nepodařilo načíst.");
         return;
       }
-      $("sklad-cislo").textContent = String(data.uskladneno);
+      $("sklad-cislo").textContent = SimteGen.cislo(data.uskladneno);
       vykresliSady($("sklad-seznam"), data.sady, true,
-        dotaz ? "Nic jsme nenašli." : "Ve skladu zatím nic není.");
+        dotaz ? "Nic jsme nenašli."
+          : stav.skladStav === "vydano" ? "Zatím jste žádnou sadu nevydali."
+            : "V regálu zatím nic neleží. Novou sadu zapíšete tlačítkem dole.");
       obnovTiskoveTlacitko();
     }
 
@@ -1456,26 +1646,33 @@
     // --------------------------------------------------------- Customers
     // The policy promises the shop can correct and delete a motorist's record
     // in the app, so there has to be a screen that actually does it.
+    let odlozeneSmazani = null;
+
     async function nactiZakazniky() {
       const dotaz = $("hledani-zakaznici").value.trim();
+      const kontejner = $("zakaznici-seznam");
+      if (!kontejner.children.length) kontejner.innerHTML = KOSTRA_SEZNAMU;
       const { ok, data } = await api(
         `/api/zakaznici?q=${encodeURIComponent(dotaz)}`, "GET");
-      const kontejner = $("zakaznici-seznam");
       if (!ok) {
-        kontejner.innerHTML = prazdno("Zákazníky se nepodařilo načíst.");
+        kontejner.innerHTML = chybaHtml("Zákazníky se nepodařilo načíst.");
         return;
       }
-      $("hlavicka-znacka").textContent = `${data.celkem} v kartotéce`;
-      if (!data.zakaznici.length) {
+      // Zákazník smazaný s nabídkou Vrátit je pryč hned, i když server
+      // dostane pokyn až po ní (viz smazání zákazníka níž).
+      const smazany = odlozeneSmazani && odlozeneSmazani.id;
+      const zakaznici = data.zakaznici.filter((z) => z.id !== smazany);
+      const celkem = data.celkem - (data.zakaznici.length - zakaznici.length);
+      $("hlavicka-znacka").textContent = `${SimteGen.cislo(celkem)} v kartotéce`;
+      if (!zakaznici.length) {
         kontejner.innerHTML = prazdno(dotaz
           ? "Nikoho takového jsme nenašli."
           : "Zatím tu nemáte žádné zákazníky. Založte prvního tlačítkem dole, "
             + "nebo se přidají sami při zápisu první sady.");
         return;
       }
-      kontejner.innerHTML = data.zakaznici.map((z, i) =>
+      kontejner.innerHTML = zakaznici.map((z) =>
         `<button class="radek otevri-zakaznika" data-id="${z.id}" type="button">
-          <span class="poradi">${String(i + 1).padStart(2, "0")}</span>
           <span class="hlavni"><strong>${bezpecne(z.jmeno)}</strong>
             <span>${bezpecne(z.telefon)}${z.email ? ` · ${bezpecne(z.email)}` : ""}</span></span>
           <span class="vpravo">${z.sad_uskladneno
@@ -1483,7 +1680,7 @@
         </button>`).join("");
       kontejner.querySelectorAll(".otevri-zakaznika").forEach((b) =>
         b.addEventListener("click", () =>
-          otevriZakaznika(data.zakaznici.find((z) => z.id === Number(b.dataset.id)))));
+          otevriZakaznika(zakaznici.find((z) => z.id === Number(b.dataset.id)))));
     }
 
     $("hledani-zakaznici").addEventListener("input", debounce(nactiZakazniky, 250));
@@ -1568,18 +1765,68 @@
           `Zákazníka nelze smazat, dokud u vás má uskladněné sady (${z.sad_uskladneno}). `
           + "Nejdřív je prosím vydejte.", true);
       }
-      const varovani = z.sad_celkem
-        ? `Smazat zákazníka ${z.jmeno}? Smaže se i ${z.sad_celkem} vydaných sad `
-          + "v jeho historii. Krok je nevratný."
-        : `Smazat zákazníka ${z.jmeno}? Krok je nevratný.`;
-      if (!confirm(varovani)) return;
-      const { ok, data } = await api("/api/zakaznici", "POST",
-        { akce: "smazat", id: z.id });
-      if (!ok) {
-        return zprava("zakaznik-zprava", data.chyba || "Smazání se nepovedlo.", true);
-      }
+      // Zákazník zmizí hned a appka nabídne Vrátit. Server ho ale maže
+      // natvrdo i s historií vydaných sad, takže pokyn odejde až ve chvíli,
+      // kdy nabídka Vrátit zmizí (nebo když appka odchází do pozadí).
+      dokonciSmazani();
+      odlozeneSmazani = { id: z.id, jmeno: z.jmeno };
       zpet();
       nactiZakazniky();
+      const zbyle = z.sad_celkem ? ` i s historií ${pocet(z.sad_celkem, "sada")}` : "";
+      SimteGen.vratitelne(`Zákazník ${z.jmeno} smazán${zbyle}`, () => {
+        if (!odlozeneSmazani || odlozeneSmazani.id !== z.id) {
+          throw new Error("Zákazník už je smazaný.");
+        }
+        zrusSmazani();
+        nactiZakazniky();
+      });
+      hlidejNabidku(z.id);
+    });
+
+    // Nabídku Vrátit kreslí simtegen.js jako .sg-vratit; když z dokumentu
+    // zmizí (vypršela, nebo ji nahradila jiná), smazání se dokončí.
+    function hlidejNabidku(id) {
+      const nabidka = document.querySelector(".sg-vratit");
+      const hlidac = new MutationObserver(() => {
+        if (nabidka && nabidka.isConnected) return;
+        if (odlozeneSmazani && odlozeneSmazani.id === id) dokonciSmazani();
+        else hlidac.disconnect();
+      });
+      odlozeneSmazani.hlidac = hlidac;
+      hlidac.observe(document.body, { childList: true });
+    }
+
+    function zrusSmazani() {
+      if (odlozeneSmazani && odlozeneSmazani.hlidac) odlozeneSmazani.hlidac.disconnect();
+      odlozeneSmazani = null;
+    }
+
+    function dokonciSmazani() {
+      const s = odlozeneSmazani;
+      if (!s) return;
+      zrusSmazani();
+      // keepalive: požadavek doběhne, i když se appka právě zavírá.
+      fetch("/api/zakaznici", {
+        method: "POST",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ akce: "smazat", id: s.id }),
+      }).then(async (r) => {
+        if (r.ok) return;
+        const data = await r.json().catch(() => ({}));
+        zprava("zakaznici-zprava", data.chyba
+          || `Zákazníka ${s.jmeno} se nepodařilo smazat — zůstal v kartotéce.`, true);
+        nactiZakazniky();
+      }).catch(() => {
+        zprava("zakaznici-zprava",
+          `Zákazníka ${s.jmeno} se nepodařilo smazat — zůstal v kartotéce.`, true);
+        nactiZakazniky();
+      });
+    }
+
+    window.addEventListener("pagehide", dokonciSmazani);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") dokonciSmazani();
     });
     // ------------------------------------------------------- New set wizard
     // zakaznik !== null comes from the customer screen: "uskladnit pneu tomuto
@@ -1616,8 +1863,9 @@
       $("ns-vybrany-telefon").textContent = z.telefon;
     }
 
-    const POPISY_KROKU = ["čí jsou kola", "vozidlo a pneu", "hloubka dezénu",
-                          "kam to jde a za kolik"];
+    // Jedno hlavní tlačítko provede celým průvodcem; mění se jen jeho slovo.
+    const TLACITKO_KROKU = ["Pokračovat", "Pokračovat", "Pokračovat", "Uložit sadu",
+                            "Vytisknout štítek"];
 
     function ukazKrok(cislo) {
       stav.krok = cislo;
@@ -1626,12 +1874,9 @@
       }
       $("krok-ukazatel").querySelectorAll("span").forEach((s, i) =>
         s.classList.toggle("hotovo", i < Math.min(cislo, 4)));
-      $("krok-popis").textContent = cislo > 4
-        ? "Hotovo" : `Krok ${cislo} ze 4 — ${POPISY_KROKU[cislo - 1]}`;
-      $("ns-akce").hidden = cislo > 4;
-      $("ns-akce-hotovo").hidden = cislo <= 4;
-      $("ns-krok-zpet").hidden = cislo === 1;
-      $("ns-krok-dal").textContent = cislo === 4 ? "Uložit sadu" : "Pokračovat";
+      $("hlavicka-znacka").textContent = cislo > 4 ? "Hotovo" : `Krok ${cislo} ze 4`;
+      $("ns-krok-zpet").hidden = cislo === 1 || cislo > 4;
+      $("ns-krok-dal").textContent = TLACITKO_KROKU[cislo - 1];
       window.scrollTo(0, 0);
     }
 
@@ -1791,7 +2036,8 @@
         }
         return ukazKrok(4);
       }
-      return ulozNovouSadu();
+      if (stav.krok === 4) return ulozNovouSadu();
+      return tiskni([stav.sada]);
     });
 
     async function ulozNovouSadu() {
@@ -1831,21 +2077,42 @@
         `${data.sada.jmeno} · ${NAZVY_TYPU[data.sada.typ]} ${data.sada.rozmer || ""}`
         + ` · místo ${data.sada.pozice || "neuvedeno"}`;
       ukazKrok(5);
+      $("ns-zprava").className = "zprava";
+      $("ns-zprava").textContent = "Sada je uložená. Štítek vytisknete tlačítkem dole.";
     }
 
-    $("ns-tisk").addEventListener("click", () => tiskni([stav.sada]));
     $("ns-dalsi").addEventListener("click", () => zacniNovouSadu());
-    $("ns-detail").addEventListener("click", () => otevriSadu(stav.sada.id));
+    $("ns-hotovo-kod").addEventListener("click", (e) => {
+      e.preventDefault();
+      otevriSadu(stav.sada.id);
+    });
     $("ns-objednat").addEventListener("click", () => zacniObjednavku(stav.sada));
 
     // --------------------------------------------------------- Set detail
     async function otevriSadu(id) {
       const { ok, data } = await api(`/api/sady/${id}`, "GET");
-      if (!ok) return;
+      if (!ok) {
+        const aktivni = document.querySelector(".obrazovka.aktivni");
+        zprava(ZPRAVA_OBRAZOVKY[aktivni && aktivni.id] || "dnes-zprava",
+          data.chyba || "Sadu se nepodařilo otevřít. Zkuste to prosím znovu.", true);
+        return;
+      }
       stav.sada = data.sada;
       stav.pohyby = data.pohyby;
+      zprava("sada-zprava", "");
       jdi("obrazovka-sada");
       vykresliSadu();
+    }
+
+    // Detail znovu ze serveru (po výdeji, přesunu a jejich Vrátit): stav
+    // i historie pohybů, aby deník ukazoval, co se opravdu stalo.
+    async function obnovSadu(id) {
+      const { ok, data } = await api(`/api/sady/${id}`, "GET");
+      if (!ok || !stav.sada || stav.sada.id !== id) return;
+      stav.sada = data.sada;
+      stav.pohyby = data.pohyby;
+      const aktivni = document.querySelector(".obrazovka.aktivni");
+      if (aktivni && aktivni.id === "obrazovka-sada") vykresliSadu();
     }
 
     function vykresliSadu() {
@@ -1859,56 +2126,55 @@
           <span>${NAZVY_POHYBU[p.typ] || p.typ}${p.poznamka
             ? ` — ${bezpecne(p.poznamka)}` : ""}</span><span></span></li>`).join("");
 
+      // Tři sekce: kola (čí jsou a v jakém stavu), kde leží a kolik stojí,
+      // a deník pohybů. Hodnoty, které se měří nebo kódují, jsou v mono.
+      const telefon = String(s.telefon || "").replace(/\s/g, "");
       $("sada-telo").innerHTML = `
-        <div class="sekce">
-          <h2 class="sekce-titulek"><span>01 — Zákazník</span></h2>
-          <div class="karta">
-            <div class="radky">
-              <div><span class="klic">Jméno</span><span class="hodnota">${bezpecne(s.jmeno)}</span></div>
-              <div><span class="klic">Telefon</span><span class="hodnota">${bezpecne(s.telefon)}</span></div>
-              ${s.email ? `<div><span class="klic">E-mail</span><span class="hodnota">${bezpecne(s.email)}</span></div>` : ""}
-            </div>
-            <a class="tlacitko vedlejsi" href="tel:${bezpecne(String(s.telefon).replace(/\s/g, ""))}">Zavolat</a>
-          </div>
-        </div>
-        <div class="sekce">
-          <h2 class="sekce-titulek"><span>02 — Kola</span></h2>
+        <div class="sekce s7">
+          <h2 class="sekce-titulek"><span>Kola</span>
+            ${telefon ? `<a href="tel:${bezpecne(telefon)}">Zavolat →</a>` : ""}</h2>
           <div class="karta vykres">
             <div class="radky">
+              <div><span class="klic">Zákazník</span><span class="hodnota">${bezpecne(s.jmeno)}${
+                s.telefon ? ` · ${bezpecne(s.telefon)}` : ""}</span></div>
+              ${s.email ? `<div><span class="klic">E-mail</span><span class="hodnota">${bezpecne(s.email)}</span></div>` : ""}
               <div><span class="klic">Vozidlo</span><span class="hodnota">
-                ${bezpecne(s.spz || "bez SPZ")}${s.vozidlo ? ` · ${bezpecne(s.vozidlo)}` : ""}</span></div>
+                <span class="mono">${bezpecne(s.spz || "bez SPZ")}</span>${s.vozidlo ? ` · ${bezpecne(s.vozidlo)}` : ""}</span></div>
               <div><span class="klic">Typ a rozměr</span><span class="hodnota">
-                ${NAZVY_TYPU[s.typ] || s.typ} · ${bezpecne(s.rozmer || "—")}</span></div>
+                ${NAZVY_TYPU[s.typ] || s.typ} · <span class="mono">${bezpecne(s.rozmer || "—")}</span></span></div>
               <div><span class="klic">Počet</span><span class="hodnota">
                 ${s.pocet_kusu} ks · ${s.na_discich ? "na discích" : "bez disků"}</span></div>
               ${s.dezen ? `<div><span class="klic">Dezén</span><span class="hodnota">${bezpecne(s.dezen)}</span></div>` : ""}
-              <div><span class="klic">Hloubky LP/PP/LZ/PZ</span><span class="hodnota">
+              <div><span class="klic">Hloubky LP/PP/LZ/PZ</span><span class="hodnota mono">
                 ${mm(s.hloubka_lp)} / ${mm(s.hloubka_pp)} / ${mm(s.hloubka_lz)} / ${mm(s.hloubka_pz)}</span></div>
             </div>
             ${hloubka > 0 && hloubka < 40
               ? `<p class="hlaska varovani">Nejmenší hloubka ${mm(hloubka)} — nabídněte zákazníkovi nové pneu.</p>` : ""}
           </div>
         </div>
+        <div class="s5 pod-sebou">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>03 — Sklad a platba</span></h2>
+          <h2 class="sekce-titulek"><span>Uložení a platba</span></h2>
           <div class="karta">
             <div class="radky">
-              <div><span class="klic">Místo</span><span class="hodnota">${bezpecne(s.pozice || "neuvedeno")}</span></div>
+              <div><span class="klic">Místo</span><span class="hodnota mono">${bezpecne(s.pozice || "neuvedeno")}</span></div>
               <div><span class="klic">Přijato</span><span class="hodnota">${datumCesky(s.datum_prijmu)}</span></div>
               ${s.datum_vydeje ? `<div><span class="klic">Vydáno</span><span class="hodnota">${datumCesky(s.datum_vydeje)}</span></div>` : ""}
-              <div><span class="klic">Cena uskladnění</span><span class="hodnota">${korun(s.cena_skladovani)}</span></div>
+              <div><span class="klic">Cena uskladnění</span><span class="hodnota">${korun(s.cena_skladovani)}${
+                s.zaplaceno ? " · zaplaceno" : " · nezaplaceno"}</span></div>
             </div>
-            <button class="tlacitko vedlejsi jen-role" id="sada-zaplaceno" type="button">
-              ${s.zaplaceno ? "Zaplaceno — zrušit" : "Označit jako zaplacené"}</button>
-            <button class="tlacitko vedlejsi jen-zapis" id="sada-presunout" type="button">Přesunout ve skladu</button>
+            ${s.poznamka ? `<p>${bezpecne(s.poznamka)}</p>` : ""}
+            <div class="radka">
+              <button class="tlacitko vedlejsi jen-role" id="sada-zaplaceno" type="button">
+                ${s.zaplaceno ? "Zrušit zaplacení" : "Označit jako zaplacené"}</button>
+              <button class="tlacitko vedlejsi jen-zapis" id="sada-presunout" type="button">Přesunout ve skladu</button>
+            </div>
           </div>
         </div>
-        ${s.poznamka ? `<div class="sekce">
-          <h2 class="sekce-titulek"><span>04 — Poznámka</span></h2>
-          <div class="karta"><p>${bezpecne(s.poznamka)}</p></div></div>` : ""}
         <div class="sekce">
-          <h2 class="sekce-titulek"><span>${s.poznamka ? "05" : "04"} — Historie</span></h2>
+          <h2 class="sekce-titulek"><span>Historie</span></h2>
           <ul class="denik">${historie || "<li><time>—</time><span>Žádné pohyby.</span><span></span></li>"}</ul>
+        </div>
         </div>`;
 
       $("sada-zaplaceno").addEventListener("click", async () => {
@@ -1919,38 +2185,63 @@
         vykresliSadu();
       });
 
-      $("sada-presunout").addEventListener("click", async () => {
-        const pozice = prompt("Nové místo ve skladu:", stav.sada.pozice || "");
-        if (pozice === null) return;
-        const { ok, data } = await api(`/api/sady/${stav.sada.id}`, "POST",
-          { akce: "presunout", pozice });
-        if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
-        stav.sada = data.sada;
-        const detail = await api(`/api/sady/${stav.sada.id}`, "GET");
-        if (detail.ok) stav.pohyby = detail.data.pohyby;
-        vykresliSadu();
-        zprava("sada-zprava", "Přesunuto.");
-      });
+      $("sada-presunout").addEventListener("click", presunSadu);
 
       $("sada-vydat").textContent = s.stav === "vydano" ? "Vrátit na sklad" : "Vydat";
+    }
+
+    // Přesun: nové místo se ptá aplikace (ne okno prohlížeče), přesun
+    // proběhne hned a dá se vzít zpět na původní místo.
+    async function presunSadu() {
+      const sada = stav.sada;
+      const puvodni = sada.pozice || "";
+      const pozice = await SimteGen.zeptej("Kam sadu přesouváte?", {
+        popisek: "Místo ve skladu", hodnota: puvodni, ano: "Přesunout",
+      });
+      if (pozice === null || pozice.toUpperCase() === puvodni.toUpperCase()) return;
+      const { ok, data } = await api(`/api/sady/${sada.id}`, "POST",
+        { akce: "presunout", pozice: pozice.toUpperCase() });
+      if (!ok) return zprava("sada-zprava", data.chyba || "Přesun se nepovedl.", true);
+      zprava("sada-zprava", "");
+      await obnovSadu(sada.id);
+      if (!puvodni) return zprava("sada-zprava", `Přesunuto na ${data.sada.pozice}.`);
+      SimteGen.vratitelne(`Přesunuto na ${data.sada.pozice}`, async () => {
+        const r = await api(`/api/sady/${sada.id}`, "POST", { akce: "presunout", pozice: puvodni });
+        if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+        await obnovSadu(sada.id);
+      });
     }
 
     $("sada-tisk").addEventListener("click", () => tiskni([stav.sada]));
     $("sada-objednat").addEventListener("click", () => zacniObjednavku(stav.sada));
 
+    // Výdej proběhne hned a nabídne Vrátit (server ho do 15 minut vezme
+    // zpět i bez platného předplatného). Vrácení na sklad o sezónu později
+    // se zeptá, kam sada jde.
     $("sada-vydat").addEventListener("click", async () => {
-      const vraceni = stav.sada.stav === "vydano";
-      if (!vraceni && !confirm(`Vydat sadu ${stav.sada.kod} zákazníkovi ${stav.sada.jmeno}?`)) return;
-      const telo = vraceni
-        ? { akce: "vratit", pozice: prompt("Kam ji ukládáte?", stav.sada.pozice || "") || "" }
-        : { akce: "vydat" };
-      const { ok, data } = await api(`/api/sady/${stav.sada.id}`, "POST", telo);
-      if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
-      stav.sada = data.sada;
-      const detail = await api(`/api/sady/${stav.sada.id}`, "GET");
-      if (detail.ok) stav.pohyby = detail.data.pohyby;
-      vykresliSadu();
-      zprava("sada-zprava", vraceni ? "Sada je zpět na skladě." : "Sada vydána.");
+      const sada = stav.sada;
+      if (sada.stav === "vydano") {
+        const pozice = await SimteGen.zeptej("Kam sadu ukládáte?", {
+          popisek: "Místo ve skladu", hodnota: sada.pozice || "", ano: "Vrátit na sklad",
+        });
+        if (pozice === null) return;
+        const { ok, data } = await api(`/api/sady/${sada.id}`, "POST",
+          { akce: "vratit", pozice: pozice.toUpperCase() });
+        if (!ok) return zprava("sada-zprava", data.chyba || "Nepovedlo se.", true);
+        await obnovSadu(sada.id);
+        zprava("sada-zprava", `Sada je zpět na skladě, místo ${data.sada.pozice || "neuvedeno"}.`);
+        return;
+      }
+      const { ok, data } = await api(`/api/sady/${sada.id}`, "POST", { akce: "vydat" });
+      if (!ok) return zprava("sada-zprava", data.chyba || "Výdej se nepovedl.", true);
+      zprava("sada-zprava", "");
+      await obnovSadu(sada.id);
+      SimteGen.vratitelne(`Sada ${sada.kod} vydána`, async () => {
+        const r = await api(`/api/sady/${sada.id}`, "POST",
+          { akce: "vratit", pozice: sada.pozice || "" });
+        if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+        obnovAktivni();
+      });
     });
 
     // ----------------------------------------------------- Bookings screen
@@ -2006,11 +2297,17 @@
         }));
       kontejner.querySelectorAll(".obj-hotovo").forEach((b) =>
         b.addEventListener("click", () => zmenObjednavku(b.dataset.id, { akce: "hotovo" })));
+      // Zrušit hned, Vrátit vrátí objednávku do stavu, ve kterém byla.
       kontejner.querySelectorAll(".obj-zrusit").forEach((b) =>
-        b.addEventListener("click", () => {
-          if (confirm("Zrušit tuto objednávku?")) {
-            zmenObjednavku(b.dataset.id, { akce: "zruseno" });
-          }
+        b.addEventListener("click", async () => {
+          const objednavka = objednavky.find((x) => x.id === Number(b.dataset.id));
+          const predtim = objednavka && objednavka.stav === "hotovo" ? "hotovo" : "planovano";
+          if (!await zmenObjednavku(b.dataset.id, { akce: "zruseno" })) return;
+          SimteGen.vratitelne(`Objednávka ${objednavka ? objednavka.nazev : ""} zrušena`, async () => {
+            if (!await zmenObjednavku(b.dataset.id, { akce: predtim })) {
+              throw new Error("Nepovedlo se.");
+            }
+          });
         }));
     }
 
@@ -2020,6 +2317,9 @@
       "obrazovka-objednavky": "obj-zprava",
       "obrazovka-priprava": "pripr-zprava",
       "obrazovka-dnes": "dnes-zprava",
+      "obrazovka-prehled": "prehled-zprava",
+      "obrazovka-zakaznici": "zakaznici-zprava",
+      "obrazovka-sada": "sada-zprava",
     };
 
     async function zmenObjednavku(id, telo) {
@@ -2028,11 +2328,11 @@
       if (!ok) {
         zprava(ZPRAVA_OBRAZOVKY[aktivni] || "dnes-zprava",
           data.chyba || "Nepovedlo se.", true);
-        return;
+        return false;
       }
-      if (aktivni === "obrazovka-objednavky") nactiObjednavky();
-      else if (aktivni === "obrazovka-priprava") nactiPripravu();
-      else nactiDnes();
+      zprava(ZPRAVA_OBRAZOVKY[aktivni] || "dnes-zprava", "");
+      obnovAktivni();
+      return true;
     }
 
     // Sedm dní s počtem objednávek: pás, ze kterého je vidět, kdy je nabito
@@ -2062,9 +2362,10 @@
       const od = stav.objednavkyOd;
       const doKdy = posunDne(od, 6);
       $("obj-rozsah").textContent = `${denCesky(od, false)} – ${denCesky(doKdy, false)}`;
+      if (!$("obj-seznam").children.length) $("obj-seznam").innerHTML = KOSTRA_SEZNAMU;
       const { ok, data } = await api(`/api/objednavky?od=${od}&do=${doKdy}`, "GET");
       if (!ok) {
-        $("obj-seznam").innerHTML = prazdno("Objednávky se nepodařilo načíst.");
+        $("obj-seznam").innerHTML = chybaHtml("Objednávky se nepodařilo načíst.");
         return;
       }
       vykresliTyden(od, data.objednavky);
@@ -2209,7 +2510,11 @@
       // two cars really fit. Confirm and send it again.
       if (!ok && data.kolize) {
         $("no-ulozit").disabled = false;
-        if (!confirm(`${data.chyba}\n\nZapsat i tak?`)) {
+        const iTak = await SimteGen.potvrd(data.chyba, {
+          popis: "Kolik aut se do dílny opravdu vejde, víte nejlíp vy.",
+          ano: "Zapsat i tak", ne: "Vybrat jiný čas",
+        });
+        if (!iTak) {
           return zprava("no-zprava", "");
         }
         $("no-ulozit").disabled = true;
@@ -2238,12 +2543,13 @@
         }));
 
       $("pripr-nahled").hidden = true;
+      if (!$("pripr-seznam").children.length) $("pripr-seznam").innerHTML = KOSTRA_SEZNAMU;
       const { ok, data } = await api(
         `/api/priprava?den=${stav.pripravaDen}`, "GET");
       if (!ok) {
         $("pripr-cislo").textContent = "—";
         $("pripr-akce").hidden = true;
-        $("pripr-seznam").innerHTML = prazdno("Přípravu se nepodařilo načíst.");
+        $("pripr-seznam").innerHTML = chybaHtml("Přípravu se nepodařilo načíst.");
         return;
       }
       stav.pripravaPolozky = data.polozky;
@@ -2293,7 +2599,7 @@
         $("pripr-nahled").hidden = false;
         return;
       }
-      zprava("pripr-zprava", `Odesláno na váš e-mail (${data.pocet} objednávek).`);
+      zprava("pripr-zprava", `Odesláno na váš e-mail (${pocet(data.pocet, "objednavka")}).`);
     });
 
     // ------------------------------------------------ Připomínka do kalendáře
@@ -2317,7 +2623,7 @@
         const kdy = p.cely_den ? "celý den" : p.cas;
         return `${kdy} ${p.nazev} — ${NAZVY_UKONU[p.ukon] || p.ukon}: ${kola}`;
       });
-      const popis = `Připravit na ${denCesky(den, true)} (${polozky.length} objednávek):\n`
+      const popis = `Připravit na ${denCesky(den, true)} (${pocet(polozky.length, "objednavka")}):\n`
         + `${radky.join("\n")}\n\n${nazevServisu}`;
       // Plovoucí lokální čas (bez Z a bez TZID): událost patří do dne, jak ho
       // čte mechanik, a nepotřebuje k tomu celý VTIMEZONE.
@@ -2367,9 +2673,22 @@
 
     // ------------------------------------------------------------ Overview
     async function nactiPrehled() {
+      if (!$("prehled-telo").children.length) {
+        $("prehled-telo").innerHTML = `<div class="kostra vysoka"></div>${KOSTRA_SEZNAMU}`;
+      }
       const { ok, data } = await api("/api/prehled", "GET");
       if (!ok) {
-        $("prehled-telo").innerHTML = prazdno("Přehled se nepodařilo načíst.");
+        $("prehled-akce").hidden = true;
+        $("prehled-telo").innerHTML = chybaHtml("Sezónní přehled se nepodařilo načíst.");
+        return;
+      }
+      // Bez uskladněných sad není koho obvolat ani komu nabídnout pneu.
+      $("prehled-akce").hidden = !data.vyzva.length;
+      if (!data.uskladneno && !data.vyzva.length && !data.opotrebene.length
+          && !data.nezaplacene.length) {
+        $("prehled-telo").innerHTML = prazdno("Před sezónou tu uvidíte, koho obvolat "
+          + "na přezutí, komu nabídnout nové pneu a kdo nezaplatil uskladnění. "
+          + "Začněte tím, že uskladníte první sadu.");
         return;
       }
 
@@ -2387,10 +2706,10 @@
           ${akce || ""}
         </div>`;
 
-      const sekce = (cislo, titulek, popis, sady, akce) =>
-        `<div class="sekce">
-          <h2 class="sekce-titulek"><span>${cislo} — ${bezpecne(titulek)}</span>
-            <span>${sady.length}</span></h2>
+      const sekce = (id, titulek, popis, sady, akce) =>
+        `<div class="sekce" id="${id}">
+          <h2 class="sekce-titulek"><span>${bezpecne(titulek)}</span>
+            <span>${SimteGen.cislo(sady.length)}</span></h2>
           <p class="popisek">${bezpecne(popis)}</p>
           <div class="seznam">${sady.length
             ? sady.map((s) => radek(s, akce ? akce(s) : "")).join("")
@@ -2398,24 +2717,24 @@
         </div>`;
 
       $("prehled-telo").innerHTML = `
-        <div class="karta vykres">
+        <div class="karta vykres" data-netisknout>
           <div class="cislo-radek">
-            <span class="cislo-obri">${data.vyzva.length}</span>
-            <p>zákazníků obvolat<br>na přezutí</p>
+            <span class="cislo-obri">${SimteGen.cislo(data.vyzva.length)}</span>
+            <p>obvolat<br>na přezutí</p>
           </div>
           <div class="radky">
-            <div><span class="klic">Uskladněno sad</span><span class="hodnota">${data.uskladneno}</span></div>
+            <div><span class="klic">Uskladněno</span><span class="hodnota">${pocet(data.uskladneno, "sada")}</span></div>
             <div><span class="klic">Nezaplaceno</span><span class="hodnota">${korun(data.dluh)}</span></div>
-            <div><span class="klic">Nepřipraveno na zítra</span><span class="hodnota">${data.nepripraveno}</span></div>
+            <div><span class="klic">Nepřipraveno na zítra</span><span class="hodnota">${SimteGen.cislo(data.nepripraveno)}</span></div>
           </div>
         </div>
         <div class="dva-sloupce">
-        ${sekce("01", "Obvolat na přezutí",
+        ${sekce("prehled-obvolat", "Obvolat na přezutí",
           "Kola leží ve skladu a majitel se za posledních pět měsíců neobjednal. "
           + "Každý telefonát je objednávka.", data.vyzva)}
-        ${sekce("02", "Nabídnout nové pneu",
+        ${sekce("prehled-opotrebene", "Nabídnout nové pneu",
           "Nejtenčí měřené kolo pod 4 mm — zákazník to sám nevidí.", data.opotrebene)}
-        ${sekce("03", "Nezaplacené uskladnění",
+        ${sekce("prehled-nezaplacene", "Nezaplacené uskladnění",
           "Uskladnění, které vám zákazník ještě nezaplatil.", data.nezaplacene,
           (s) => `<button class="tlacitko vedlejsi jen-role oznac-zaplaceno" data-id="${s.id}" type="button">Zaplaceno</button>`)}
         </div>`;
@@ -2424,9 +2743,17 @@
         b.addEventListener("click", () => otevriSadu(Number(b.dataset.id))));
       $("prehled-telo").querySelectorAll(".oznac-zaplaceno").forEach((b) =>
         b.addEventListener("click", async () => {
-          await api(`/api/sady/${b.dataset.id}`, "POST",
+          const sada = data.nezaplacene.find((s) => s.id === Number(b.dataset.id));
+          const { ok: o, data: d } = await api(`/api/sady/${b.dataset.id}`, "POST",
             { akce: "zaplaceno", zaplaceno: true });
+          if (!o) return zprava("prehled-zprava", d.chyba || "Nepovedlo se.", true);
           nactiPrehled();
+          SimteGen.vratitelne(`Sada ${sada ? sada.kod : ""} zaplacena`, async () => {
+            const r = await api(`/api/sady/${b.dataset.id}`, "POST",
+              { akce: "zaplaceno", zaplaceno: false });
+            if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+            nactiPrehled();
+          });
         }));
     }
 
@@ -2437,8 +2764,8 @@
       $("ucet-email").textContent = n.email;
       $("nast-role").textContent = NAZVY_ROLI[n.role] || n.role;
       $("nast-uskladneno").textContent = n.limit_sad
-        ? `${n.uskladneno} z ${n.limit_sad} sad`
-        : `${n.uskladneno} sad`;
+        ? `${SimteGen.cislo(n.uskladneno)} z ${SimteGen.cislo(n.limit_sad)} sad`
+        : pocet(n.uskladneno, "sada");
       $("nast-nazev").value = n.nazev || "";
       $("nast-telefon").value = n.telefon || "";
       $("nast-adresa").value = n.adresa || "";
@@ -2491,6 +2818,7 @@
       // protože nákup se připíše na účet toho, kdo ho udělal.
       document.body.classList.toggle("vlastnik",
         role === "spravce" && !!stav.nastaveni && stav.nastaveni.vlastni_ucet !== false);
+      $("ucet-odejit-blok").hidden = !stav.nastaveni || stav.nastaveni.vlastni_ucet !== false;
     }
 
     $("nast-format").querySelectorAll("button").forEach((b) =>
@@ -2540,13 +2868,11 @@
     const PRIPOMENOUT_AKTIVNI = 30;
 
     function mesicu(n) {
-      if (n === 1) return "1 měsíc";
-      if (n >= 2 && n <= 4) return `${n} měsíce`;
-      return `${n} měsíců`;
+      return pocet(n, "mesic");
     }
 
     function dnu(n) {
-      return n === 1 ? "1 den" : (n >= 2 && n <= 4 ? `${n} dny` : `${n} dní`);
+      return pocet(n, "den");
     }
 
     function vykresliPredplatne() {
@@ -2565,7 +2891,7 @@
         // Počet sad v regálu je důvod, proč se předplatné obnovuje: kola tu
         // leží dál, ať appka platí nebo ne.
         const sady = stav.nastaveni && stav.nastaveni.uskladneno
-          ? ` V regálu máte ${stav.nastaveni.uskladneno} sad.` : "";
+          ? ` V regálu máte ${pocet(stav.nastaveni.uskladneno, "sada")}.` : "";
         pruh.textContent = vyprselo
           ? `Předplatné skončilo — appka je v režimu čtení.${sady} Klepněte pro obnovení.`
           : `${p.stav === "zkusebni" ? "Zkušební období" : "Předplatné"} končí za `
@@ -2610,16 +2936,16 @@
       $("pred-veta").textContent = PRED_VETY[p.stav] || "";
 
       const n = stav.nastaveni;
-      $("pred-sad").textContent = n ? String(n.uskladneno) : "—";
+      $("pred-sad").textContent = n ? SimteGen.cislo(n.uskladneno) : "—";
       $("pred-zakazniku").textContent = n && n.zakazniku != null
-        ? String(n.zakazniku) : "—";
+        ? SimteGen.cislo(n.zakazniku) : "—";
 
       vykresliCenik();
     }
 
     // „129 Kč / firma / měsíc“ — cena a jednotka přesně ze schválení.
     function cenaVarianty(v) {
-      return `${v.cena} ${mena()} / ${v.jednotka}`;
+      return `${SimteGen.kc(v.cena)} / ${v.jednotka}`;
     }
 
     // Ceník jako řádky „Standard — 129 Kč / firma / měsíc“ a pod ním, co
@@ -2679,7 +3005,7 @@
       // slevy navíc. Server počítá totéž z téhož ceníku (cenik.js).
       const obdobi = stav.objednavka.mesice / v.obdobi;
       const celkem = v.cena * obdobi;
-      $("pred-cena").textContent = `${celkem} ${mena()}`;
+      $("pred-cena").textContent = SimteGen.kc(celkem);
       $("pred-cena-rozpis").textContent = v.obdobi > 1
         ? `${v.nazev} · ${cenaVarianty(v)}, za celou provozovnu.`
         : `${v.nazev} · ${cenaVarianty(v)} × ${mesicu(stav.objednavka.mesice)}, `
@@ -2730,7 +3056,7 @@
           <span class="hlavni"><strong>Objednávka č. ${o.id}</strong>
             <span>${bezpecne(o.varianta || "")} · ${mesicu(o.mesice)}
               · ${bezpecne(STAVY_OBJEDNAVKY[o.stav] || o.stav)}</span></span>
-          <span class="vpravo">${o.cena_czk ? `${o.cena_czk} ${bezpecne(mena())}` : ""}</span>
+          <span class="vpravo">${o.cena_czk ? SimteGen.kc(o.cena_czk) : ""}</span>
         </div>
         ${o.stav === "nova" ? `<div class="radek-akce jen-spravce">
           <button class="tlacitko vedlejsi pred-zrusit" data-id="${o.id}" type="button">Zrušit objednávku</button>
@@ -2738,7 +3064,13 @@
 
       seznam.querySelectorAll(".pred-zrusit").forEach((b) =>
         b.addEventListener("click", async () => {
-          if (!confirm(`Zrušit objednávku č. ${b.dataset.id}?`)) return;
+          // Zrušená objednávka předplatného se obnovit nedá (vrátit by
+          // znamenalo novou objednávku), proto tady otázka, ne Vrátit.
+          const zrusit = await SimteGen.potvrd(`Zrušit objednávku č. ${b.dataset.id}?`, {
+            popis: "Zrušenou objednávku nejde obnovit, můžete ale objednat znovu.",
+            ano: "Zrušit objednávku", ne: "Ponechat",
+          });
+          if (!zrusit) return;
           const { ok: o, data: d } = await api(`/api/objednavka/${b.dataset.id}`,
             "POST", { akce: "zrusit" });
           if (!o) return zprava("pred-zprava", d.chyba || "Nepovedlo se.", true);
@@ -2780,27 +3112,37 @@
 
     $("pred-znovu").addEventListener("click", otevriPredplatne);
     $("nast-predplatne").addEventListener("click", otevriPredplatne);
+    $("nast-tym").addEventListener("click", () => {
+      zprava("tym-zprava", "");
+      jdi("obrazovka-tym");
+      nactiTym();
+    });
+    $("nast-ucet").addEventListener("click", () => {
+      zprava("ucet-zprava", "");
+      jdi("obrazovka-ucet");
+    });
     $("pruh-predplatne").addEventListener("click", otevriPredplatne);
 
     // ------------------------------------------------------------- Team
     let tymRole = "mechanik";
 
     async function nactiTym() {
-      const { ok, data } = await api("/api/clenove", "GET");
       const kontejner = $("tym-seznam");
+      if (!kontejner.children.length) kontejner.innerHTML = KOSTRA_SEZNAMU;
+      const { ok, data } = await api("/api/clenove", "GET");
       if (!ok) {
-        kontejner.innerHTML = prazdno("Tým se nepodařilo načíst.");
+        kontejner.innerHTML = chybaHtml("Tým se nepodařilo načíst.");
         return;
       }
       if (!data.clenove.length) {
-        kontejner.innerHTML = prazdno("Zatím jste tu sami. Přidejte kolegu níž "
+        kontejner.innerHTML = prazdno("Zatím jste tu sami. Přidejte kolegu "
           + "— přihlásí se svým e-mailem.");
         return;
       }
       kontejner.innerHTML = data.clenove.map((c) =>
         `<div class="radek">
           <span class="hlavni"><strong>${bezpecne(c.email)}</strong>
-            <span>${NAZVY_ROLI[c.role] || c.role}</span></span>
+            <span>${NAZVY_ROLI[c.role] || c.role}${c.prijato ? "" : " · čeká na přijetí pozvánky"}</span></span>
         </div>
         <div class="radek-akce">
           <button class="tlacitko vedlejsi tym-zmenit" data-id="${c.id}" type="button"
@@ -2812,23 +3154,36 @@
       kontejner.querySelectorAll(".tym-zmenit").forEach((b) =>
         b.addEventListener("click", async () => {
           const poradi = ["spravce", "mechanik", "cteni"];
-          const dalsi = poradi[(poradi.indexOf(b.dataset.role) + 1) % poradi.length];
-          if (!confirm(`Změnit ${b.dataset.email} na „${NAZVY_ROLI[dalsi]}“?`)) return;
-          const { ok: o, data: d } = await api("/api/clenove", "POST",
-            { akce: "zmenit", id: Number(b.dataset.id), email: b.dataset.email, role: dalsi });
+          const puvodni = b.dataset.role;
+          const dalsi = poradi[(poradi.indexOf(puvodni) + 1) % poradi.length];
+          const zmen = (role) => api("/api/clenove", "POST",
+            { akce: "zmenit", id: Number(b.dataset.id), email: b.dataset.email, role });
+          const { ok: o, data: d } = await zmen(dalsi);
           if (!o) return zprava("tym-zprava", d.chyba || "Nepovedlo se.", true);
-          zprava("tym-zprava", "Oprávnění změněno.");
+          zprava("tym-zprava", "");
           nactiTym();
+          SimteGen.vratitelne(`${b.dataset.email}: ${NAZVY_ROLI[dalsi]}`, async () => {
+            const r = await zmen(puvodni);
+            if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+            nactiTym();
+          });
         }));
 
+      // Odebrání hned; Vrátit kolegu přidá zpátky se stejnou rolí.
       kontejner.querySelectorAll(".tym-odebrat").forEach((b) =>
         b.addEventListener("click", async () => {
-          if (!confirm(`Odebrat ${b.dataset.email} přístup k vašemu servisu?`)) return;
+          const clen = data.clenove.find((c) => c.id === Number(b.dataset.id));
           const { ok: o, data: d } = await api("/api/clenove", "POST",
             { akce: "odebrat", id: Number(b.dataset.id) });
           if (!o) return zprava("tym-zprava", d.chyba || "Nepovedlo se.", true);
-          zprava("tym-zprava", "Kolega odebrán.");
+          zprava("tym-zprava", "");
           nactiTym();
+          SimteGen.vratitelne(`Kolega ${b.dataset.email} odebrán`, async () => {
+            const r = await api("/api/clenove", "POST",
+              { akce: "pridat", email: b.dataset.email, role: clen ? clen.role : "mechanik" });
+            if (!r.ok) throw new Error(r.data.chyba || "Nepovedlo se.");
+            nactiTym();
+          });
         }));
     }
 
@@ -2838,6 +3193,54 @@
         chipy($("tym-role"), "role", tymRole);
       }));
 
+    // Pozvánky do cizího servisu pro přihlášeného. Přijetí je jediná cesta,
+    // jak se pozvánka stane přístupem (functions/api/clenove.js) — nikdo
+    // jiný nikoho do svého servisu nepřesune.
+    async function nactiPozvanky() {
+      const blok = $("pozvanky");
+      const { ok, data } = await api("/api/clenove", "GET");
+      const pozvanky = (ok && data.pozvanky) || [];
+      blok.hidden = !pozvanky.length;
+      blok.innerHTML = pozvanky.map((p) => `
+        <div class="karta">
+          <p>Servis <strong>${bezpecne(p.servis)}</strong> vás zve do týmu
+          (${bezpecne(NAZVY_ROLI[p.role] || p.role)}). Po přijetí uvidíte jeho
+          evidenci místo své. Neznáte-li ho, pozvánku odmítněte.</p>
+          <div class="radka">
+            <button class="tlacitko vedlejsi pozvanka-prijmout" data-id="${p.id}" type="button">Přijmout</button>
+            <button class="tlacitko vedlejsi pozvanka-odmitnout" data-id="${p.id}" type="button">Odmítnout</button>
+          </div>
+        </div>`).join("") + '<div id="pozvanky-zprava" class="zprava" aria-live="polite"></div>';
+      blok.querySelectorAll(".pozvanka-prijmout").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "prijmout", id: Number(b.dataset.id) });
+          if (!o) return zprava("pozvanky-zprava", d.chyba || "Pozvánku se nepodařilo přijmout.", true);
+          // Jiný servis = jiná evidence: celé načtení znovu, od Dnes.
+          location.reload();
+        }));
+      blok.querySelectorAll(".pozvanka-odmitnout").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const { ok: o, data: d } = await api("/api/clenove", "POST",
+            { akce: "odmitnout", id: Number(b.dataset.id) });
+          if (!o) return zprava("pozvanky-zprava", d.chyba || "Nepovedlo se.", true);
+          nactiPozvanky();
+        }));
+    }
+
+    // Odejít může každý pozvaný sám — nesmí zůstat v cizím servisu jen proto,
+    // že ho správce neodebere. Vrátit to sám nemůže, proto otázka.
+    $("ucet-odejit").addEventListener("click", async () => {
+      const odejit = await SimteGen.potvrd("Odejít z tohoto servisu?", {
+        popis: "Přístup k jeho evidenci ztratíte, dokud vás správce znovu nepozve.",
+        ano: "Odejít ze servisu", nebezpecne: true,
+      });
+      if (!odejit) return;
+      const { ok, data } = await api("/api/clenove", "POST", { akce: "odejit" });
+      if (!ok) return zprava("ucet-zprava", data.chyba || "Nepovedlo se.", true);
+      location.reload();
+    });
+
     $("tym-pridat").addEventListener("click", async () => {
       zprava("tym-zprava", "Přidávám…");
       const { ok, data } = await api("/api/clenove", "POST", {
@@ -2845,34 +3248,24 @@
       });
       if (!ok) return zprava("tym-zprava", data.chyba || "Nepovedlo se.", true);
       $("tym-email").value = "";
-      zprava("tym-zprava", "Hotovo — kolega se přihlásí svým e-mailem.");
+      // Pozvánka platí, až ji kolega sám přijme: přihlásí se svým e-mailem
+      // a na obrazovce Dnes klepne na Přijmout.
+      zprava("tym-zprava", "Pozvánka je připravená. Kolega se přihlásí svým e-mailem "
+        + "a na obrazovce Dnes ji přijme.");
       nactiTym();
     });
 
     $("nast-ukazka-naplnit").addEventListener("click", async () => {
-      zprava("nast-zprava", "Plním ukázková data…");
-      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "naplnit" });
-      if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
-      await nactiUcet();
-      zprava("nast-zprava",
-        `Hotovo — ${data.sad} sad, ${data.zakazniku} zákazníků, ${data.objednavek} objednávek.`);
+      zprava("ucet-zprava", "Plním ukázková data…");
+      if (await naplnUkazku("ucet-zprava")) zprava("ucet-zprava", "");
     });
 
-    $("nast-ukazka-smazat").addEventListener("click", async () => {
-      if (!confirm("Smazat ukázková data? Vaše skutečné záznamy zůstanou.")) return;
-      const { ok, data } = await api("/api/ukazkova-data", "POST", { akce: "smazat" });
-      if (!ok) return zprava("nast-zprava", data.chyba || "Nepovedlo se.", true);
-      await nactiUcet();
-      // Example customers you hung a real set or booking on cannot go without
-      // taking that record with them, so they stay — and we say so.
-      zprava("nast-zprava", data.ponechani
-        ? `Ukázková data smazána. ${data.ponechani} ukázkových zákazníků jsme `
-          + "ponechali — máte u nich vedené vlastní sady nebo objednávky."
-        : "Ukázková data smazána.");
-    });
+    // Vaše skutečné záznamy zůstanou; Vrátit ukázku nahraje znovu.
+    $("nast-ukazka-smazat").addEventListener("click", () => smazUkazku("ucet-zprava", false));
 
     $("stahnout-data").addEventListener("click", () => {
       location.href = "/api/ucet/export";
+      zprava("ucet-zprava", "Stahujeme soubor s vašimi daty.");
     });
 
     $("odhlasit").addEventListener("click", async () => {
@@ -2882,7 +3275,13 @@
     });
 
     $("smazat-ucet").addEventListener("click", async () => {
-      if (!confirm("Opravdu smazat účet a všechna data včetně evidence sad? Krok je nevratný.")) return;
+      // Jediná věc v appce, kterou vrátit nejde: proto otázka, červené
+      // tlačítko a fokus na Zrušit (Enter nic nesmaže).
+      const smazat = await SimteGen.potvrd("Smazat účet a všechna data?", {
+        popis: "Smaže se celá evidence sad, zákazníků a objednávek. Krok je nevratný.",
+        ano: "Smazat účet", nebezpecne: true,
+      });
+      if (!smazat) return;
       const { ok, data } = await api("/api/ucet/smazat", "POST");
       if (!ok) return zprava("ucet-zprava", data.chyba || "Smazání se nepovedlo.", true);
       document.body.classList.remove("prihlasen");
@@ -2957,9 +3356,10 @@
         titulek: "Nastavení a vaše data",
         text: [
           "Vyplníte údaje, které se tisknou na štítek, zvolíte formát štítku "
-          + "(role nebo archy A4) a výchozí cenu, pozvete kolegu do týmu.",
-          "Je tu i předplatné a vaše data: kdykoli si je odtud stáhnete nebo "
-          + "smažete účet.",
+          + "(role nebo archy A4) a výchozí cenu.",
+          "Odtud vede cesta i k předplatnému, k týmu (pozvete kolegu) a k účtu: "
+          + "data si kdykoli stáhnete nebo smažete účet.",
+          "Smažete-li nebo zrušíte něco omylem, dole se na chvíli objeví Vrátit.",
         ],
       },
     ];
@@ -3055,7 +3455,7 @@
         const mesicni = seznam.filter((v) => v.obdobi === 1);
         const nejlevnejsi = (mesicni.length ? mesicni : seznam)
           .reduce((a, b) => (a.cena <= b.cena ? a : b));
-        $("uvod-cena-cislo").textContent = `${nejlevnejsi.cena} ${mena()}`;
+        $("uvod-cena-cislo").textContent = SimteGen.kc(nejlevnejsi.cena);
         vykresliRadkyCeniku($("uvod-cenik"), $("uvod-cenik-obsah"));
       }
       // Bez věty o způsobu platby: v aplikaci z Google Play se platí přes
@@ -3088,32 +3488,57 @@
       vykresliUvod();
     }
 
+    // Úvod pro nepřihlášené se počítá jednou za načtení stránky — anonymní
+    // součet (den, stránka, počet), bez cookie a bez účtu.
+    let navstevaZapsana = false;
+    function zapisNavstevu() {
+      if (navstevaZapsana) return;
+      navstevaZapsana = true;
+      fetch("/api/navsteva", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stranka: "uvod" }),
+      }).catch(() => {});
+    }
+
+    // Kdo je přihlášený, říká jen SimteGen.kdoJsem(): mechanik v dílně se
+    // slabým signálem nesmí vypadat odhlášeně. Přihlášení se ukáže jen při
+    // „odhlasen“; při „offline“ zůstane poslední obrazovka a pruh se
+    // „Zkusit znovu“.
     async function obnov() {
-      try {
-        const { data } = await api("/api/ja", "GET");
-        prevezmiCenik(data);
-        if (!data.prihlasen) {
-          document.body.classList.remove("prihlasen");
-          ukaz("obrazovka-prihlaseni");
-          return;
-        }
-        document.body.classList.add("prihlasen");
-        // Předplatné jede s /api/ja, takže režim čtení platí od prvního
-        // vykreslení a ne až po dotazu na nastavení.
-        if (data.predplatne) stav.predplatne = data.predplatne;
-        vykresliPredplatne();
-        await nactiUcet();
-        vykresliNastaveni();
-        history.replaceState({ obrazovka: "obrazovka-dnes" }, "");
-        ukaz("obrazovka-dnes");
-        nactiDnes();
-        // First arrival on this account: show the walkthrough over the home
-        // screen, so the tour describes something the shop can already see.
-        if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();
-      } catch {
+      const { stav: spojeni, ja } = await SimteGen.kdoJsem();
+      if (spojeni === "offline") {
+        SimteGen.offline(obnov);
+        return;
+      }
+      SimteGen.spojeno();
+      prevezmiCenik(ja);
+      if (spojeni === "odhlasen") {
         document.body.classList.remove("prihlasen");
         ukaz("obrazovka-prihlaseni");
+        zapisNavstevu();
+        return;
       }
+      document.body.classList.add("prihlasen");
+      // Předplatné jede s /api/ja, takže režim čtení platí od prvního
+      // vykreslení a ne až po dotazu na nastavení.
+      if (ja.predplatne) stav.predplatne = ja.predplatne;
+      vykresliPredplatne();
+      await nactiUcet();
+      vykresliNastaveni();
+      const aktivni = document.querySelector(".obrazovka.aktivni");
+      // Po výpadku spojení zůstává obrazovka, na které mechanik byl.
+      if (aktivni && aktivni.id !== "obrazovka-nacitani" && aktivni.id !== "obrazovka-prihlaseni") {
+        obnovAktivni();
+        return;
+      }
+      history.replaceState({ obrazovka: "obrazovka-dnes" }, "");
+      ukaz("obrazovka-dnes");
+      nactiDnes();
+      nactiPozvanky();
+      // First arrival on this account: show the walkthrough over the home
+      // screen, so the tour describes something the shop can already see.
+      if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();
     }
 
     obnov();

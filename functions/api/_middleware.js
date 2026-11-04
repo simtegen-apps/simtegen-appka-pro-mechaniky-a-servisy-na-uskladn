@@ -99,6 +99,25 @@ async function zapis(context, kopie, odkaz, odpoved) {
 
 const UKAZKOVY_UCET = "@ukazka.invalid";
 
+// ── The product's name for the login e-mail ──────────────────────────
+// "Váš přihlašovací odkaz" from an unknown sender looked like phishing next
+// to the customer's other mail; the subject now names the product. The
+// name is the page's <meta name="application-name"> (CI requires it on
+// every page), read once per worker from the static index and handed to
+// the handler as context.data.produkt — the product's prihlaseni.js uses
+// it when present (template; older products get their subject line
+// rewritten by the build, stavitel._NAZEV_V_EMAILU).
+let nazevProduktu = null;
+
+async function nactiNazev(context) {
+  if (nazevProduktu !== null) return nazevProduktu;
+  const stranka = await context.env.ASSETS.fetch(new URL("/", context.request.url));
+  const html = stranka.ok ? await stranka.text() : "";
+  const m = html.match(/<meta\s+name=["']application-name["']\s+content=["']([^"'<>]{1,60})["']/i);
+  nazevProduktu = m ? m[1].trim() : "";
+  return nazevProduktu;
+}
+
 async function zapisZkusebni(context) {
   const { env, data } = context;
   const p = data.predplatne;
@@ -148,6 +167,54 @@ async function sJa(context, odpoved) {
   return nova;
 }
 
+// ── Sliding login ─────────────────────────────────────────────────────
+// A login used to end 30 days after the link, however often the customer
+// came back — the mechanic who opens the app every morning was asked for a
+// new link once a month, in the middle of work. Now every API call made in
+// the session's second half renews it to 30 days from now; a session is
+// never older than a year (then one new link). At most one write per
+// session per two weeks, so no cost on ordinary calls. Here and not in the
+// product's spolecne.js: this file is refreshed in every product on its
+// next build, together with the manifest wording that the policy prints
+// ("30 dní od posledního použití, nejdéle rok").
+const DEN_S = 86400;
+const RELACE_DNI = 30;
+const RELACE_NEJDELE_DNI = 365;
+
+function cookieRelace(request) {
+  const hlavicka = request.headers.get("Cookie") || "";
+  for (const cast of hlavicka.split(";")) {
+    const [k, ...v] = cast.trim().split("=");
+    if (k === "relace") return v.join("=");
+  }
+  return null;
+}
+
+async function prodluzRelaci(context, odpoved) {
+  const { request, env, data } = context;
+  // Logout, account deletion and a fresh login set their own cookie; a demo
+  // account lives 24 hours by design.
+  if (!data.uzivatel || odpoved.headers.has("Set-Cookie")
+      || String(data.uzivatel.email || "").endsWith(UKAZKOVY_UCET)) return odpoved;
+  const token = cookieRelace(request);
+  if (!token) return odpoved;
+  const otiskTokenu = await otisk(token);
+  const radek = await env.DB.prepare(
+    "SELECT expirace, vytvoreno FROM relace WHERE otisk_tokenu = ?"
+  ).bind(otiskTokenu).first();
+  const nyni = Math.floor(Date.now() / 1000);
+  if (!radek || radek.expirace - nyni > (RELACE_DNI / 2) * DEN_S) return odpoved;
+  const nova = Math.min(nyni + RELACE_DNI * DEN_S, Number(radek.vytvoreno) + RELACE_NEJDELE_DNI * DEN_S);
+  if (nova <= radek.expirace) return odpoved;
+  await env.DB.prepare(
+    "UPDATE relace SET expirace = ? WHERE otisk_tokenu = ? AND expirace < ?"
+  ).bind(nova, otiskTokenu, nova).run();
+  const vysledek = new Response(odpoved.body, odpoved);
+  vysledek.headers.append("Set-Cookie",
+    `relace=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${nova - nyni}`);
+  return vysledek;
+}
+
 export async function onRequest(context) {
   const { request } = context;
   const cesta = new URL(request.url).pathname;
@@ -162,18 +229,33 @@ export async function onRequest(context) {
       // Before the migration, or a bad token: the handler decides, not us.
     }
   }
+  if (request.method === "POST" && cesta === "/api/prihlaseni") {
+    try {
+      context.data.produkt = (await nactiNazev(context)) || undefined;
+    } catch {
+      // Without a name the mail says "Váš přihlašovací odkaz", as before.
+    }
+  }
   const odpoved = await context.next();
   try {
     await zapis(context, kopie, odkaz, odpoved);
   } catch {
     // See the header: never the customer's problem.
   }
+  let vysledek = odpoved;
   if (request.method === "GET" && cesta === "/api/ja" && odpoved.ok) {
     try {
-      return await sJa(context, odpoved);
+      vysledek = await sJa(context, odpoved);
     } catch {
       // The product's answer, untouched, rather than none.
     }
   }
-  return odpoved;
+  if (vysledek.ok) {
+    try {
+      vysledek = await prodluzRelaci(context, vysledek);
+    } catch {
+      // A login that is not renewed today is renewed tomorrow.
+    }
+  }
+  return vysledek;
 }

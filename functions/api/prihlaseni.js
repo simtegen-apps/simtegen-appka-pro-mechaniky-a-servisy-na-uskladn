@@ -7,7 +7,9 @@
 // infrastructure, at the price that such a deployment must never be treated
 // as a real login boundary. The response says so explicitly.
 
-import { json, novyToken, otisk, ted, ODKAZ_TRVANI } from "../../spolecne.js";
+import {
+  hrubyLimit, json, novyToken, otisk, ted, zeStejneStranky, ODKAZ_TRVANI,
+} from "../../spolecne.js";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
 
@@ -22,6 +24,20 @@ export async function onRequestPost(context) {
   const email = String(telo.email || "").trim().toLowerCase();
   if (!EMAIL.test(email)) {
     return json({ chyba: "Zadejte prosím platnou e-mailovou adresu." }, 422);
+  }
+
+  // Where e-mail really goes out, only our own page may ask, and one sender
+  // address only ten times an hour: the per-recipient limit below alone let
+  // a script mail thousands of strangers from the firm's domain. The
+  // product's functions/_middleware.js fences the same, so a template
+  // refresh of this file does not reopen it.
+  if (env.RESEND_API_KEY && env.EMAIL_ODESILATEL) {
+    if (!zeStejneStranky(request)) {
+      return json({ chyba: "Požadavek musí přijít ze stránky aplikace." }, 403);
+    }
+    if (!hrubyLimit(request, "prihlaseni", 10, 3600)) {
+      return json({ chyba: "Příliš mnoho pokusů. Zkuste to prosím za hodinu." }, 429);
+    }
   }
 
   // Three links per hour per address: enough for a confused customer,
@@ -58,7 +74,7 @@ export async function onRequestPost(context) {
     body: JSON.stringify({
       from: env.EMAIL_ODESILATEL,
       to: [email],
-      subject: "Váš přihlašovací odkaz",
+      subject: context.data.produkt ? `${context.data.produkt}: přihlašovací odkaz` : "Váš přihlašovací odkaz",
       text:
         "Dobrý den,\n\npro přihlášení otevřete tento odkaz (platí 1 hodinu):\n"
         + `${odkaz}\n\nPokud jste o přihlášení nežádali, e-mail ignorujte.\n`,

@@ -242,11 +242,13 @@
         "typ": "Diagnostics",
         "ucely": [
           "App functionality",
-          "Developer communications"
+          "Developer communications",
+          "Analytics"
         ],
-        "volitelne": true,
+        "volitelne": false,
         "zdroje": [
-          "hlášení chyb (tlačítko Nahlásit chybu)"
+          "hlášení chyb (tlačítko Nahlásit chybu)",
+          "počty chyb aplikace (souhrnně, bez vazby na osobu)"
         ]
       }
     ]

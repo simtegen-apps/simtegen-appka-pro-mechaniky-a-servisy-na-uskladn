@@ -31,6 +31,37 @@ export function json(telo, status = 200, hlavicky = {}) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Public tally endpoints (/api/navsteva, /api/chyba-stranky)
+// ---------------------------------------------------------------------------
+// They write without a login, so two cheap fences: the request must come
+// from our own page (a browser sends Origin on every POST; Sec-Fetch-Site
+// covers the few that do not), and one address gets a handful of writes per
+// hour. The counter lives in the worker's memory only — per isolate, gone on
+// restart, never stored: rough, but it turns a script's million writes into
+// a few dozen, which is what protects the D1 write quota the logins need.
+export function zeStejneStranky(request) {
+  const origin = request.headers.get("Origin");
+  if (origin) return origin === new URL(request.url).origin;
+  return request.headers.get("Sec-Fetch-Site") === "same-origin";
+}
+
+const HRUBE_LIMITY = new Map();
+
+export function hrubyLimit(request, klic, max, oknoS) {
+  const adresa = request.headers.get("CF-Connecting-IP") || "neznama";
+  const nyni = Date.now();
+  if (HRUBE_LIMITY.size > 5000) HRUBE_LIMITY.clear();
+  const k = `${klic}|${adresa}`;
+  const zaznam = HRUBE_LIMITY.get(k);
+  if (!zaznam || nyni - zaznam.od > oknoS * 1000) {
+    HRUBE_LIMITY.set(k, { od: nyni, pocet: 1 });
+    return true;
+  }
+  zaznam.pocet += 1;
+  return zaznam.pocet <= max;
+}
+
 export function ctiCookie(request, nazev) {
   const cookies = request.headers.get("Cookie") || "";
   for (const kus of cookies.split(";")) {
@@ -297,13 +328,31 @@ export function bezDiakritiky(text) {
 // why /api/ucet/smazat stays correct without changes.
 //
 // Priority when both exist: the account's OWN shop wins over any invitation.
-// An invitation is an offer, not a claim on somebody else's warehouse.
+// An invitation is an offer, not a claim on somebody else's warehouse — and
+// it counts only once the invited person accepted it themselves (clenove.
+// prijato, migration 0008). An address typed in by a správce alone moves
+// nobody anywhere — rows written before 0008 included (rule below, 0009).
 export const ROLE = ["spravce", "mechanik", "cteni"];
+
+// Is row c (clenove) an accepted membership of person u (uzivatele, the
+// address the row names)? Accepted in the app (prijato_cas), or an old row
+// from before 0008 whose person already had an account when 0009 ran — the
+// colleagues who were working keep working, a row for someone who had
+// never signed in is an invitation like any new one. With u missing (no
+// account yet) the comparison is NULL, i.e. not accepted. Plain SQL,
+// shared by the resolver and functions/api/clenove.js.
+export const CLENSTVI_PRIJATO =
+  "(c.prijato = 1 AND (c.prijato_cas IS NOT NULL OR u.vytvoreno < " +
+  "(SELECT provedeno FROM stav_migraci WHERE nazev = '0009_clenove_bez_prihlaseni')))";
+// The opposite: an invitation still waiting for its person.
+export const CLENSTVI_NEPRIJATO =
+  "(c.prijato = 0 OR (c.prijato_cas IS NULL AND NOT (u.vytvoreno < " +
+  "(SELECT provedeno FROM stav_migraci WHERE nazev = '0009_clenove_bez_prihlaseni'))))";
 
 // Does this account run a shop of its own? nastaveni_servisu deliberately does
 // not count: nactiNastaveni() creates that row on first read, so every account
 // has one and it proves nothing. Only records a person actually entered do.
-async function maVlastniData(env, uzivatelId) {
+export async function maVlastniData(env, uzivatelId) {
   const radek = await env.DB.prepare(
     "SELECT (EXISTS(SELECT 1 FROM sady WHERE uzivatel_id = ?) " +
     "OR EXISTS(SELECT 1 FROM zakaznici WHERE uzivatel_id = ?) " +
@@ -315,13 +364,19 @@ async function maVlastniData(env, uzivatelId) {
 export async function nactiKontext(env, uzivatel) {
   if (!uzivatel) return null;
 
+  // mimo-uzivatele: membership is looked up by the signed-in person's own
+  // address across shops — that is what the row is for.
   const clenstvi = await env.DB.prepare(
-    "SELECT uzivatel_id, role FROM clenove WHERE email = ? ORDER BY id LIMIT 1"
-  ).bind(uzivatel.email).first();
+    "SELECT c.uzivatel_id, c.role FROM clenove c JOIN uzivatele u ON u.id = ? " +
+    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_PRIJATO} ` +
+    "ORDER BY c.id LIMIT 1"
+  ).bind(uzivatel.id).first();
 
-  // No invitation, or one pointing back at this very account: own shop.
-  // Checking membership first keeps the ordinary case at a single query.
-  if (!clenstvi || clenstvi.uzivatel_id === uzivatel.id) {
+  // No accepted membership elsewhere: own shop. A row pointing back at this
+  // very account is skipped by the query, so nobody can be demoted inside
+  // their own shop. Checking membership first keeps the ordinary case at a
+  // single query.
+  if (!clenstvi) {
     return { id: uzivatel.id, role: "spravce", vlastni: true };
   }
 

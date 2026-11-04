@@ -43,6 +43,8 @@ ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
 # policy says so whenever the product carries the migration — written by the
 # template, so no product forgets to.
 ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
+# Script errors counted anonymously (P9, functions/api/chyba-stranky.js).
+CHYBY_MIGRACE = Path("db") / "migrace" / "0930_chyby_stranek.sql"
 POSTUP = Path("POSTUP_PRI_INCIDENTU.md")
 
 _HLAVICKA = "GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: data-manifest.json, generátor: vykresli_zasady.py."
@@ -197,6 +199,17 @@ def _ukladame(manifest: dict) -> list[dict]:
             "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
             "subjekty": "zákazníci a návštěvníci",
             "retence": "u účtu do jeho smazání; souhrnné počty bez osobních údajů",
+        })
+    if CHYBY_MIGRACE.exists():
+        rows.append({
+            "entita": "chyby aplikace",
+            "ucel": "najít a opravit chyby, na které v aplikaci narazíte, i když nám je nenahlásíte",
+            "pole": "souhrnné počty chyb skriptu podle dne, obrazovky a místa v našem kódu — bez textu "
+                    "chyby, bez vazby na osobu nebo zařízení. Nic se neukládá do vašeho prohlížeče.",
+            "zaklad": "oprávněný zájem — funkční a bezpečná služba",
+            "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
+            "subjekty": "zákazníci a návštěvníci",
+            "retence": "souhrnné počty bez osobních údajů",
         })
     rows.append({
         "entita": "provozní a bezpečnostní logy",

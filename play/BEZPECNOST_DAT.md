@@ -56,7 +56,7 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 | Aktivita v aplikaci (App activity) | Jiný obsah vytvořený uživatelem (Other user-generated content) | Ano | povinné | Funkce aplikace (App functionality) | zakaznici, sady, pohyby, objednavky |
 | Aktivita v aplikaci (App activity) | Interakce s aplikací (App interactions) | Ano | volitelné | Analýza (Analytics) | zdroj příchodu (odkaz z kampaně) |
 | Kalendář (Calendar) | Události v kalendáři (Calendar events) | Ano | povinné | Funkce aplikace (App functionality) | objednavky |
-| Informace o aplikaci a výkonu (App info and performance) | Diagnostika (Diagnostics) | Ano | volitelné | Funkce aplikace (App functionality), Komunikace vývojáře (Developer communications) | hlášení chyb (tlačítko Nahlásit chybu) |
+| Informace o aplikaci a výkonu (App info and performance) | Diagnostika (Diagnostics) | Ano | povinné | Funkce aplikace (App functionality), Komunikace vývojáře (Developer communications), Analýza (Analytics) | hlášení chyb (tlačítko Nahlásit chybu), počty chyb aplikace (souhrnně, bez vazby na osobu) |
 
 ## 4. Obsah aplikace — ostatní prohlášení (App content)
 

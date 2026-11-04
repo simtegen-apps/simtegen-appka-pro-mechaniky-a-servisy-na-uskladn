@@ -322,6 +322,308 @@
           "obsahuje": ["predplatne", "zkusebni"]
         }
       ]
+    },
+    {
+      "nazev": "Zrušení objednávky a její Vrátit: kola jsou zase v přípravě",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Eta",
+            "telefon": "601000555",
+            "spz": "UAT5511",
+            "typ": "zimni",
+            "rozmer": "205/55 R16",
+            "pozice": "UATREGAL-21",
+            "cena_skladovani": 800
+          },
+          "ocekavam": 200,
+          "uloz": { "eta_id": "sada.id", "eta_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky",
+          "telo": {
+            "sada_id": "{eta_id}",
+            "den": "2030-04-10",
+            "cas": "10:00",
+            "ukon": "prezuti",
+            "na_discich": true,
+            "delka_min": 45,
+            "poznamka": "UAT-poznamka-Eta",
+            "potvrzeno": true
+          },
+          "ocekavam": 200,
+          "uloz": { "eta_obj": "objednavka.id" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky/{eta_obj}",
+          "telo": { "akce": "zruseno" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/priprava?den=2030-04-10",
+          "ocekavam": 200,
+          "neobsahuje": ["UATREGAL-21"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky/{eta_obj}",
+          "telo": { "akce": "planovano" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/priprava?den=2030-04-10",
+          "ocekavam": 200,
+          "obsahuje": ["{eta_kod}", "UATREGAL-21", "UAT-motorista-Eta"]
+        }
+      ]
+    },
+    {
+      "nazev": "Výdej sady a jeho Vrátit: sada je zpět na původním místě",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Theta",
+            "telefon": "601000666",
+            "spz": "UAT6622",
+            "typ": "letni",
+            "rozmer": "195/65 R15",
+            "pozice": "UATREGAL-22",
+            "cena_skladovani": 700
+          },
+          "ocekavam": 200,
+          "uloz": { "theta_id": "sada.id", "theta_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady/{theta_id}",
+          "telo": { "akce": "vydat" },
+          "ocekavam": 200,
+          "obsahuje": ["vydano"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=uskladneno&q=UATREGAL-22",
+          "ocekavam": 200,
+          "neobsahuje": ["{theta_kod}"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady/{theta_id}",
+          "telo": { "akce": "vratit", "pozice": "UATREGAL-22" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=uskladneno&q=UATREGAL-22",
+          "ocekavam": 200,
+          "obsahuje": ["{theta_kod}", "UAT-motorista-Theta"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady/{theta_id}",
+          "ocekavam": 200,
+          "obsahuje": ["vydej", "výdej vrácen", "UATREGAL-22"]
+        }
+      ]
+    },
+    {
+      "nazev": "Přesun sady a jeho Vrátit: sada je zase na původním místě",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Iota",
+            "telefon": "601000777",
+            "spz": "UAT7733",
+            "typ": "zimni",
+            "rozmer": "225/45 R17",
+            "pozice": "UATREGAL-A1-03",
+            "cena_skladovani": 900
+          },
+          "ocekavam": 200,
+          "uloz": { "iota_id": "sada.id", "iota_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady/{iota_id}",
+          "telo": { "akce": "presunout", "pozice": "UATREGAL-B2-01" },
+          "ocekavam": 200,
+          "obsahuje": ["UATREGAL-B2-01"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady/{iota_id}",
+          "telo": { "akce": "presunout", "pozice": "UATREGAL-A1-03" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=uskladneno&q=UATREGAL-A1-03",
+          "ocekavam": 200,
+          "obsahuje": ["{iota_kod}", "UAT-motorista-Iota"]
+        }
+      ]
+    },
+    {
+      "nazev": "Odebrání kolegy a jeho Vrátit: kolega má zase stejnou roli",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "pridat", "email": "uat-kolega-kappa@example.cz", "role": "mechanik" },
+          "ocekavam": 200,
+          "uloz": { "kolega_id": "clen.id" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "odebrat", "id": "{kolega_id}" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "neobsahuje": ["uat-kolega-kappa@example.cz"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "pridat", "email": "uat-kolega-kappa@example.cz", "role": "mechanik" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "obsahuje": ["uat-kolega-kappa@example.cz", "mechanik"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "neobsahuje": ["uat-kolega-kappa@example.cz"]
+        }
+      ]
+    },
+    {
+      "nazev": "Pozvánka do týmu platí až po přijetí pozvaným, cizí účet ji nepřijme",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "pridat", "email": "uat-pozvany-mu@example.cz", "role": "spravce" },
+          "ocekavam": 200,
+          "obsahuje": ["pozvano", "\"prijato\":0"],
+          "uloz": { "pozvanka_id": "clen.id" }
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/clenove",
+          "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "neobsahuje": ["uat-pozvany-mu@example.cz"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/clenove",
+          "ocekavam": 200,
+          "obsahuje": ["uat-pozvany-mu@example.cz", "\"prijato\":0"]
+        }
+      ]
+    },
+    {
+      "nazev": "Účet B nevrátí objednávku ani sadu účtu A",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Lambda",
+            "telefon": "601000888",
+            "spz": "UAT8844",
+            "typ": "zimni",
+            "rozmer": "215/60 R16",
+            "pozice": "UATREGAL-23",
+            "cena_skladovani": 800
+          },
+          "ocekavam": 200,
+          "uloz": { "lambda_id": "sada.id", "lambda_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky",
+          "telo": {
+            "sada_id": "{lambda_id}",
+            "den": "2030-04-11",
+            "cas": "11:00",
+            "ukon": "prezuti",
+            "na_discich": true,
+            "delka_min": 45,
+            "poznamka": "UAT-poznamka-Lambda",
+            "potvrzeno": true
+          },
+          "ocekavam": 200,
+          "uloz": { "lambda_obj": "objednavka.id" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/objednavky/{lambda_obj}",
+          "telo": { "akce": "zruseno" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady/{lambda_id}",
+          "telo": { "akce": "vydat" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/objednavky/{lambda_obj}",
+          "telo": { "akce": "planovano" },
+          "ocekavam": 404
+        },
+        {
+          "jako": "B",
+          "pozadavek": "POST /api/sady/{lambda_id}",
+          "telo": { "akce": "vratit", "pozice": "UATREGAL-23" },
+          "ocekavam": 404,
+          "neobsahuje": ["UAT-motorista-Lambda"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/priprava?den=2030-04-11",
+          "ocekavam": 200,
+          "neobsahuje": ["UATREGAL-23"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady?stav=uskladneno&q=UATREGAL-23",
+          "ocekavam": 200,
+          "neobsahuje": ["{lambda_kod}"]
+        }
+      ]
     }
   ]
 }

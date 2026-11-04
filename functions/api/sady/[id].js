@@ -10,6 +10,8 @@ import {
 } from "../../../spolecne.js";
 import { vyzadujPredplatne } from "../../../predplatne.js";
 
+const STORNO_VYDEJE_S = 15 * 60;
+
 function hloubka(hodnota) {
   const n = Number(String(hodnota == null ? "" : hodnota).replace(",", "."));
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -56,12 +58,20 @@ export async function onRequestPost(context) {
   const akce = ocisti(telo.akce, 20);
   const nyni = ted();
 
+  // „Vrátit“ hned po výdeji (tlačítko Vrátit v appce): výdej omylem se
+  // bere zpět, nejde o nové uskladnění. Patnáct minut je dost na Vrátit
+  // i na „ještě stojí u pultu“, a málo na to, aby se tudy obcházelo
+  // předplatné zakládáním nových sad.
+  const storno = akce === "vratit" && sada.stav === "vydano"
+    && sada.datum_vydeje && nyni - sada.datum_vydeje < STORNO_VYDEJE_S;
+
   // Vypršelé předplatné zastavuje zápisy, ale NE vydání kol a NE zápis, že
   // zákazník uskladnění zaplatil. Servis fyzicky drží cizí majetek: kdyby mu
   // appka nedovolila sadu vydat, držela by kola motoristy jako rukojmí naší
   // nezaplacené faktury. Totéž u „zaplaceno“ — jsou to peníze servisu, které
-  // s naším předplatným nemají nic společného.
-  if (akce !== "vydat" && akce !== "zaplaceno") {
+  // s naším předplatným nemají nic společného. A výdej omylem musí jít
+  // vzít zpět stejně, jako šel udělat.
+  if (akce !== "vydat" && akce !== "zaplaceno" && !storno) {
     const stop = vyzadujPredplatne(context);
     if (stop) return stop;
   }
@@ -78,9 +88,21 @@ export async function onRequestPost(context) {
         "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
       ).bind(data.servis.id, id, "vydej", nyni, ocisti(telo.poznamka, 200)),
     ]);
+  } else if (akce === "vratit" && storno) {
+    // Undo of a hand-out: the set never left, so it keeps its date of
+    // arrival. The log still gets a line — pohyby is append-only.
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE sady SET stav = 'uskladneno', datum_vydeje = NULL, pozice = ? " +
+        "WHERE uzivatel_id = ? AND id = ?"
+      ).bind(ocisti(telo.pozice, 40) || sada.pozice, data.servis.id, id),
+      env.DB.prepare(
+        "INSERT INTO pohyby (uzivatel_id, sada_id, typ, datum, poznamka) VALUES (?, ?, ?, ?, ?)"
+      ).bind(data.servis.id, id, "prijem", nyni, "výdej vrácen"),
+    ]);
   } else if (akce === "vratit") {
-    // A set handed out by mistake, or the same wheels coming back for another
-    // season: the code and the history stay, only the state reopens.
+    // The same wheels coming back for another season: the code and the
+    // history stay, only the state reopens.
     await env.DB.batch([
       env.DB.prepare(
         "UPDATE sady SET stav = 'uskladneno', datum_vydeje = NULL, datum_prijmu = ?, " +

@@ -244,11 +244,17 @@ PLAY = Path("play")
 ZDROJE_PLAY = {"entita": "zdroj příchodu (odkaz z kampaně)",
                "play_typy": ["akce_v_aplikaci"], "play_ucely": ["analytika"], "play_volitelne": True}
 ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
+# Script errors counted anonymously (P9, migration 0930): sent from the
+# device without asking, so Diagnostics, collected, not optional.
+CHYBY_PLAY = {"entita": "počty chyb aplikace (souhrnně, bez vazby na osobu)",
+              "play_typy": ["diagnostika"], "play_ucely": ["funkce", "analytika"], "play_volitelne": False}
+CHYBY_MIGRACE = Path("db") / "migrace" / "0930_chyby_stranek.sql"
 
 
 def _polozky_play(manifest: dict) -> list[dict]:
     return ([u for u in manifest.get("ukladame") or [] if isinstance(u, dict)] + [HLASENI_PLAY]
-            + ([ZDROJE_PLAY] if ZDROJE_MIGRACE.exists() else []))
+            + ([ZDROJE_PLAY] if ZDROJE_MIGRACE.exists() else [])
+            + ([CHYBY_PLAY] if CHYBY_MIGRACE.exists() else []))
 
 
 def _bezpecnost_dat(manifest: dict) -> dict:
