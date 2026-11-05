@@ -15,15 +15,21 @@ Workflow Vydání ho nahrává sám, jakmile má servisní účet. Ručně jen p
 - **Úplný popis:**
 
 ```
-Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.
+Pneusklad je aplikace pro malé a mobilní pneuservisy, které si uskladněné pneu zákazníků chtějí hlídat bez složitého systému.
 
-Objednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.
+Co v aplikaci uděláte:
+• Zapíšete uskladněné pneu: zákazník, vozidlo, rozměr, počet kusů a místo ve skladu.
+• Vytisknete štítek, který označí pneu v regálu.
+• Vedete objednávkový kalendář a nastavíte si připomínku termínu.
+• Rychle dohledáte, čí pneu kde leží.
 
-Před sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.
+Pro koho je určena:
+Pro majitele a mechaniky pneuservisů o jednom nebo dvou lidech, včetně mobilních servisů, kteří si software vybírají a platí sami a nechtějí platit za rozsáhlý firemní balík.
 
-Do servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.
+Cena:
+Předplatné je 129 Kč měsíčně za firmu.
 
-Prvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129 Kč měsíčně přes Google Play. Obnovuje se automaticky a zrušit ho můžete kdykoli v Google Play. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.
+Aplikace slouží k evidenci skladu a objednávek. Neřeší fakturaci ani účetnictví.
 ```
 
 ## 2. Zásady ochrany soukromí (Privacy policy)

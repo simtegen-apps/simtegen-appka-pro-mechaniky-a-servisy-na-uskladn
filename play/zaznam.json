@@ -2,10 +2,10 @@
   "jazyk": "cs-CZ",
   "nazev": "Pneusklad: uskladnění pneu",
   "kratky_popis": "Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.",
-  "dlouhy_popis": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.\n\nObjednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.\n\nPřed sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.\n\nDo servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.\n\nPrvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129 Kč měsíčně přes Google Play. Obnovuje se automaticky a zrušit ho můžete kdykoli v Google Play. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.",
+  "dlouhy_popis": "Pneusklad je aplikace pro malé a mobilní pneuservisy, které si uskladněné pneu zákazníků chtějí hlídat bez složitého systému.\n\nCo v aplikaci uděláte:\n• Zapíšete uskladněné pneu: zákazník, vozidlo, rozměr, počet kusů a místo ve skladu.\n• Vytisknete štítek, který označí pneu v regálu.\n• Vedete objednávkový kalendář a nastavíte si připomínku termínu.\n• Rychle dohledáte, čí pneu kde leží.\n\nPro koho je určena:\nPro majitele a mechaniky pneuservisů o jednom nebo dvou lidech, včetně mobilních servisů, kteří si software vybírají a platí sami a nechtějí platit za rozsáhlý firemní balík.\n\nCena:\nPředplatné je 129 Kč měsíčně za firmu.\n\nAplikace slouží k evidenci skladu a objednávek. Neřeší fakturaci ani účetnictví.",
   "kategorie": "BUSINESS",
   "kontakt_email": "support@simtegen.com",
-  "hlavni_veta": "Kde leží čí kola a co zítra sundat",
+  "hlavni_veta": "Sklad pneu, štítky a objednávky pro malý pneuservis na jednom místě",
   "snimky": [
     {
       "obrazovka": "obrazovka-dnes",
