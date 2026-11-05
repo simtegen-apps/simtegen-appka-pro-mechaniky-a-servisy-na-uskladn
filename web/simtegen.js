@@ -384,7 +384,8 @@
       }).then(function () { odeslat.disabled = false; });
     });
 
-    panel.addEventListener("keydown", function (e) { if (e.key === "Escape") zavri(); });
+    // Tab stays in the form, Escape closes it — it is a dialog over the page.
+    drzFokus(panel, zavri);
     doc.body.appendChild(pozadi);
     doc.body.appendChild(panel);
   }
@@ -867,6 +868,80 @@
    * for what cannot be taken back (deleting the account); the safe button
    * then has the focus, so Enter never destroys anything.
    */
+  /* ── Panel a klávesnice ────────────────────────────────────────────
+   * A panel over the page (detail, filter, a form in a sheet) is a dialog:
+   * Tab stays inside it — behind it is a page that cannot be used now, and
+   * a keyboard user who tabs out is lost behind the backdrop — Escape
+   * closes it, and the focus goes back to where it came from. Products used
+   * to open their own .panel by toggling hidden, and none of that happened.
+   *
+   *   const p = SimteGen.panel(document.getElementById("detail"), {priZavreni})
+   *   p.zavri()
+   *
+   * The element is the product's own markup (a .panel with a heading);
+   * this only opens it, keeps the keyboard in it and closes it.
+   */
+  var FOKUSOVATELNE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+    'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function fokusovatelne(okno) {
+    return Array.prototype.filter.call(okno.querySelectorAll(FOKUSOVATELNE), function (el) {
+      return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+    });
+  }
+
+  function drzFokus(okno, zavrit) {
+    okno.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && zavrit) { e.preventDefault(); zavrit(); return; }
+      if (e.key !== "Tab") return;
+      var prvky = fokusovatelne(okno);
+      if (!prvky.length) { e.preventDefault(); return; }
+      var prvni = prvky[0], posledni = prvky[prvky.length - 1];
+      var uvnitr = okno.contains(doc.activeElement);
+      if (e.shiftKey && (doc.activeElement === prvni || !uvnitr)) { e.preventDefault(); posledni.focus(); }
+      else if (!e.shiftKey && (doc.activeElement === posledni || !uvnitr)) { e.preventDefault(); prvni.focus(); }
+    });
+  }
+
+  function otevriPanel(okno, volby) {
+    volby = volby || {};
+    if (okno.sgPanel) okno.sgPanel.zavri();
+    var predtim = doc.activeElement;
+    if (!okno.getAttribute("role")) okno.setAttribute("role", "dialog");
+    okno.setAttribute("aria-modal", "true");
+    if (!okno.getAttribute("aria-labelledby") && !okno.getAttribute("aria-label")) {
+      var nadpis = okno.querySelector("h1, h2, h3");
+      if (nadpis) {
+        if (!nadpis.id) nadpis.id = "sg-panel-" + (++dialogu);
+        okno.setAttribute("aria-labelledby", nadpis.id);
+      }
+    }
+    var bg = null;
+    if (volby.pozadi !== false) {
+      bg = prvek("div", "panel-pozadi");
+      okno.parentNode.insertBefore(bg, okno);
+    }
+    var otevreno = true;
+    function zavri() {
+      if (!otevreno) return;
+      otevreno = false;
+      okno.hidden = true;
+      okno.sgPanel = null;
+      if (bg && bg.parentNode) bg.parentNode.removeChild(bg);
+      if (predtim && predtim.focus && predtim.isConnected) predtim.focus();
+      if (volby.priZavreni) volby.priZavreni();
+    }
+    if (!okno.sgDrzi) { okno.sgDrzi = true; drzFokus(okno, function () { if (okno.sgPanel) okno.sgPanel.zavri(); }); }
+    if (bg) bg.addEventListener("click", zavri);
+    okno.hidden = false;
+    var api = { zavri: zavri };
+    okno.sgPanel = api;
+    var prvni = okno.querySelector("[autofocus]") || fokusovatelne(okno)[0];
+    if (prvni) prvni.focus();
+    else { okno.setAttribute("tabindex", "-1"); okno.focus(); }
+    return api;
+  }
+
   var otevrenyDialog = null;
   var dialogu = 0;
 
@@ -923,16 +998,10 @@
       ne.addEventListener("click", zrus);
       bg.addEventListener("click", zrus);
       okno.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") { e.preventDefault(); zrus(); return; }
-        if (e.key === "Enter" && e.target === vstup) { e.preventDefault(); ano.click(); return; }
-        // Keep Tab inside: behind the panel is a page that cannot be used now.
-        if (e.key === "Tab") {
-          var prvky = okno.querySelectorAll("button, input");
-          var prvni = prvky[0], posledni = prvky[prvky.length - 1];
-          if (e.shiftKey && doc.activeElement === prvni) { e.preventDefault(); posledni.focus(); }
-          else if (!e.shiftKey && doc.activeElement === posledni) { e.preventDefault(); prvni.focus(); }
-        }
+        if (e.key === "Enter" && e.target === vstup) { e.preventDefault(); ano.click(); }
       });
+      // Tab stays inside, Escape cancels (Panel a klávesnice, below).
+      drzFokus(okno, zrus);
       doc.body.appendChild(bg);
       doc.body.appendChild(okno);
       (vstup || (volby.nebezpecne ? ne : ano)).focus();
@@ -1248,6 +1317,44 @@
     return api;
   }
 
+  /* ── Průvodce prvním spuštěním ──────────────────────────────────────
+   * A new account must not open on an empty screen (D12). The product's
+   * empty state carries <ol class="pruvodce" data-pruvodce> with two to
+   * four <li data-krok="…"> steps, each with its one button; the product
+   * says which are done FROM ITS OWN DATA (a first customer exists, a first
+   * set is stored) — nothing is kept in the browser:
+   *
+   *   SimteGen.pruvodce(document.querySelector("[data-pruvodce]"), ["servis"])
+   *
+   * Done steps are ticked, the first open one is the current step and only
+   * its button shows (one main action per screen); with all steps done the
+   * guide hides and the call returns true.
+   */
+  function pruvodce(el, hotove) {
+    if (!el) return false;
+    var hotovo = {};
+    (hotove || []).forEach(function (k) { hotovo[k] = true; });
+    var kroky = Array.prototype.slice.call(el.querySelectorAll("li[data-krok]"));
+    var aktualni = null;
+    kroky.forEach(function (li) {
+      var je = !!hotovo[li.getAttribute("data-krok")];
+      li.classList.toggle("hotovo", je);
+      var stav = li.querySelector(".pruvodce-stav");
+      if (!stav) {
+        stav = prvek("span", "pruvodce-stav jen-ctecka");
+        li.insertBefore(stav, li.firstChild);
+      }
+      stav.textContent = je ? "Hotovo: " : "";
+      li.removeAttribute("aria-current");
+      if (!je && !aktualni) { aktualni = li; li.setAttribute("aria-current", "step"); }
+      Array.prototype.forEach.call(li.querySelectorAll("button, a.tlacitko"), function (b) {
+        b.hidden = li !== aktualni;
+      });
+    });
+    el.hidden = !aktualni;
+    return !aktualni;
+  }
+
   function napojFormulare() {
     Array.prototype.forEach.call(doc.querySelectorAll("form[data-formular], form[data-koncept]"), formular);
   }
@@ -1256,7 +1363,8 @@
 
   window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno, tisk: tisk,
     cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet,
-    potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular };
+    potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular,
+    panel: otevriPanel, pruvodce: pruvodce };
 
   /* Google Play v aplikaci — nákup předplatného a „Vyzkoušet ukázku“ —
    * žije v play.js: jen v produktu s modulem aplikace (<html data-aplikace>)

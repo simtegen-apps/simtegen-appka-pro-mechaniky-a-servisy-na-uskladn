@@ -125,6 +125,26 @@ def _nazev(root: Path) -> str:
     return " ".join(str(manifest.get("produkt") or aplikace.get("nazev") or "Aplikace").split())
 
 
+def _hlava(data: dict, nazev: str) -> str:
+    """For search engines and the AI chats behind them: a description, and
+    the questions as schema.org FAQPage — the page's own words, so nothing
+    the customer cannot read. Texts are plain by chyby() (no "<"); "</" is
+    escaped anyway, the script element must not close early."""
+    uvod = " ".join(str(data.get("uvod") or "").split())
+    popis = f"Nápověda k aplikaci {nazev}: {uvod}"
+    if len(popis) > 160:
+        popis = popis[:159].rsplit(" ", 1)[0] + "…"
+    radky = [f'  <meta name="description" content="{html.escape(popis, quote=True)}">']
+    if data.get("otazky"):
+        faq = {"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": "cs",
+               "mainEntity": [{"@type": "Question", "name": " ".join(q["otazka"].split()),
+                               "acceptedAnswer": {"@type": "Answer", "text": " ".join(q["odpoved"].split())}}
+                              for q in data["otazky"]]}
+        ld = json.dumps(faq, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+        radky.append(f'  <script type="application/ld+json">{ld}</script>')
+    return "\n".join(radky) + "\n"
+
+
 def stranka(data: dict, nazev: str) -> str:
     n = html.escape(nazev, quote=True)
     sekce = []
@@ -147,7 +167,7 @@ def stranka(data: dict, nazev: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="application-name" content="{n}">
   <title>Nápověda — {n}</title>
-  <link rel="stylesheet" href="styl.css">
+{_hlava(data, nazev)}  <link rel="stylesheet" href="styl.css">
   <link rel="stylesheet" href="produkt.css">
 </head>
 <body>

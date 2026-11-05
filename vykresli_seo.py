@@ -34,6 +34,14 @@ og:image is the app icon (web/ikona-512.png) and only with the app module:
 that module is what draws the icon, so deciding by the manifest instead of
 by the file keeps the output independent of the order generators run in.
 
+The block also carries schema.org data (JSON-LD) — what an AI chat or a
+search engine reads as facts rather than prose: what the product is, who
+runs it (provozovatel, ico, sidlo, kontakt_email from the manifest; an
+empty slot is left out, never guessed) and what it costs. The price is the
+page's own `window.CENIK = { mesic: N, mena: "Kč" }` (the builder writes it
+from the approved price): the data then says exactly what the page says,
+and a product without it gets no offer rather than a stale one.
+
 `zkontroluj(manifest)` is what CI runs (via kontrola_manifestu.py): the
 block and both files must equal what this script writes — a hand-edited
 block is drift, exactly like a hand-edited privacy policy.
@@ -65,9 +73,16 @@ ZACATEK = "<!-- SEO: GENEROVÁNO z data-manifest.json (vykresli_seo.py) — need
 KONEC = "<!-- /SEO -->"
 HLAVICKA = "GENEROVANÝ SOUBOR z data-manifest.json (vykresli_seo.py) — needituj ručně."
 POPIS_DELKA = 160
-# Legal pages of both templates, in sitemap order; only those the product has.
-PRAVNI = ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html", "odstoupeni-formular.html")
+# Pages besides the app, in sitemap order; only those the product has. The
+# help page first: questions and answers are what a search (and an AI chat
+# behind it) quotes.
+PRAVNI = ("napoveda.html", "zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
+          "odstoupeni-formular.html")
 OBRAZEK = "ikona-512.png"
+
+# The page's monthly price, as the builder writes it (stavitel _MODUL_UVOD).
+_CENIK = re.compile(r"""window\.CENIK\s*=\s*\{\s*["']?mesic["']?\s*:\s*(\d+)\s*,\s*["']?mena["']?\s*:\s*["']([^"']{1,8})["']""")
+_MENY = {"kč": "CZK", "czk": "CZK", "€": "EUR", "eur": "EUR"}
 
 _ADRESA = re.compile(r"^https://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
 # The first block only. A second one is not ours, and it must stay visible
@@ -117,9 +132,110 @@ def _chyby_konfigurace(manifest: dict) -> list[str]:
     return chyby
 
 
-def blok(manifest: dict) -> str:
+def _cena(index_text: str) -> tuple[int, str] | None:
+    """(monthly price, ISO currency) from the page's window.CENIK, outside
+    the block. None without one or with a currency we cannot name.
+
+    Comments are skipped: the template's own index explains the variable
+    with an example price in a comment, and every product born from it
+    would otherwise announce that example as its price."""
+    text = re.sub(r"/\*.*?\*/|<!--.*?-->", "", _BLOK.sub("", index_text or "", count=1), flags=re.DOTALL)
+    for radek in text.splitlines():
+        i = radek.find("window.CENIK")
+        if i < 0 or "//" in radek[:i]:
+            continue
+        m = _CENIK.match(radek, i)
+        if not m:
+            continue
+        mena = _MENY.get(m.group(2).strip().lower())
+        return (int(m.group(1)), mena) if mena and int(m.group(1)) > 0 else None
+    return None
+
+
+def _organizace(manifest: dict, firma: dict) -> dict:
+    """The firm's own web (SimteGen's firemni_web.py writes `firma`): the
+    Organization with its register data and its applications as an offer
+    catalogue — what a chat asked "what is SimteGen" reads as facts."""
+    url = adresa(manifest)
+    data: dict = {"@context": "https://schema.org", "@type": "Organization",
+                  "name": _nazev(manifest) or _jednoradkove(firma.get("nazev")),
+                  "legalName": _jednoradkove(firma.get("nazev"))}
+    if url:
+        data["url"] = f"{url}/"
+    if _popis(manifest):
+        data["description"] = _popis(manifest)
+    if _jednoradkove(firma.get("ico")):
+        data["identifier"] = {"@type": "PropertyValue", "propertyID": "IČO", "value": _jednoradkove(firma["ico"])}
+    if _jednoradkove(firma.get("sidlo")):
+        data["address"] = _jednoradkove(firma["sidlo"])
+    if _jednoradkove(firma.get("email")):
+        data["email"] = _jednoradkove(firma["email"])
+    produkty = [p for p in firma.get("produkty") or [] if isinstance(p, dict) and _jednoradkove(p.get("nazev"))]
+    if produkty:
+        data["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Aplikace", "itemListElement": [
+            {"@type": "Offer", "itemOffered": {k: v for k, v in (
+                ("@type", "WebApplication"), ("name", _jednoradkove(p.get("nazev"))),
+                ("url", _jednoradkove(p.get("url"))), ("description", _jednoradkove(p.get("popis")))) if v}}
+            for p in produkty]}
+    return data
+
+
+def strukturovana_data(manifest: dict, index_text: str = "") -> dict | None:
+    """schema.org WebApplication with its operator and, with a page price,
+    its offers — or, on the firm's own web, its Organization. None without a
+    product name — a nameless entity is noise."""
+    if isinstance(manifest.get("firma"), dict) and _jednoradkove(manifest["firma"].get("nazev")):
+        return _organizace(manifest, manifest["firma"])
+    nazev = _nazev(manifest)
+    if not nazev:
+        return None
+    url, popis = adresa(manifest), _popis(manifest)
+    data: dict = {"@context": "https://schema.org", "@type": "WebApplication", "name": nazev}
+    if popis:
+        data["description"] = popis
+    if url:
+        data["url"] = f"{url}/"
+        if "aplikace" in manifest:
+            data["image"] = f"{url}/{OBRAZEK}"
+    data["inLanguage"] = "cs"
+    data["operatingSystem"] = "Web, Android" if "aplikace" in manifest else "Web"
+    provozovatel = _jednoradkove(manifest.get("provozovatel"))
+    if provozovatel:
+        org: dict = {"@type": "Organization", "name": provozovatel}
+        if _jednoradkove(manifest.get("ico")):
+            org["identifier"] = {"@type": "PropertyValue", "propertyID": "IČO",
+                                 "value": _jednoradkove(manifest["ico"])}
+        if _jednoradkove(manifest.get("sidlo")):
+            org["address"] = _jednoradkove(manifest["sidlo"])
+        if _jednoradkove(manifest.get("kontakt_email")):
+            org["email"] = _jednoradkove(manifest["kontakt_email"])
+        data["provider"] = org
+    cena = _cena(index_text)
+    if cena:
+        castka, mena = cena
+        nabidky = [{"@type": "Offer", "name": "Předplatné", "price": str(castka), "priceCurrency": mena,
+                    "priceSpecification": {"@type": "UnitPriceSpecification", "price": castka,
+                                           "priceCurrency": mena, "unitText": "měsíc",
+                                           "billingDuration": "P1M"}}]
+        try:
+            zkusebni = int(manifest.get("zkusebni_dni") or 0)
+        except (TypeError, ValueError):
+            zkusebni = 0
+        if zkusebni > 0:
+            nabidky.append({"@type": "Offer", "name": f"Zkušební období {zkusebni} dní",
+                            "price": "0", "priceCurrency": mena})
+        data["offers"] = nabidky
+    return data
+
+
+def _json_ld(data: dict) -> str:
+    # "</" escaped: a value can never close the script element early.
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+
+def blok(manifest: dict, index_text: str = "") -> str:
     """The block itself, its first line without indentation (that belongs
-    to the surrounding file)."""
+    to the surrounding file). index_text = the page around it (its price)."""
     url, nazev, popis = adresa(manifest), _nazev(manifest), _popis(manifest)
     radky = [ZACATEK]
     if popis:
@@ -139,6 +255,9 @@ def blok(manifest: dict) -> str:
     # "summary", not "summary_large_image": the only picture is a square
     # icon, which the large card would crop into a strip.
     radky.append('<meta name="twitter:card" content="summary">')
+    data = strukturovana_data(manifest, index_text)
+    if data:
+        radky.append(f'<script type="application/ld+json">{_json_ld(data)}</script>')
     radky.append(KONEC)
     return "\n  ".join(radky)
 
@@ -147,7 +266,7 @@ def index_s_blokem(text: str, manifest: dict) -> str | None:
     """index.html with the current block. None when it cannot be placed: no
     </head>, or half a block (a start without an end, or the reverse) — a
     hand edit whose end nobody can guess without eating product content."""
-    novy = blok(manifest)
+    novy = blok(manifest, text)
     m = _BLOK.search(text)
     if m:
         return text[:m.start()] + novy + text[m.end():]

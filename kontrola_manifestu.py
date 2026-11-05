@@ -215,7 +215,26 @@ LEGAL_PAGES = ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html", "o
 NAVRH_SOUBORY = (
     "web/styl.css", "web/produkt.css", "web/simtegen.js",
     "web/pismo/schibsted-grotesk.woff2", "web/pismo/plex-mono-400.woff2", "web/pismo/plex-mono-500.woff2",
+    "web/ikony.svg",
 )
+_IKONA = re.compile(r"ikony\.svg#([A-Za-z0-9_-]+)")
+
+
+def _nezname_ikony() -> list[str]:
+    """An icon from the set that is not in it draws nothing — an empty
+    square where the button's picture should be, and nobody notices until a
+    customer does. The set is the template's (web/ikony.svg, refreshed by
+    every build), so a name the builder made up fails here."""
+    sada = WEB / "ikony.svg"
+    if not sada.exists():
+        return []
+    zname = set(re.findall(r'<symbol id="([^"]+)"', sada.read_text(encoding="utf-8")))
+    chyby: list[str] = []
+    for path in sorted(p for p in WEB.rglob("*") if p.suffix in (".html", ".js") and p.is_file()):
+        for jmeno in sorted(set(_IKONA.findall(path.read_text(encoding="utf-8", errors="replace"))) - zname):
+            chyby.append(f"{path}: ikona „{jmeno}“ v sadě web/ikony.svg není — vyber ze seznamu v DESIGN.md "
+                         "(Ikony), nebo nakresli vlastní inline SVG stejným stylem.")
+    return chyby
 PRAVNI_STRANKY = LEGAL_PAGES
 _BARVA = re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\s*\(")
 _STYL_ATRIBUT = re.compile(r"""\sstyle\s*=\s*("[^"]*"|'[^']*')""", re.IGNORECASE)
@@ -323,6 +342,7 @@ def _zkontroluj_design() -> list[str]:
         chyby.append("web/styl.css není návrhový systém v3 — v produktu se neupravuje, obnoví ho stavba.")
     chyby += _zkontroluj_produkt_css()
     chyby += _nativni_dialogy()
+    chyby += _nezname_ikony()
     for path in sorted(WEB.glob("*.html")):
         if path.name in PRAVNI_STRANKY or path.name == "offline.html":
             continue
