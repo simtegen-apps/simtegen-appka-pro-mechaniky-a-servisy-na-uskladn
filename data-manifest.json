@@ -1,7 +1,7 @@
 {
   "produkt": "Pneusklad — evidence uskladněných pneu",
   "popis": "Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.",
-  "provozovatel": "SimteGen s.r.o.",
+  "provozovatel": "SimteGen, s.r.o.",
   "kontakt_email": "support@simtegen.com",
   "obsah_zakaznika": "uklada_se",
   "obsah_zakaznika_popis": "jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní",
@@ -326,5 +326,8 @@
     ]
   },
   "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id.",
-  "adresa": "https://pneusklad.simtegen.com"
+  "adresa": "https://pneusklad.simtegen.com",
+  "ico": "13980351",
+  "sidlo": "Korunní 2569/108, Vinohrady, 101 00 Praha 10",
+  "dic": "CZ13980351"
 }

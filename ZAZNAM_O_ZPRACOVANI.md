@@ -4,13 +4,13 @@
 **Verze:** 2.0 · **poslední aktualizace:** (doplnit datum) · **zpracoval:** (doplnit jméno)
 **Přezkoumat:** nejméně 1× ročně a při každé změně zpracování, zpracovatelů nebo účelů.
 
-**Správce:** SimteGen s.r.o., IČO (doplnit), se sídlem (doplnit),
+**Správce:** SimteGen, s.r.o., IČO 13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10,
 e-mail support@simtegen.com, datová schránka (doplnit).
 **Zástupce podle čl. 27 GDPR:** nejmenován (správce je usazen v EU).
 **Pověřenec pro ochranu osobních údajů:** nejmenován — nesplněna žádná z podmínek čl. 37 GDPR.
 
-Vedeno podle čl. 30 GDPR. Záznam má dvě části: **A** pro zpracování, kde je SimteGen s.r.o.
-správcem, a **B** pro zpracování prováděná pro zákazníky, kde je SimteGen s.r.o. zpracovatelem.
+Vedeno podle čl. 30 GDPR. Záznam má dvě části: **A** pro zpracování, kde je SimteGen, s.r.o.
+správcem, a **B** pro zpracování prováděná pro zákazníky, kde je SimteGen, s.r.o. zpracovatelem.
 
 ---
 
@@ -74,7 +74,7 @@ data; písemný postup při incidentu v `POSTUP_PRI_INCIDENTU.md`; roční přez
 
 ## B. Záznam zpracovatele (čl. 30 odst. 2 GDPR)
 
-SimteGen s.r.o. zpracovává osobní údaje jako **zpracovatel** pro zákazníky služby, kteří
+SimteGen, s.r.o. zpracovává osobní údaje jako **zpracovatel** pro zákazníky služby, kteří
 do aplikace vkládají údaje třetích osob. Právním rámcem je
 `web/zpracovatelska-smlouva.html` (čl. 28 GDPR), uzavíraná jako součást obchodních podmínek.
 
