@@ -217,10 +217,14 @@
         "kategorie": "App activity",
         "typ": "App interactions",
         "ucely": [
+          "App functionality",
+          "Account management",
+          "Developer communications",
           "Analytics"
         ],
-        "volitelne": true,
+        "volitelne": false,
         "zdroje": [
+          "upominky",
           "zdroj příchodu (odkaz z kampaně)"
         ]
       },

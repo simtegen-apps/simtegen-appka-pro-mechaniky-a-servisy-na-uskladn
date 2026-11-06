@@ -1,206 +1,202 @@
-# Specifikace — build 12
+# Specifikace — build 14
 
-Běžící Pneusklad (sklad sad se štítky, objednávkový kalendář, Připravit kola, sezónní přehled, tým, předplatné, Google Play) se převede na návrhový systém v3 přesně v rozsahu, který zákazník chce. Všech 11 oken prohlížeče (confirm/prompt) nahradí dialogy aplikace. Běžné mazání, rušení, výdej a přesun proběhnou hned a nabídnou Vrátit. Otázku dostane jen to, co vrátit nejde. Nadpisy ztratí číslování „01 —“ a každá obrazovka bude mít právě jedno černé tlačítko. Data, migrace, API (až na jednu výjimku pro Vrátit u výdeje) i ID prvků, na která míří snímky a UAT, zůstávají beze změny.
+Build 14 mění jen úvodní stránku hotového Pneuskladu na https://pneusklad.simtegen.com. Dostane nový <title>, novou meta description (vygenerovanou z manifestu), H1 „Víte, kde má který zákazník uložené pneu?“ a pod ním tři krátké body: evidence pneu, tisk štítků, objednávky s připomínkou. Cena 129 Kč měsíčně za firmu a věta „Prvních 30 dní zdarma, bez karty.“ budou vidět bez posouvání na telefonu i na notebooku. Funkce, ceny, API, migrace, datový model ani přihlašovací formulář se nemění.
 
 ## Placená hodnota (proč přijde druhý nákup)
-Platí se za evidenci uložených kol, tedy jediné místo, kde servis ví, čí kola leží ve které polici, co má zítra sundat a koho má před sezónou obvolat. Druhý nákup přichází sám, protože kola leží v regálu celý rok, přezouvá se každé jaro i podzim a předplatné se obnovuje. Tahle stavba hodnotu udrží: platící zákazník appku označil za nepřehlednou, okna prohlížeče ho v aplikaci z Google Play zdržují a omylem smazanou objednávku nebo vydanou sadu teď nejde vzít zpět. Vrátit a jedna jasná akce na obrazovce snižují riziko, že servis kvůli chybě v evidenci odejde.
+Servis platí 129 Kč měsíčně za firmu za evidenci, kde leží čí kola, za štítky ze své tiskárny a za objednávky s připomínkou den předem. Druhý nákup přichází, protože pneu leží v regálu přes sezóny a evidenci potřebuje při každém přezouvání (jaro i podzim, každý rok). Tahle změna platenou hodnotu nemění, jen ji úvodní stránka a vyhledávač podají dřív a jasněji.
 
 ## Design (obrazovky, navigace, stavy)
-BARVA PRODUKTU: zůstává rumělka #c2410c (tmavý režim #f07a45). Je to barva zahřáté pryže a výstražných štítků v dílně, zákazník ji z appky, štítků i ikony v Google Play už zná. Kontrast na papíře #f6f4ef je 4,71:1 (≥ 4,5). web/produkt.css se nemění.
+Návrhový systém v3 „Papír a výkres“ zůstává beze změny. Barva produktu zůstává #c2410c (pálená oranžová, barva pryže a výstražných štítků v dílně). Kontrast na papíře #f6f4ef vychází asi 6,7:1, tedy splňuje ≥ 4,5:1. Tmavá varianta #f07a45 zůstává v web/produkt.css.
 
-TYP OBRAZOVEK: všechny jsou PŘEHLED. Nástroj (výkres) produkt nemá: zákazník nic neskládá ani nekreslí, eviduje sady a termíny. Mapa regálu by byla nová funkce mimo zadání („bez přestavby zbytku“), proto se nestaví.
+MĚNÍ SE JEN JEDNA OBRAZOVKA: Úvod a přihlášení (#obrazovka-prihlaseni)
+- Typ: přehled se třemi sekcemi. Ostatní obrazovky (Dnes, Sklad, Objednávky, Nastavení, detaily, Předplatné) zůstávají přesně jak jsou, navigace dál 4 položky.
+- Proč obrazovka existuje: cizí návštěvník během pěti vteřin pozná, co produkt dělá, za kolik, a nechá si poslat přihlašovací odkaz.
+- Hlavní akce: tlačítko „Začít zdarma“ (#poslat-odkaz) v .lista-dole, beze změny. Vedlejší akce „Vyzkoušet ukázku“ (data-ukazka) zůstává.
 
-CO SE MĚNÍ NAPŘÍČ APPKOU
-• Nadpisy: všechny .sekce-titulek bez čísel („Stav dne“, „Najít v evidenci“, „Dnešní objednávky“ …), a to i v dynamicky kreslených (Detail sady, Sezónní přehled). Úvod ztratí .poradi 01–03. Štítek nad nadpisem se ruší („Pro malé a mobilní pneuservisy“ se přesune pod titulek jako běžná věta, „Načítám evidenci“ zmizí, zůstane .kostra).
-• Písmo: produktové .radky .klic přestane být mono s velkými písmeny a bude psát obyčejná slova tužkou (.stitek z v3). Mono zůstane jen na tom, co se měří nebo kóduje: kód sady (.kod), rozměr 205/55 R16 (.rozmer), pozice A1-04, hloubky v mm, čas objednávky.
-• Čísla: částky, data a počty se budou psát přes SimteGen.kc / datum / pocet místo vlastních korun()/datumCesky()/toLocaleString (např. „1 sad“ nebo „5 sady“ se už nezobrazí).
-• Dialogy: confirm/prompt nahradí SimteGen.vratitelne / potvrd / zeptej (viz plán). Nadpis panelu je otázka nebo věta a tlačítko říká, co udělá.
+Pořadí na telefonu (jeden sloupec, vše do 1. obrazovky 360×740 nad ohybem až po cenu a zkušební dobu):
+1. `<h1 class="titulek-velky">Víte, kde má který zákazník uložené pneu?</h1>`. Nahrazuje `<p class="titulek-velky">Kde leží čí kola.</p>`. Dosavadní dlouhý odstavec pod ním odpadá.
+2. Tři krátké body. Je to `ul.seznam` se třemi `.radek`, každý s tučným názvem a jedním řádkem vysvětlení. Bez nadpisu „Co to umí“, aby se vešly nad ohyb.
+   - **Evidence pneu**: kdo má jakou sadu a kde v regálu, sezónu po sezóně.
+   - **Tisk štítků**: kód sady na štítek z vaší tiskárny štítků.
+   - **Objednávky s připomínkou**: den předem víte, která kola sundat z regálu.
+   Druhý řádek prvního bodu nese důvod platit i podruhé (evidence přes sezóny).
+3. Karta ceny (#uvod-cena, .karta.vykres), hned pod body. Obsahuje štítek „Cena od“, obří číslo z window.CENIK přes /api/ja (dnes 129 Kč) a text „měsíčně za firmu“ (dřív „za celou provozovnu“, sjednoceno s textem markeťáka). Odstavec #uvod-zkusebni se přesune DO karty, takže „Prvních 30 dní zdarma, bez karty.“ stojí přímo pod cenou. V HTML dál nebude žádná částka.
+4. Sekce „Přihlášení“: e-mail, nápověda a věta o datech v EU, beze změny.
+5. Sekce „Bez registrace“ s tlačítkem data-ukazka, beze změny.
+6. Nová sekce „Ceník“ až pod přihlášením. Sem se přesunou řádky všech variant (#uvod-cenik, #uvod-cenik-obsah) se stejnými ID, takže vykresliUvod() funguje beze změny. Pravidlo Google Play (v aplikaci jen varianty koupitelné přes Play) dál řeší stávající kód.
 
-OBRAZOVKY (hlavní akce = jediné černé tlačítko; max. 2 vedlejší vedle ní)
-1) Úvod a přihlášení. Hlavní akce „Začít zdarma“. „Vyzkoušet ukázku“ se změní na vedlejší (data-ukazka). Sekce „Co to umí“, „Přihlášení“, „Bez registrace“. Obří číslo je cena „129 Kč“ (nese informaci). Prázdný stav: bez ceníku se karta ceny nevykreslí. Načítání: úvodní obrazovka simtegen.js a .kostra. Chyba: .hlaska.chyba pod polem. Volá jednou POST /api/navsteva {stranka:"uvod"}.
+Tablet a notebook (od 768 px):
+- Obsah obrazovky se zabalí do `.mrizka` (styl.css, 12 sloupců).
+- Vlevo `.s7`: H1 a tři body (H1 v clamp velikosti 3,75rem).
+- Vpravo `.s5`: karta ceny se zkušební dobou, pod ní Přihlášení a tlačítko „Začít zdarma“.
+- Pod oběma sloupci přes celou šířku: Bez registrace a Ceník.
+- Cena i e-mailové pole jsou tak na notebooku 1366×768 i tabletu 768×1024 v první obrazovce. Není to roztažený telefon.
+
+Stavy úvodu:
+- Načítání: stávající #obrazovka-nacitani s .kostra. H1 a body jsou statické v HTML, takže je vyhledávač i pomalé připojení vidí hned.
+- Prázdný stav (ceník nedorazil): karta ceny se nevykreslí (karta.hidden jako dnes), H1, body a přihlášení zůstanou. Žádný prázdný rám.
+- Chyba: .zprava / .hlaska.chyba pod polem e-mailu, jako dosud.
+- Offline: řeší SimteGen.kdoJsem() / SimteGen.offline() beze změny.
+
+Nadpisy pro vyhledávač:
+- Hlavička aplikace (`<h1 id="hlavicka-titulek">Pneusklad</h1>`) je vzor návrhového systému pro všechny obrazovky a zůstává.
+- Na úvodu tak budou dvě H1. Google to připouští. Hlavní, největší a obsahová je ta markeťákova.
+- Sekční nadpisy zůstávají H2 (.sekce-titulek).
+
+Aplikace z Google Play: úvod v ní vypadá stejně. Cenu ukazovat smí. Fakturační objednávka (data-objednavka) se úvodu netýká.
+
+## Plán
+1. data-manifest.json: přepsat kořenové pole `popis` na přesně „Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.“ (134 znaků, limit 160). Pole `produkt` (og:title) a celou sekci `aplikace` (Play záznam) nechat beze změny, zadání je jen web a vyhledávače. Entity, `ukladame`, `agregaty`, služby ani cookies se nemění.
+2. Spustit `python vykresli_seo.py`. Přepíše blok `<!-- SEO -->` v web/index.html (meta description, og:description), robots.txt a sitemap.xml. Blok needitovat ručně, CI ho porovnává. Pokud generátor v tomto prostředí nejde spustit, musí ho pustit člověk před CI.
+3. web/index.html `<head>`: `<title>` změnit na „Evidence uskladněných pneu pro malé pneuservisy | Pneusklad“.
+4. web/index.html, #obrazovka-prihlaseni:
+   - `<p class="titulek-velky">Kde leží čí kola.</p>` nahradit `<h1 class="titulek-velky">Víte, kde má který zákazník uložené pneu?</h1>` a odstranit dlouhý odstavec pod ním.
+   - Sekci „Co to umí“ nahradit třemi body bez nadpisu: Evidence pneu / Tisk štítků / Objednávky s připomínkou, každý s jedním řádkem vysvětlení.
+   - Kartu #uvod-cena přesunout hned pod body, text „měsíčně za celou provozovnu“ změnit na „měsíčně za firmu“ a #uvod-zkusebni přesunout dovnitř karty pod číslo.
+   - #uvod-cenik a #uvod-cenik-obsah přesunout do nové sekce „Ceník“ za „Bez registrace“.
+   - Obsah zabalit do `.mrizka` se sloupci `.s7` / `.s5` pro ≥768 px. Jen existující třídy, žádné nové barvy ani rozměry.
+   - JS (vykresliUvod, posliOdkaz, volání POST /api/navsteva {stranka:"uvod"}, kdoJsem) se nemění, ID zůstávají.
+5. Nesahat na: cenik.js, functions/**, db/migrace/**, functions/api/_middleware.js, 0910_zdroje.sql, web/simtegen.js, web/play.js, web/styl.css, .github/. Přihlašovací formulář zůstává na úvodu.
+6. play/co_je_noveho.txt přepsat (do 500 znaků, vykat), například: „Úvodní stránka je přehlednější: hned nahoře vidíte, co aplikace umí (evidence pneu, tisk štítků, objednávky s připomínkou), kolik stojí a že prvních 30 dní je zdarma. Ve funkcích ani cenách se nic nemění.“
+7. SPEC.md: aktualizovat odstavec 1) Úvod a přihlášení na nové pořadí a nadpisy.
+8. Zkontrolovat pomocí `python kontrola_manifestu.py`, `python vizualni_kontrola.py` a `python uat_kontrola.py` (popř. CI), že SEO blok, aplikace a UAT jsou zelené.
+
+## Soubory
+- data-manifest.json
+- web/index.html
+- web/robots.txt
+- web/sitemap.xml
+- play/co_je_noveho.txt
+- SPEC.md
+
+## Rizika
+- **Částka „129 Kč“ ve dvou místech.** V meta description je ručně napsaná, ale jediný zdroj ceny je cenik.js. Při budoucí změně ceny se musí ručně upravit i `popis` v manifestu, jinak vyhledávač ukáže starou cenu. Patří to do README k ceníku.
+- **Dvě H1 na úvodu.** Hlavička aplikace „Pneusklad“ je H1 a ve zdroji stojí dřív. Google to toleruje, ale SEO audit může hlásit „více H1“. Pokud by to markeťákovi vadilo, další krok je převést nadpis hlavičky na `role="heading"` s úpravou v návrhovém systému. To je mimo rozsah „jen texty“.
+- **Nadpis nad ohybem na úzkých telefonech.** Na telefonu 320 px se H1 v clamp velikosti zalomí do 4–5 řádků a cena se může posunout pod ohyb. Ověřit na 360×740 i 320×640, případně zkrátit vysvětlující řádky bodů (ne H1).
+- **Generátor SEO.** Když se `vykresli_seo.py` nespustí, CI spadne na rozdílu SEO bloku. Generátor musí spustit člověk.
+- **og:title zůstává „Pneusklad — evidence uskladněných pneu“.** Plyne z pole `produkt` a markeťák ho nezmínil. Změna by zasáhla zásady a Play záznam.
+- **Text v Google Play se nemění.** Play záznam (aplikace.popis, dlouhy_popis) zůstává. Mimo zadání.
+
+## Jak ověřit
+1. Na telefonu (Chrome, okno 360×740) otevřít anonymně https://pneusklad.simtegen.com a bez posouvání uvidět:
+   - H1 „Víte, kde má který zákazník uložené pneu?“,
+   - tři body Evidence pneu / Tisk štítků / Objednávky s připomínkou,
+   - kartu „Cena od 129 Kč měsíčně za firmu“ s větou „Prvních 30 dní zdarma, bez karty.“
+2. Posunout dolů: Přihlášení s e-mailem, „Vyzkoušet ukázku“, Ceník se všemi variantami. „Začít zdarma“ pošle odkaz jako dřív.
+3. Na notebooku: H1 a body vlevo, cena a přihlášení vpravo, vše v první obrazovce.
+4. Zobrazit zdroj stránky (view-source): `<title>` a `<meta name="description">` se shodují s textem markeťáka znak po znaku.
+5. Přihlásit se existujícím účtem: Dnes, Sklad, Objednávky a štítek fungují a vypadají jako před změnou.
+6. V aplikaci z Google Play: úvod má novou H1 a cenu, žádnou nabídku faktury.
+7. CI (kontrola manifestu, SEO, aplikace, UAT, vizuální kontrola) je zelené.
+
+## Akceptační scénáře (CI je spustí proti API)
+- Nepřihlášený návštěvník otevře https://pneusklad.simtegen.com a ve zdroji stránky musí vidět <title> „Evidence uskladněných pneu pro malé pneuservisy | Pneusklad“, meta description „Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.“ a H1 „Víte, kde má který zákazník uložené pneu?“.
+- Nepřihlášený návštěvník na telefonu 360×740 načte úvodní stránku a bez posouvání musí vidět tři body Evidence pneu, Tisk štítků a Objednávky s připomínkou, cenu 129 Kč měsíčně za firmu a větu „Prvních 30 dní zdarma, bez karty.“.
+- Nepřihlášený návštěvník zadá na úvodní stránce e-mail a klepne na „Začít zdarma“ a musí vidět potvrzení o odeslaném přihlašovacím odkazu jako před změnou.
+- Přihlášený servis A založí přes POST /api/sady novou sadu a musí ji dostat zpět přes GET /api/sady/{id} s kódem a pozicí ve skladu stejně jako před změnou.
+- Servis B zavolá GET /api/sady a GET /api/sady/{id} sady servisu A a nesmí sadu servisu A vidět ani otevřít (prázdný seznam, 404).
+
+_Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Ostatní obrazovky (beze změny od buildu 12)
+
+Build 14 mění jen obrazovku 1) Úvod a přihlášení (viz Design výš). Zbytek
+appky zůstává tak, jak ho popsala specifikace buildu 12:
+
 2) Dnes. Hlavní akce „Nová sada na uskladnění“. Sekce „Stav dne“ (obří číslo kol na zítra, stupnice připraveno, vedlejší Připravit kola / Obvolat), „Najít v evidenci“, „Dnešní objednávky“ (3–5 nejbližších, „Celý týden →“). Prázdný stav nového účtu bez sad: .prazdno „Tady uvidíte, která kola máte zítra sundat z regálu. Začněte první uskladněnou sadou.“ s vedlejším „Naplnit ukázkovými daty“ (vlastník účtu). Plní existujícím /api/ukazkova-data, druhé plnění se nepřidává. Hlavní akcí zůstává lišta. Načítání: .kostra. Chyba: .hlaska.chyba „Přehled dne se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.“
 3) Sklad. Hlavní akce „Nová sada“, vedlejší „Tisk štítků (n)“. Sekce „Sklad“ (obří počet sad v regálu, filtr) a „Hledání“. Prázdný: „V regálu zatím nic neleží.“ Načítání: .kostra. Chyba: .hlaska.chyba.
 4) Zákazníci. Hlavní akce „Nový zákazník“. Jedna sekce „Kartotéka“. Stavy beze změny.
-5) Zákazník. Hlavní akce „Uskladnit pneu“, vedlejší „Uložit“, varovné „Smazat“ (s Vrátit, viz plán). Sekce „Údaje motoristy“.
-6) Nová sada (průvodce 4 kroky + hotovo). Jedno černé tlačítko #ns-krok-dal v jedné .lista-dole, mění text i akci: „Pokračovat“ → „Uložit sadu“ (krok 4) → „Vytisknout štítek“ (hotovo). Druhá lišta #ns-akce-hotovo zmizí. Na kroku hotovo jsou vedlejší „Hned objednat přezutí“ a „Zapsat další sadu“, detail sady otevře klepnutí na kód. Ukazatel kroků zůstává.
-7) Detail sady. Hlavní akce „Tisk štítku“, vedlejší „Vydat“ / „Vrátit na sklad“ a „Objednat“. Pět sekcí se sloučí do tří: „Kola“ (zákazník s odkazem Zavolat, SPZ, rozměr, dezén, hloubky 4 kol v mm, varování pod 4 mm), „Uložení a platba“ (místo, přijato/vydáno, cena, poznámka, tiché „Označit jako zaplacené“ a „Přesunout ve skladu“), „Historie“ (.denik). Chyba: .hlaska.chyba.
+5) Zákazník. Hlavní akce „Uskladnit pneu“, vedlejší „Uložit“, varovné „Smazat“ (s Vrátit). Sekce „Údaje motoristy“.
+6) Nová sada (průvodce 4 kroky + hotovo). Jedno černé tlačítko #ns-krok-dal v jedné .lista-dole, mění text i akci: „Pokračovat“ → „Uložit sadu“ (krok 4) → „Vytisknout štítek“ (hotovo). Na kroku hotovo jsou vedlejší „Hned objednat přezutí“ a „Zapsat další sadu“, detail sady otevře klepnutí na kód. Ukazatel kroků zůstává.
+7) Detail sady. Hlavní akce „Tisk štítku“, vedlejší „Vydat“ / „Vrátit na sklad“ a „Objednat“. Sekce „Kola“ (zákazník s odkazem Zavolat, SPZ, rozměr, dezén, hloubky 4 kol v mm, varování pod 4 mm), „Uložení a platba“ (místo, přijato/vydáno, cena, poznámka, tiché „Označit jako zaplacené“ a „Přesunout ve skladu“), „Historie“ (.denik). Chyba: .hlaska.chyba.
 8) Objednávky. Hlavní akce „Nová objednávka“. Sekce „Týden“ (.tyden) a „Termíny“. „Zrušit“ u termínu proběhne hned a ukáže Vrátit.
 9) Nová objednávka. Hlavní akce „Zapsat objednávku“. Sekce „Čí kola“, „Kdy“, „Co se bude dělat“. Plný termín: SimteGen.potvrd(hláška serveru, {ano: "Zapsat i tak"}).
 10) Připravit kola. Hlavní akce „Poslat si seznam e-mailem“, vedlejší „Připomínka do kalendáře“. Sekce „Na který den“ (obří počet kol) a „Sundat z regálu“.
-11) Sezónní přehled. Hlavní akce „Vytisknout seznam k obvolání“ (data-tisk="#prehled-obvolat", tiskne vzhled styl.css). Sekce „Obvolat“, „Pod 4 mm“, „Nezaplaceno“ bez čísel. Prázdný: „Před sezónou tu uvidíte, koho obvolat.“
-12) Nastavení (menu). Hlavní akce „Uložit nastavení“ (jen správce). Šest sekcí se zredukuje na tři: „Štítek“ (název, telefon, adresa, formát, zkušební štítek, výchozí cena), „Provoz“ a „Účet“, kde jsou řádky .radek 56 px vedoucí na Předplatné ›, Tým › (správce) a Účet a data ›, plus „Zobrazit návod“. Mechanik a „jen čtení“ vidí jen sekci Účet.
-13) Tým (nová podobrazovka, přesunutý obsah, stejná ID). Hlavní akce „Přidat kolegu“. Seznam členů s „Změnit roli“ a „Odebrat“, obojí hned s Vrátit. Prázdný: „Zatím jste tu sami.“
-14) Účet a data (nová podobrazovka, přesunutý obsah). Hlavní akce „Stáhnout moje data“, vedlejší „Odhlásit se“ a „Doporučit kolegovi“ (data-doporucit="ucet"). Sekce „Ukázková data“ (vlastník): „Smazat ukázková data“ s Vrátit. Sekce „Smazání účtu“: varovné tlačítko a SimteGen.potvrd s červeným tlačítkem a fokusem na Zrušit.
-15) Předplatné. Hlavní akce na webu „Objednávka zavazující k platbě“ (data-objednavka), v aplikaci tlačítko Google Play. Sekce „Stav účtu“, „Ceník“ / „Nákup“ a „Objednávky provozovny“ bez čísel (dnes je číslo sekce Nákup podle prostředí 02/03). Zrušení fakturační objednávky přes SimteGen.potvrd.
+11) Sezónní přehled. Hlavní akce „Vytisknout seznam k obvolání“ (data-tisk="#prehled-obvolat"). Sekce „Obvolat“, „Pod 4 mm“, „Nezaplaceno“ bez čísel. Prázdný: „Před sezónou tu uvidíte, koho obvolat.“
+12) Nastavení (menu). Hlavní akce „Uložit nastavení“ (jen správce). Sekce „Štítek“ (název, telefon, adresa, formát, zkušební štítek, výchozí cena), „Provoz“ a „Účet“ s řádky na Předplatné ›, Tým › (správce) a Účet a data ›, plus „Zobrazit návod“. Mechanik a „jen čtení“ vidí jen sekci Účet.
+13) Tým. Hlavní akce „Přidat kolegu“. Seznam členů s „Změnit roli“ a „Odebrat“, obojí hned s Vrátit. Prázdný: „Zatím jste tu sami.“
+14) Účet a data. Hlavní akce „Stáhnout moje data“, vedlejší „Odhlásit se“ a „Doporučit kolegovi“ (data-doporucit="ucet"). Sekce „Ukázková data“ (vlastník): „Smazat ukázková data“ s Vrátit. Sekce „Smazání účtu“: varovné tlačítko a SimteGen.potvrd s červeným tlačítkem a fokusem na Zrušit.
+15) Předplatné. Hlavní akce na webu „Objednávka zavazující k platbě“ (data-objednavka), v aplikaci tlačítko Google Play. Sekce „Stav účtu“, „Ceník“ / „Nákup“ a „Objednávky provozovny“. Zrušení fakturační objednávky přes SimteGen.potvrd.
 
-NAVIGACE: beze změny, 4 položky Dnes · Sklad · Objednávky · Nastavení. Hlavní hodnota je na 1–2 klepnutích (Dnes → Nová sada → průvodce → štítek). Tým a Účet a data jsou na 2 klepnutích (Nastavení → řádek). Každá podobrazovka má šipku Zpět v hlavičce se záložní cestou na nadřazenou obrazovku (Tým / Účet a data → Nastavení) a nic nespoléhá na tlačítko prohlížeče.
+NAVIGACE: 4 položky Dnes · Sklad · Objednávky · Nastavení. Hlavní hodnota je na 1–2 klepnutích (Dnes → Nová sada → průvodce → štítek). Tým a Účet a data jsou na 2 klepnutích (Nastavení → řádek). Každá podobrazovka má šipku Zpět v hlavičce se záložní cestou na nadřazenou obrazovku a nic nespoléhá na tlačítko prohlížeče.
 
-TABLET A NOTEBOOK (beze změny rozvržení z buildu 10, jen bez čísel): Dnes s5 stav dne + s7 hledání a objednávky. Sklad s4 číslo a filtr + s8 seznam. Objednávky s7 týden + s5 termíny. Předplatné s5 + s7. Nastavení .dva-sloupce (Štítek | Provoz a Účet). Sezónní přehled .dva-sloupce. Detail sady s7 Kola + s5 Uložení a historie.
+TABLET A NOTEBOOK: Úvod s7 nadpis a body + s5 cena a přihlášení, pod nimi přes celou šířku Bez registrace a Ceník. Dnes s5 stav dne + s7 hledání a objednávky. Sklad s4 číslo a filtr + s8 seznam. Objednávky s7 týden + s5 termíny. Předplatné s5 + s7. Nastavení .dva-sloupce (Štítek | Provoz a Účet). Sezónní přehled .dva-sloupce. Detail sady s7 Kola + s5 Uložení a historie.
 
 STAVY: každá obrazovka má .prazdno (věta, co tu bude, a cesta dál), .kostra místo kolečka, .hlaska.chyba česky s tím, co dělat, a úspěch jako .toast. U vratných akcí úspěch dělá SimteGen.vratitelne s Vrátit.
 
-## Plán
-1. Infrastruktura šablony: stavba přepíše DESIGN.md, web/styl.css, web/simtegen.js a písma na v3. Produkt je needituje. Před další prací ověřit, že SimteGen.vratitelne/potvrd/zeptej/kdoJsem existují, a zjistit, jak dlouho trvá okno Vrátit (případně jestli vratitelne vrací Promise).
-2. web/index.html: produktový <style> pročistit podle v3. .radky .klic bez mono, velkých písmen a prostrkání. Zrušit .poradi. Ponechat jen rozvržení a tisk štítku (Zebra 100×50 mm), který je jádrem produktu.
-3. Nadpisy: odstranit „NN — “ ze všech .sekce-titulek v HTML i v šablonových řetězcích (vykresliSadu ř. ~1853–1899, sezónní přehled ř. ~2381, Předplatné ř. ~864). Štítky nad nadpisy přesunout pod nadpis nebo smazat.
-4. Jedna hlavní akce: data-ukazka změnit na „tlacitko vedlejsi“. Nová sada: sloučit #ns-akce a #ns-akce-hotovo do jedné lišty s jedním #ns-krok-dal, který podle kroku mění text a obsluhu (Pokračovat / Uložit sadu / Vytisknout štítek). Hotovo krok bude mít 2 vedlejší a detail sady se otevře klepnutím na kód. Sezónní přehled dostane hlavní „Vytisknout seznam k obvolání“ (data-tisk). Projít, že žádná obrazovka nemá v HTML ani v šablonách víc než jedno .tlacitko bez .vedlejsi/.varovne/.ikona (CI počítá i skrytá).
-5. Okna prohlížeče na dialogy aplikace (stávající API, stejné endpointy):
-   a) Zrušit objednávku dílny (ř. ~2000): provést {akce:"zruseno"} hned a nabídnout SimteGen.vratitelne("Objednávka zrušena", → {akce:"planovano"}).
-   b) Vydat sadu (ř. ~1932): provést {akce:"vydat"} hned a nabídnout vratitelne("Sada A1-04 vydána", → {akce:"vratit", pozice: původní}).
-   c) Vrátit vydanou sadu na sklad (ř. ~1934): SimteGen.zeptej("Kam sadu ukládáte?", {popisek: "Místo ve skladu", hodnota: pozice}). null = zrušeno.
-   d) Přesunout ve skladu (ř. ~1912): zeptej → presunout → vratitelne („Přesunuto na B2-01“, → presunout na původní pozici).
-   e) Změnit roli (ř. ~2805): hned + vratitelne → zmenit na původní roli.
-   f) Odebrat kolegu (ř. ~2815): hned + vratitelne → pridat se stejným e-mailem a rolí.
-   g) Smazat ukázková data (ř. ~2851): hned + vratitelne → naplnit.
-   h) Smazat zákazníka (ř. ~1564, tvrdý DELETE s kaskádou vydaných sad): odložené smazání bez změny dat. Zákazník hned zmizí ze seznamu a appka se vrátí do Kartotéky s vratitelne(„Zákazník Jan Dvořák smazán“). POST {akce:"smazat"} odejde až po uplynutí okna Vrátit, nebo dřív při pagehide/visibilitychange (fetch keepalive). Vrátit zruší časovač a vrátí řádek. Pokud má sady v regálu, zůstává stávající hláška bez mazání.
-   i) Plný termín (ř. ~2201): SimteGen.potvrd(data.chyba, {ano: "Zapsat i tak"}).
-   j) Zrušit fakturační objednávku předplatného (ř. ~2730): SimteGen.potvrd("Zrušit objednávku č. 12?", {popis: "Zrušenou objednávku nejde obnovit, můžete ale objednat znovu.", ano: "Zrušit objednávku"}).
-   k) Smazat účet (ř. ~2874): SimteGen.potvrd("Smazat účet a všechna data?", {popis: "Smaže se celá evidence sad, zákazníků a objednávek. Krok je nevratný.", ano: "Smazat účet", nebezpecne: true}).
-6. functions/api/sady/[id].js: „vratit“ projde i bez platného předplatného (stejně jako vydat), ale jen když sada byla vydána před méně než 15 minutami. Bez toho by Vrátit po omylem vydané sadě v režimu čtení skončil chybou 402. Jinak 402 jako dosud. Pořadí kontrol (přihlášení → předplatné → role) se nemění.
-7. Nastavení rozdělit (přesunem HTML bloků se stejnými ID a obsluhou): Nastavení (Štítek, Provoz, Účet s řádky) + nové podobrazovky obrazovka-tym a obrazovka-ucet. Doplnit je do mapy nadřazených obrazovek pro #hlavicka-zpet. Na obrazovku Účet a data přidat data-doporucit="ucet".
-8. Detail sady: vykresliSadu sloučit na 3 sekce (Kola / Uložení a platba / Historie). Rozměr, kód, pozici a hloubky dát do .rozmer/.kod.
-9. Formát čísel: korun(), datumCesky(), mm(), počty („${data.sad} sad“) přepsat na SimteGen.kc / datum / cislo / pocet. Částky objednávek předplatného přes SimteGen.kc.
-10. Dnes: prázdný stav nového účtu (0 sad, 0 objednávek) s .prazdno a vedlejším „Naplnit ukázkovými daty“ (vlastník, existující /api/ukazkova-data, bez data-ukazkova-data, aby simtegen.js nenaplnil podruhé).
-11. Šablonová povinnost: obnov() přepsat na SimteGen.kdoJsem(). Přihlášení ukázat jen při „odhlasen“, při „offline“ nechat poslední obrazovku a SimteGen.offline(obnov) / SimteGen.spojeno(). Při zobrazení úvodu jednou POST /api/navsteva {stranka:"uvod"} (endpoint a tabulku navstevy dodává šablona, needitovat; chybí-li v manifestu agregaty.navstevy, doplní je stavba).
-12. Zachovat ID, na která míří snímky a UAT (#dlazdice-priprava, #dnes-na-prehled, #sklad-seznam .radek, [data-obrazovka=…]). data-manifest.json se proto nemění.
-13. uat/scenare.json: přidat scénáře z akceptace (zrušení a vrácení objednávky, výdej a Vrátit, přesun a Vrátit, odebrání kolegy a Vrátit, účet B). Stávající nechat.
-14. play/co_je_noveho.txt přepsat (viz risks/validation). SPEC.md doplnit o build 11.
-15. Generátory: python vykresli_zasady.py && python vykresli_aplikaci.py && python kontrola_manifestu.py. V tomhle prostředí se Python nespustí, proto je musí pustit člověk před CI.
+## Co se při stavbě buildu 14 oproti specifikaci změnilo
 
-## Soubory
-- web/index.html
-- functions/api/sady/[id].js
-- uat/scenare.json
-- play/co_je_noveho.txt
-- SPEC.md
-- infrastruktura šablony, přepíše stavba (needitovat): DESIGN.md, web/styl.css, web/simtegen.js, web/pismo/*
-- generované (needitovat, přegenerovat): web/zasady.html, play/zaznam.json, play/BEZPECNOST_DAT.md, web/manifest.webmanifest, web/sw.js, web/offline.html, web/ukazka.json
-
-## Rizika
-1. Odložené smazání zákazníka: když zákazník zavře appku úplně (zabití procesu bez pagehide), požadavek neodejde a zákazník v kartotéce zůstane. Chyba je na bezpečné straně, ale je viditelná. Časovač musí sedět s délkou okna Vrátit v simtegen.js, jinak by Vrátit po vypršení slibovalo něco, co už nejde. Stavba délku ověří a při nesouladu ukáže „Zákazník už je smazaný.“
-2. Vrátit u výdeje a přesunu zapisuje do deníku pohybů další řádek („vráceno na sklad“). Pohyby jsou append-only, takže historie bude poctivá, jen delší. Mazat pohyby by porušilo princip evidence.
-3. Výjimka pro „vratit“ bez předplatného (15 minut po výdeji) je jediná změna serveru. Bez ní by Vrátit v režimu čtení selhal s 402. Ověřit testem s plati_do v minulosti.
-4. Tisk štítku na Zebru má v produktu vlastní @media print (100×50 mm, 203 dpi), což DESIGN v3 nedoporučuje. Je to jádro placené hodnoty a SimteGen.tisk velikost stránky štítku neumí, proto zůstává. CI to podle seznamu odmítnutí nekontroluje. Kdyby to recenzent zamítl, řešení patří do šablony, ne do produktu.
-5. Přesun Týmu a Účtu na podobrazovky: zákazník najde tyto věci o klepnutí dál. ID a obsluha zůstávají, mění se jen umístění. Riziko nese návod (navod.js/NAVOD texty), který může zmiňovat „Nastavení → Tým“. Texty návodu zkontrolovat.
-6. Jedno černé tlačítko v průvodci Nová sada mění obsluhu podle kroku. Chyba ve stavu průvodce by mohla poslat Uložit dvakrát. Tlačítko se po dobu požadavku zamyká (disabled), stejně jako dnes.
-7. Šablonové funkce (vratitelne/potvrd/zeptej/kdoJsem) dodává nová simtegen.js. Ve stávající verzi repa nejsou. Bez přepisu infrastruktury stavbou appka nepoběží.
-8. Generátory nejde v tomhle prostředí spustit. Člověk je musí pustit před CI, jinak CI shodí build na rozdílu proti vygenerovaným souborům.
-9. Nic se neukládá navíc, manifest ani migrace se nemění. Zásady se proto obsahově nezmění.
-
-## Jak ověřit
-Na náhledovém nasazení, telefon ~390 px, přihlášený účet s ukázkovými daty:
-1. Objednávky → u zítřejšího termínu „Zrušit“: termín se hned přeškrtne a dole je toast „Objednávka zrušena“ s Vrátit. Klepnout Vrátit: termín je zpět a je i v Připravit kola. Žádné šedé okno prohlížeče.
-2. Detail sady → „Vydat“: sada je hned vydaná, toast s Vrátit. Vrátit vrátí sadu na původní pozici, v historii jsou oba pohyby. Totéž s plati_do v minulosti (režim čtení) do 15 minut po výdeji.
-3. Detail sady → „Přesunout ve skladu“: otevře se panel aplikace s polem „Místo ve skladu“ předvyplněným A1-04 a tlačítky Zrušit / Přesunout. Po přesunu Vrátit vrátí A1-04.
-4. Zákazník bez sad v regálu → Smazat: zmizí ze seznamu, toast s Vrátit. Vrátit ho vrátí. Bez Vrátit a po obnovení stránky už v kartotéce není.
-5. Nastavení → Účet a data → „Smazat účet a všechna data“: panel s červeným tlačítkem „Smazat účet“ a fokusem na Zrušit. Zrušit nic nesmaže.
-6. Projít všechny obrazovky: žádný nadpis nezačíná číslem, na každé je nejvýš jedno černé tlačítko (úvod: jen „Začít zdarma“, Vyzkoušet ukázku je obrysové; Nová sada: jedno tlačítko „Pokračovat → Uložit sadu → Vytisknout štítek“). Rozměr, kód a pozice jsou v mono písmu, popisky obyčejným písmem.
-7. Nový účet bez dat → Dnes ukazuje větu, co sem patří, a „Naplnit ukázkovými daty“. Po naplnění se objeví sady i objednávky.
-8. Tablet 820 px a notebook 1440 px: levý pruh / boční menu, Dnes, Sklad a Objednávky ve dvou sloupcích, Nastavení ve dvou sloupcích.
-9. Lokálně (člověk): grep -nE "confirm\(|prompt\(|alert\(" web/ functions/ = nic. Dále python vykresli_aplikaci.py, python kontrola_manifestu.py, python vizualni_kontrola.py (5 šířek, světle i tmavě, bez chyb) a python uat_kontrola.py, kde projdou všechny scénáře.
-play/co_je_noveho.txt: „Aplikace je přehlednější. Na každé obrazovce je jedno hlavní tlačítko a nadpisy jsou bez čísel. Když zrušíte objednávku, vydáte nebo přesunete sadu či smažete zákazníka, můžete to hned tlačítkem Vrátit vzít zpět. Místo oken prohlížeče se ptá sama aplikace. Tým a údaje k účtu najdete v Nastavení na samostatných obrazovkách.“
-
-## Akceptační scénáře (CI je spustí proti API)
-- Mechanik účtu A — zruší zítřejší objednávku k uskladněné sadě (akce zruseno) a hned ji vrátí (akce planovano) — musí ji v GET /api/priprava na zítřek znovu vidět i s kódem sady a pozicí v regálu.
-- Mechanik účtu A — vydá uskladněnou sadu a hned ji vrátí na sklad s původní pozicí (akce vratit) — musí ji najít hledáním podle pozice ve stavu uskladněno a v historii vidět výdej i vrácení.
-- Mechanik účtu A — přesune sadu z A1-03 na B2-01 a přesun vrátí — musí sadu vidět znovu na pozici A1-03.
-- Správce účtu A s vypršelým předplatným — vydá sadu a do 15 minut ji vrátí na sklad — musí dostat úspěch, ne 402, zatímco založení nové sady dál vrací 402.
-- Správce účtu A — odebere kolegu a hned ho přidá zpět se stejným e-mailem a rolí — musí ho v GET /api/clenove vidět se stejnou rolí.
-- Účet B — pokusí se vrátit objednávku (akce planovano) a sadu (akce vratit) účtu A — musí dostat 404 a u účtu A se objednávka ani sada nezmění.
-
-_Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+1. **Vysvětlující řádky tří bodů jsou kratší** („Čí sada je kde, sezónu po
+   sezóně“, „Kód sady z vaší tiskárny štítků“, „Den předem víte, co sundat
+   z regálu“), aby se na telefonu 360 px nezalamovaly a cena se zkušební
+   dobou zůstala nad ohybem. Nadpis H1 je doslova podle markeťáka.
+2. **Sekce Ceník na úvodu se bez ceníku skryje** stejně jako karta ceny
+   (jeden řádek ve `vykresliUvod()`), aby nezůstal prázdný rám.
+3. **Manifest se změnil i mimo `popis`.** Tabulka `upominky` má v účelu
+   výslovně i odpověď na žádost o hodnocení v Google Play (zapisuje ji
+   `zapisRecenzi` v `play_nakupy.js`), v `play_typy` přibylo
+   „akce_v_aplikaci“ a v `play_ucely` „funkce“. Nic nového se neukládá —
+   jen se to popisuje přesně.
+4. **`play_nakupy.js`, `functions/api/play.js` a `web/play.js` změnila
+   obnova šablony** (žádost o hodnocení v Google Play), ne tahle stavba.
+   Vzhled karty hodnocení (černé tlačítko „Ohodnotit v Google Play“) patří
+   do šablony.
+5. **Akceptační scénář úvodu** ověřuje titulek, popis, nadpis a tři body
+   v HTML a přihlášení přes `POST /api/prihlaseni`. UAT běží bez klíčů
+   k odesílání e-mailů, takže endpoint vrátí odkaz ve vývojovém režimu
+   (200) — stejně, jako se UAT přihlašuje účty A a B. Rozvržení nad ohybem
+   na telefonu ověří vizuální kontrola a člověk, API to neumí.
+6. **Generátory ani kontroly stavitel nespustil.** Prostředí spuštění
+   Pythonu odmítá. Před CI je musí pustit člověk: `vykresli_zasady.py`,
+   `vykresli_napovedu.py`, `vykresli_aplikaci.py`, `vykresli_seo.py`,
+   pak `kontrola_manifestu.py` a `uat_kontrola.py`.
 
 ## Co se při stavbě buildu 12 oproti specifikaci změnilo
 
 1. **Scénář „vypršelé předplatné + Vrátit výdeje“ není v `uat/scenare.json`.**
    API nemá cestu, jak účtu nastavit `plati_do` do minulosti, a UAT běží jen
    přes API. Výjimku v `functions/api/sady/[id].js` (akce `vratit` do
-   15 minut po výdeji projde bez předplatného) ověří člověk ručně podle
-   bodu 2 validace (`UPDATE predplatne SET plati_do = unixepoch() - 1`
-   na náhledové D1). Ostatních pět scénářů v UAT je.
-2. **Vrátit výdeje zachová datum příjmu.** Specifikace mluvila jen
-   o průchodu bez předplatného. Výdej omylem ale sadu nikdy neodnesl, proto
-   `vratit` do 15 minut po výdeji nepřepisuje `datum_prijmu`. V deníku je
-   řádek „Příjem na sklad — výdej vrácen“. Vrácení o sezónu později
-   funguje jako dřív.
-3. **Manifest se změnil, i když specifikace psala, že ne.** Šablona
-   přinesla migraci `0006_navstevy.sql` (počítadlo návštěv úvodu). Bez
-   `agregaty: ["navstevy"]` v manifestu by kontrola build shodila. Přibyl
-   i `popis` pro vyhledávač (pravidlo stavby). Nic osobního se neukládá
-   navíc.
-4. **Tisk štítku na Zebru se zapíná třídou `html.tisk-stitku`.** Stará
-   pravidla `@media print` schovávala celou appku při každém tisku. Nový
-   „Vytisknout seznam k obvolání“ (`data-tisk`, styl.css) by tak vytiskl
-   prázdnou stránku 100 × 50 mm. Velikost stránky štítku se teď nastaví jen
-   při tisku štítku a po něm se vrátí. Třída štítku se přejmenovala na
-   `.stitek-sady`, aby se nemíchala s `.stitek` návrhového systému.
-5. **Nápověda (`napoveda.json`) je nová** a odkaz „Nápověda“ v patičce je
-   zapsaný ručně přesně v tvaru generátoru. Generátor by odkaz vložil
-   k prvnímu výskytu `zasady.html`, a to je věta ve fakturační objednávce
-   na obrazovce Předplatné, ne patička.
-6. **Navíc Vrátit i u „Zaplaceno“ v sezónním přehledu a u nahrání
-   ukázkových dat.** Obojí stojí na existujícím API a chová se stejně
-   jako ostatní vratné akce.
-7. **Pruh předplatného na Dnes zůstává produktový** (`#pruh-predplatne`).
+   15 minut po výdeji projde bez předplatného) ověří člověk ručně
+   (`UPDATE predplatne SET plati_do = unixepoch() - 1` na náhledové D1).
+2. **Vrátit výdeje zachová datum příjmu.** Výdej omylem sadu nikdy
+   neodnesl, proto `vratit` do 15 minut po výdeji nepřepisuje
+   `datum_prijmu`. V deníku je řádek „Příjem na sklad — výdej vrácen“.
+3. **Manifest:** šablona přinesla migraci `0006_navstevy.sql` (počítadlo
+   návštěv úvodu), proto `agregaty: ["navstevy"]`. Přibyl i `popis` pro
+   vyhledávač. Nic osobního se neukládá navíc.
+4. **Tisk štítku na Zebru se zapíná třídou `html.tisk-stitku`**, aby tisk
+   seznamu k obvolání (`data-tisk`) nevytiskl prázdnou stránku 100 × 50 mm.
+   Třída štítku se přejmenovala na `.stitek-sady`.
+5. **Nápověda (`napoveda.json`) je nová**, odkaz „Nápověda“ v patičce je
+   zapsaný ručně přesně v tvaru generátoru.
+6. **Vrátit i u „Zaplaceno“ v sezónním přehledu a u nahrání ukázkových
+   dat.**
+7. **Pruh předplatného na Dnes zůstává produktový** (`#pruh-predplatne`);
    simtegen.js v3 ho pozná a druhý pruh nekreslí.
 8. **Opravy po bezpečnostní recenzi.**
-   - *Tým:* řádek v `clenove` je nově jen pozvánka (`prijato = 0`,
-     migrace `0008_clenove_prijeti.sql`, pouze ADD COLUMN). Přístupem se
-     stane, až ji pozvaný přihlášený stejnou adresou přijme na Dnes.
-     `nactiKontext` čte jen přijaté řádky a nikdy řádek ukazující na vlastní
-     účet. Vlastní evidence má dál přednost. Adresa majitele servisu se do
-     jeho týmu vložit nedá (ani pozvaným správcem). Odpověď na pozvání je
-     vždy stejná a důvody odmítnutí vidí jen pozvaný při přijetí, takže
-     formulář neprozradí, kdo kde pracuje. Limit je 10 pozvánek za hodinu
-     na servis (dvě čísla v `nastaveni_servisu`). Člen může ze servisu sám
-     odejít (Účet a data). Stávající členové mají `prijato = 1` (DEFAULT),
-     o přístup nepřijdou. Vrátit po odebrání kolegu znovu pozve a ten
-     pozvánku přijme znovu.
+   - *Tým:* řádek v `clenove` je jen pozvánka (`prijato = 0`, migrace
+     `0008_clenove_prijeti.sql`). Přístupem se stane, až ji pozvaný
+     přihlášený stejnou adresou přijme na Dnes. Adresa majitele servisu se
+     do jeho týmu vložit nedá. Limit 10 pozvánek za hodinu na servis. Člen
+     může ze servisu sám odejít.
    - *Přihlášení odkazem:* `GET /api/overeni` nejdřív ukáže „Přihlásit se
-     jako …?“. Relace vznikne až druhým GET z té stránky s jednorázovým
-     kódem v cookie SameSite=Strict. GET zůstal kvůli šablonovému
-     middlewaru, který zdroj nového účtu zapisuje jen u GET → 303.
-     Vývojová nasazení bez odesílání e-mailů přihlašují dál jedním krokem,
-     protože tak se přihlašují UAT a vizuální kontrola.
-   - *Počítadla `/api/navsteva` a `/api/chyba-stranky`:* zapisují jen
-     požadavky z vlastní stránky (Origin, případně Sec-Fetch-Site) a nejvýš
-     20, resp. 30 za hodinu z jedné adresy. Počítá se v paměti workeru, nic
-     se neukládá.
-   - `overeni.js`, `navsteva.js` a `chyba-stranky.js` jsou soubory šablony.
-     Opravy je potřeba převzít i do šablony, jinak je příští obnova
-     přepíše. U `chyba-stranky.js` se to po první opravě skutečně stalo.
-   - *Druhé kolo recenze:* pojistky pro veřejné zapisující endpointy
-     (`/api/navsteva`, `/api/chyba-stranky`, `/api/prihlaseni`) teď drží
-     i produktový `functions/_middleware.js`, který obnova šablony
-     nepřepisuje. `/api/prihlaseni` navíc přijímá jen požadavek z vlastní
-     stránky a nejvýš 10 požadavků za hodinu z jedné IP adresy, a to tam,
-     kde se e-maily skutečně posílají. Vývojové nasazení posílá odkaz
-     v odpovědi, takže z něj spam nevznikne. Celkový denní strop odkazů
-     jsem nepřidal: jeden útočník by jím zablokoval přihlášení všem.
-   - *Staré řádky týmu:* první verze migrace `0009` řešila staré řádky
-     přes `UPDATE` a CI ji bez podpisu majitele odmítlo
-     (`kontrola_migraci.py`). Teď `0009_clenove_bez_prihlaseni.sql` nic
-     existujícího nemění. Zapíše čas svého provedení (agregát
-     `stav_migraci`: jen název migrace a čas) a přidá `clenove.prijato_cas`.
-     Pravidlo `CLENSTVI_PRIJATO` ve `spolecne.js` pak bere řádek jako
-     přijatý, jen když ho pozvaný přijal v aplikaci, nebo když jde o starý
-     řádek člověka, jehož účet existoval už při migraci. Výsledek je stejný
-     jako u `UPDATE … WHERE email NOT IN (SELECT email FROM uzivatele)`, ale
-     bez přepisu dat a bez podpisu. Kdo se dřív nikdy nepřihlásil, uvidí
-     starý řádek jako pozvánku na Dnes. Recenzentovu alternativu
-     (porovnat `clenove.vytvoreno` s `uzivatele.vytvoreno`) jsem nepoužil:
-     útočníkův řádek vzniká dřív, než se oběť poprvé přihlásí, takže by
-     jí prošel.
-9. **Limit e-mailů z aplikace (třetí kolo recenze).** „Poslat si seznam
-   e-mailem“ (`POST /api/priprava`) jde nejvýš 5× za den na provozovnu.
-   Pevné okno je ve dvou nových sloupcích `nastaveni_servisu`, migrace
-   `0010_limit_pripravy.sql` jen přidává sloupce. Pokus se počítá ještě
-   před odesláním, aby limit nešel obejít neúspěšným odesíláním.
-   Objednávka předplatného (`POST /api/objednavka`, dva e-maily) jde nejvýš
-   3× za 24 hodin na provozovnu, zrušené se počítají také. Nad limit
-   vrací 429 s českou větou. Vývojová nasazení bez odesílání e-mailů
-   seznam přípravy jen ukážou, nic neposílají a nic nepočítají.
-10. **Generátory (`vykresli_zasady.py`, `vykresli_aplikaci.py`,
-   `vykresli_napovedu.py`, `vykresli_seo.py`) ani kontroly stavitel
-   nespustil.** Prostředí spuštění Pythonu i Node odmítá. Musí je pustit
-   člověk před CI. Do generovaných souborů se ručně nesahalo.
+     jako …?“; relace vznikne až druhým GET s jednorázovým kódem v cookie
+     SameSite=Strict. Vývojová nasazení bez odesílání e-mailů přihlašují
+     jedním krokem (UAT a vizuální kontrola).
+   - *Počítadla `/api/navsteva` a `/api/chyba-stranky`* zapisují jen
+     požadavky z vlastní stránky, nejvýš 20, resp. 30 za hodinu z jedné
+     adresy.
+   - *Pojistky veřejných zapisujících endpointů* drží i produktový
+     `functions/_middleware.js`. `/api/prihlaseni` tam, kde se e-maily
+     skutečně posílají, přijímá jen požadavek z vlastní stránky a nejvýš 10
+     za hodinu z jedné IP adresy.
+   - *Staré řádky týmu:* `0009_clenove_bez_prihlaseni.sql` nic existujícího
+     nemění; zapíše čas svého provedení (agregát `stav_migraci`) a přidá
+     `clenove.prijato_cas`. Pravidlo `CLENSTVI_PRIJATO` ve `spolecne.js`
+     bere řádek jako přijatý, jen když ho pozvaný přijal v aplikaci, nebo
+     jde o starý řádek člověka, jehož účet existoval už při migraci.
+9. **Limit e-mailů z aplikace.** „Poslat si seznam e-mailem“ jde nejvýš 5×
+   za den na provozovnu (migrace `0010_limit_pripravy.sql`), objednávka
+   předplatného nejvýš 3× za 24 hodin. Nad limit 429 s českou větou.
+10. **Generátory ani kontroly stavitel nespustil** — musí je pustit člověk
+   před CI.

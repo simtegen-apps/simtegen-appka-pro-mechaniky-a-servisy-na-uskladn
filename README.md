@@ -101,6 +101,11 @@ wrangler d1 execute <repo>-db --remote --command \
 částku na objednávce a stránka si ho bere přes `/api/ja`, takže v HTML
 neleží žádná číslice. Změna ceny = změna jednoho souboru.
 
+Výjimka: popis pro vyhledávače (`popis` v `data-manifest.json`, text od
+markeťáka) končí „129 Kč měsíčně za firmu.“ Při změně ceny ho přepište taky
+a spusťte `python vykresli_seo.py`, jinak vyhledávač ukáže starou cenu.
+Totéž platí pro `aplikace.dlouhy_popis` (záznam v Google Play).
+
 Jakmile majitel doplní daňový režim do `data-manifest.json` (klíč
 `cena_dph`, např. „bez DPH, poskytovatel není plátcem DPH“), přepište
 stejnou větu do `CENA_DPH` v `cenik.js` a přegenerujte zásady — appka ji

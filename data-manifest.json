@@ -1,6 +1,6 @@
 {
   "produkt": "Pneusklad — evidence uskladněných pneu",
-  "popis": "Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.",
+  "popis": "Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.",
   "provozovatel": "SimteGen, s.r.o.",
   "kontakt_email": "support@simtegen.com",
   "obsah_zakaznika": "uklada_se",
@@ -199,13 +199,15 @@
     },
     {
       "entita": "upominky",
-      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem)",
-      "pole": "odkaz na účet, druh upozornění, čas odeslání",
+      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem) — proto se ukládá i vaše odpověď na žádost o hodnocení v Google Play (ohodnotit, nebo později)",
+      "pole": "odkaz na účet, druh upozornění nebo odpověď na žádost o hodnocení, čas odeslání",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
-        "id_uzivatele"
+        "id_uzivatele",
+        "akce_v_aplikaci"
       ],
       "play_ucely": [
+        "funkce",
         "ucet",
         "komunikace"
       ]

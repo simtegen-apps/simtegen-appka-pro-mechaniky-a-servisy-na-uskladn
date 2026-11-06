@@ -193,3 +193,58 @@ export async function obnovNakupy(env, uzivatelId, fetchFn = fetch) {
   }
   return obnoveno;
 }
+
+// Asking for a rating in Google Play (backlog bod 17). Who: a customer
+// who paid a SECOND time (or a yearly subscriber 30 days in) — someone who
+// chose to stay, not someone still deciding; the app does not track active
+// days, and adding that would be new personal data for one banner. Never
+// gated on "do you like it?" first, never with a reward: Google's ratings
+// policy forbids both, and a stopped app costs more than a missed star.
+//
+// How often: the upominky ledger (0920, "once per account" by its primary
+// key) holds the answer. "Ohodnotit" closes it for good; "Teď ne" waits
+// for the next payment, at most RECENZE_ODLOZENI times — after that the
+// customer said no often enough. The policy names this (stavitel adds the
+// sentence to the upominky entity of every product with this module).
+export const RECENZE_HOTOVO = "recenze_play";
+export const RECENZE_POZDEJI = "recenze_pozdeji_";
+const RECENZE_ODLOZENI = 2;
+const RECENZE_ROCNI_PO = 30 * 86400;
+
+async function stavRecenze(env, uzivatelId) {
+  return env.DB.prepare(
+    "SELECT (SELECT COUNT(*) FROM platby WHERE uzivatel_id = ?1) AS platby, " +
+    "(SELECT COUNT(*) FROM platby WHERE uzivatel_id = ?1 AND mesice >= 12 AND zapsano <= ?2) AS rocni, " +
+    "(SELECT COUNT(*) FROM upominky WHERE uzivatel_id = ?1 AND druh = ?3) AS hotovo, " +
+    "(SELECT COUNT(*) FROM upominky WHERE uzivatel_id = ?1 AND druh LIKE ?4) AS odlozeno"
+  ).bind(uzivatelId, ted() - RECENZE_ROCNI_PO, RECENZE_HOTOVO, RECENZE_POZDEJI + "%").first();
+}
+
+// True when the app should ask now. A product from before the 0920
+// migration has no upominky table: the query fails and the answer is no.
+export async function zadostORecenzi(env, uzivatelId) {
+  try {
+    const s = await stavRecenze(env, uzivatelId);
+    if (!s || s.hotovo || s.odlozeno >= RECENZE_ODLOZENI) return false;
+    if (!(s.platby >= 2 || s.rocni >= 1)) return false;
+    // "Teď ne" at this payment count already: wait for the next one.
+    const odlozenoTed = await env.DB.prepare("SELECT 1 AS x FROM upominky WHERE uzivatel_id = ? AND druh = ?")
+      .bind(uzivatelId, RECENZE_POZDEJI + s.platby).first();
+    return !odlozenoTed;
+  } catch {
+    return false;
+  }
+}
+
+// odpoved: "hotovo" (went to Google Play) or "pozdeji". INSERT OR IGNORE:
+// a double tap or a second device writes nothing new.
+export async function zapisRecenzi(env, uzivatelId, odpoved) {
+  let druh = RECENZE_HOTOVO;
+  if (odpoved === "pozdeji") {
+    const s = await stavRecenze(env, uzivatelId);
+    druh = RECENZE_POZDEJI + ((s && s.platby) || 0);
+  }
+  await env.DB.prepare("INSERT OR IGNORE INTO upominky (uzivatel_id, druh) VALUES (?, ?)")
+    .bind(uzivatelId, druh).run();
+  return druh;
+}
