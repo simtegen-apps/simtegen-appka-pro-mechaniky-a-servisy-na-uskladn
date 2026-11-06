@@ -1,6 +1,6 @@
 # Specifikace — build 14
 
-Build 13 mění jen úvodní stránku hotového Pneuskladu na https://pneusklad.simtegen.com. Dostane nový <title>, novou meta description (vygenerovanou z manifestu), H1 „Víte, kde má který zákazník uložené pneu?“ a pod ním tři krátké body: evidence pneu, tisk štítků, objednávky s připomínkou. Cena 129 Kč měsíčně za firmu a věta „Prvních 30 dní zdarma, bez karty.“ budou vidět bez posouvání na telefonu i na notebooku. Funkce, ceny, API, migrace, datový model ani přihlašovací formulář se nemění.
+Build 14 mění jen úvodní stránku hotového Pneuskladu na https://pneusklad.simtegen.com. Dostane nový <title>, novou meta description (vygenerovanou z manifestu), H1 „Víte, kde má který zákazník uložené pneu?“ a pod ním tři krátké body: evidence pneu, tisk štítků, objednávky s připomínkou. Cena 129 Kč měsíčně za firmu a věta „Prvních 30 dní zdarma, bez karty.“ budou vidět bez posouvání na telefonu i na notebooku. Funkce, ceny, API, migrace, datový model ani přihlašovací formulář se nemění.
 
 ## Placená hodnota (proč přijde druhý nákup)
 Servis platí 129 Kč měsíčně za firmu za evidenci, kde leží čí kola, za štítky ze své tiskárny a za objednávky s připomínkou den předem. Druhý nákup přichází, protože pneu leží v regálu přes sezóny a evidenci potřebuje při každém přezouvání (jaro i podzim, každý rok). Tahle změna platenou hodnotu nemění, jen ji úvodní stránka a vyhledávač podají dřív a jasněji.
@@ -97,3 +97,106 @@ Aplikace z Google Play: úvod v ní vypadá stejně. Cenu ukazovat smí. Faktura
 - Servis B zavolá GET /api/sady a GET /api/sady/{id} sady servisu A a nesmí sadu servisu A vidět ani otevřít (prázdný seznam, 404).
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Ostatní obrazovky (beze změny od buildu 12)
+
+Build 14 mění jen obrazovku 1) Úvod a přihlášení (viz Design výš). Zbytek
+appky zůstává tak, jak ho popsala specifikace buildu 12:
+
+2) Dnes. Hlavní akce „Nová sada na uskladnění“. Sekce „Stav dne“ (obří číslo kol na zítra, stupnice připraveno, vedlejší Připravit kola / Obvolat), „Najít v evidenci“, „Dnešní objednávky“ (3–5 nejbližších, „Celý týden →“). Prázdný stav nového účtu bez sad: .prazdno „Tady uvidíte, která kola máte zítra sundat z regálu. Začněte první uskladněnou sadou.“ s vedlejším „Naplnit ukázkovými daty“ (vlastník účtu). Plní existujícím /api/ukazkova-data, druhé plnění se nepřidává. Hlavní akcí zůstává lišta. Načítání: .kostra. Chyba: .hlaska.chyba „Přehled dne se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.“
+3) Sklad. Hlavní akce „Nová sada“, vedlejší „Tisk štítků (n)“. Sekce „Sklad“ (obří počet sad v regálu, filtr) a „Hledání“. Prázdný: „V regálu zatím nic neleží.“ Načítání: .kostra. Chyba: .hlaska.chyba.
+4) Zákazníci. Hlavní akce „Nový zákazník“. Jedna sekce „Kartotéka“. Stavy beze změny.
+5) Zákazník. Hlavní akce „Uskladnit pneu“, vedlejší „Uložit“, varovné „Smazat“ (s Vrátit). Sekce „Údaje motoristy“.
+6) Nová sada (průvodce 4 kroky + hotovo). Jedno černé tlačítko #ns-krok-dal v jedné .lista-dole, mění text i akci: „Pokračovat“ → „Uložit sadu“ (krok 4) → „Vytisknout štítek“ (hotovo). Na kroku hotovo jsou vedlejší „Hned objednat přezutí“ a „Zapsat další sadu“, detail sady otevře klepnutí na kód. Ukazatel kroků zůstává.
+7) Detail sady. Hlavní akce „Tisk štítku“, vedlejší „Vydat“ / „Vrátit na sklad“ a „Objednat“. Sekce „Kola“ (zákazník s odkazem Zavolat, SPZ, rozměr, dezén, hloubky 4 kol v mm, varování pod 4 mm), „Uložení a platba“ (místo, přijato/vydáno, cena, poznámka, tiché „Označit jako zaplacené“ a „Přesunout ve skladu“), „Historie“ (.denik). Chyba: .hlaska.chyba.
+8) Objednávky. Hlavní akce „Nová objednávka“. Sekce „Týden“ (.tyden) a „Termíny“. „Zrušit“ u termínu proběhne hned a ukáže Vrátit.
+9) Nová objednávka. Hlavní akce „Zapsat objednávku“. Sekce „Čí kola“, „Kdy“, „Co se bude dělat“. Plný termín: SimteGen.potvrd(hláška serveru, {ano: "Zapsat i tak"}).
+10) Připravit kola. Hlavní akce „Poslat si seznam e-mailem“, vedlejší „Připomínka do kalendáře“. Sekce „Na který den“ (obří počet kol) a „Sundat z regálu“.
+11) Sezónní přehled. Hlavní akce „Vytisknout seznam k obvolání“ (data-tisk="#prehled-obvolat"). Sekce „Obvolat“, „Pod 4 mm“, „Nezaplaceno“ bez čísel. Prázdný: „Před sezónou tu uvidíte, koho obvolat.“
+12) Nastavení (menu). Hlavní akce „Uložit nastavení“ (jen správce). Sekce „Štítek“ (název, telefon, adresa, formát, zkušební štítek, výchozí cena), „Provoz“ a „Účet“ s řádky na Předplatné ›, Tým › (správce) a Účet a data ›, plus „Zobrazit návod“. Mechanik a „jen čtení“ vidí jen sekci Účet.
+13) Tým. Hlavní akce „Přidat kolegu“. Seznam členů s „Změnit roli“ a „Odebrat“, obojí hned s Vrátit. Prázdný: „Zatím jste tu sami.“
+14) Účet a data. Hlavní akce „Stáhnout moje data“, vedlejší „Odhlásit se“ a „Doporučit kolegovi“ (data-doporucit="ucet"). Sekce „Ukázková data“ (vlastník): „Smazat ukázková data“ s Vrátit. Sekce „Smazání účtu“: varovné tlačítko a SimteGen.potvrd s červeným tlačítkem a fokusem na Zrušit.
+15) Předplatné. Hlavní akce na webu „Objednávka zavazující k platbě“ (data-objednavka), v aplikaci tlačítko Google Play. Sekce „Stav účtu“, „Ceník“ / „Nákup“ a „Objednávky provozovny“. Zrušení fakturační objednávky přes SimteGen.potvrd.
+
+NAVIGACE: 4 položky Dnes · Sklad · Objednávky · Nastavení. Hlavní hodnota je na 1–2 klepnutích (Dnes → Nová sada → průvodce → štítek). Tým a Účet a data jsou na 2 klepnutích (Nastavení → řádek). Každá podobrazovka má šipku Zpět v hlavičce se záložní cestou na nadřazenou obrazovku a nic nespoléhá na tlačítko prohlížeče.
+
+TABLET A NOTEBOOK: Úvod s7 nadpis a body + s5 cena a přihlášení, pod nimi přes celou šířku Bez registrace a Ceník. Dnes s5 stav dne + s7 hledání a objednávky. Sklad s4 číslo a filtr + s8 seznam. Objednávky s7 týden + s5 termíny. Předplatné s5 + s7. Nastavení .dva-sloupce (Štítek | Provoz a Účet). Sezónní přehled .dva-sloupce. Detail sady s7 Kola + s5 Uložení a historie.
+
+STAVY: každá obrazovka má .prazdno (věta, co tu bude, a cesta dál), .kostra místo kolečka, .hlaska.chyba česky s tím, co dělat, a úspěch jako .toast. U vratných akcí úspěch dělá SimteGen.vratitelne s Vrátit.
+
+## Co se při stavbě buildu 14 oproti specifikaci změnilo
+
+1. **Vysvětlující řádky tří bodů jsou kratší** („Čí sada je kde, sezónu po
+   sezóně“, „Kód sady z vaší tiskárny štítků“, „Den předem víte, co sundat
+   z regálu“), aby se na telefonu 360 px nezalamovaly a cena se zkušební
+   dobou zůstala nad ohybem. Nadpis H1 je doslova podle markeťáka.
+2. **Sekce Ceník na úvodu se bez ceníku skryje** stejně jako karta ceny
+   (jeden řádek ve `vykresliUvod()`), aby nezůstal prázdný rám.
+3. **Manifest se změnil i mimo `popis`.** Tabulka `upominky` má v účelu
+   výslovně i odpověď na žádost o hodnocení v Google Play (zapisuje ji
+   `zapisRecenzi` v `play_nakupy.js`), v `play_typy` přibylo
+   „akce_v_aplikaci“ a v `play_ucely` „funkce“. Nic nového se neukládá —
+   jen se to popisuje přesně.
+4. **`play_nakupy.js`, `functions/api/play.js` a `web/play.js` změnila
+   obnova šablony** (žádost o hodnocení v Google Play), ne tahle stavba.
+   Vzhled karty hodnocení (černé tlačítko „Ohodnotit v Google Play“) patří
+   do šablony.
+5. **Akceptační scénář úvodu** ověřuje titulek, popis, nadpis a tři body
+   v HTML a přihlášení přes `POST /api/prihlaseni`. UAT běží bez klíčů
+   k odesílání e-mailů, takže endpoint vrátí odkaz ve vývojovém režimu
+   (200) — stejně, jako se UAT přihlašuje účty A a B. Rozvržení nad ohybem
+   na telefonu ověří vizuální kontrola a člověk, API to neumí.
+6. **Generátory ani kontroly stavitel nespustil.** Prostředí spuštění
+   Pythonu odmítá. Před CI je musí pustit člověk: `vykresli_zasady.py`,
+   `vykresli_napovedu.py`, `vykresli_aplikaci.py`, `vykresli_seo.py`,
+   pak `kontrola_manifestu.py` a `uat_kontrola.py`.
+
+## Co se při stavbě buildu 12 oproti specifikaci změnilo
+
+1. **Scénář „vypršelé předplatné + Vrátit výdeje“ není v `uat/scenare.json`.**
+   API nemá cestu, jak účtu nastavit `plati_do` do minulosti, a UAT běží jen
+   přes API. Výjimku v `functions/api/sady/[id].js` (akce `vratit` do
+   15 minut po výdeji projde bez předplatného) ověří člověk ručně
+   (`UPDATE predplatne SET plati_do = unixepoch() - 1` na náhledové D1).
+2. **Vrátit výdeje zachová datum příjmu.** Výdej omylem sadu nikdy
+   neodnesl, proto `vratit` do 15 minut po výdeji nepřepisuje
+   `datum_prijmu`. V deníku je řádek „Příjem na sklad — výdej vrácen“.
+3. **Manifest:** šablona přinesla migraci `0006_navstevy.sql` (počítadlo
+   návštěv úvodu), proto `agregaty: ["navstevy"]`. Přibyl i `popis` pro
+   vyhledávač. Nic osobního se neukládá navíc.
+4. **Tisk štítku na Zebru se zapíná třídou `html.tisk-stitku`**, aby tisk
+   seznamu k obvolání (`data-tisk`) nevytiskl prázdnou stránku 100 × 50 mm.
+   Třída štítku se přejmenovala na `.stitek-sady`.
+5. **Nápověda (`napoveda.json`) je nová**, odkaz „Nápověda“ v patičce je
+   zapsaný ručně přesně v tvaru generátoru.
+6. **Vrátit i u „Zaplaceno“ v sezónním přehledu a u nahrání ukázkových
+   dat.**
+7. **Pruh předplatného na Dnes zůstává produktový** (`#pruh-predplatne`);
+   simtegen.js v3 ho pozná a druhý pruh nekreslí.
+8. **Opravy po bezpečnostní recenzi.**
+   - *Tým:* řádek v `clenove` je jen pozvánka (`prijato = 0`, migrace
+     `0008_clenove_prijeti.sql`). Přístupem se stane, až ji pozvaný
+     přihlášený stejnou adresou přijme na Dnes. Adresa majitele servisu se
+     do jeho týmu vložit nedá. Limit 10 pozvánek za hodinu na servis. Člen
+     může ze servisu sám odejít.
+   - *Přihlášení odkazem:* `GET /api/overeni` nejdřív ukáže „Přihlásit se
+     jako …?“; relace vznikne až druhým GET s jednorázovým kódem v cookie
+     SameSite=Strict. Vývojová nasazení bez odesílání e-mailů přihlašují
+     jedním krokem (UAT a vizuální kontrola).
+   - *Počítadla `/api/navsteva` a `/api/chyba-stranky`* zapisují jen
+     požadavky z vlastní stránky, nejvýš 20, resp. 30 za hodinu z jedné
+     adresy.
+   - *Pojistky veřejných zapisujících endpointů* drží i produktový
+     `functions/_middleware.js`. `/api/prihlaseni` tam, kde se e-maily
+     skutečně posílají, přijímá jen požadavek z vlastní stránky a nejvýš 10
+     za hodinu z jedné IP adresy.
+   - *Staré řádky týmu:* `0009_clenove_bez_prihlaseni.sql` nic existujícího
+     nemění; zapíše čas svého provedení (agregát `stav_migraci`) a přidá
+     `clenove.prijato_cas`. Pravidlo `CLENSTVI_PRIJATO` ve `spolecne.js`
+     bere řádek jako přijatý, jen když ho pozvaný přijal v aplikaci, nebo
+     jde o starý řádek člověka, jehož účet existoval už při migraci.
+9. **Limit e-mailů z aplikace.** „Poslat si seznam e-mailem“ jde nejvýš 5×
+   za den na provozovnu (migrace `0010_limit_pripravy.sql`), objednávka
+   předplatného nejvýš 3× za 24 hodin. Nad limit 429 s českou větou.
+10. **Generátory ani kontroly stavitel nespustil** — musí je pustit člověk
+   před CI.
