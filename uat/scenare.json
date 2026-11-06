@@ -305,6 +305,31 @@
       ]
     },
     {
+      "nazev": "Úvodní stránka pro vyhledávače: titulek, popis, nadpis, tři body a přihlášení",
+      "kroky": [
+        {
+          "jako": "nikdo",
+          "pozadavek": "GET /",
+          "ocekavam": 200,
+          "obsahuje": ["<title>Evidence uskladněných pneu pro malé pneuservisy | Pneusklad</title>",
+                       "<meta name=\"description\" content=\"Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.\">",
+                       "<h1 class=\"titulek-velky\">Víte, kde má který zákazník uložené pneu?</h1>",
+                       "<strong>Evidence pneu</strong>", "<strong>Tisk štítků</strong>",
+                       "<strong>Objednávky s připomínkou</strong>",
+                       "id=\"uvod-cena-cislo\"", "id=\"uvod-zkusebni\"",
+                       "<label for=\"email\">", "id=\"poslat-odkaz\""],
+          "neobsahuje": ["Kde leží čí kola."]
+        },
+        {
+          "jako": "nikdo",
+          "pozadavek": "POST /api/prihlaseni",
+          "telo": { "email": "uat-uvod@example.cz" },
+          "ocekavam": 200,
+          "obsahuje": ["/api/overeni?token="]
+        }
+      ]
+    },
+    {
       "nazev": "Ceník a zkušební doba jdou ze serveru i nepřihlášenému",
       "kroky": [
         {

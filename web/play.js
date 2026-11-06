@@ -246,6 +246,46 @@
     }).catch(function () { return null; });
   }
 
+  // ── Hodnocení v Google Play ──────────────────────────────────────────
+
+  // The server decides who and when (play_nakupy.zadostORecenzi); this
+  // only draws the card. Neutral wording and no question before it: the
+  // ratings policy forbids steering who rates and how. Not a dialog —
+  // the customer opened the app to work, the card waits at the top.
+  function zadostORecenzi(balicek) {
+    if (doc.querySelector(".sg-recenze")) return;
+    var karta = prvek("section", "sg-recenze");
+    karta.setAttribute("aria-label", "Hodnocení v Google Play");
+    karta.appendChild(prvek("p", "",
+      "Pomůže nám, když aplikaci ohodnotíte v Google Play. Hodnocení je veřejné " +
+      "a co do něj napíšete, je jen na vás."));
+    var akce = prvek("div", "sg-recenze-akce");
+    var odkaz = prvek("a", "tlacitko", "Ohodnotit v Google Play");
+    // Android hands this address to the Play Store app (its detail page
+    // carries the rating stars).
+    odkaz.href = "https://play.google.com/store/apps/details?id=" + encodeURIComponent(balicek);
+    odkaz.target = "_blank";
+    odkaz.rel = "noopener";
+    var pozdeji = prvek("button", "tlacitko vedlejsi", "Teď ne");
+    pozdeji.type = "button";
+    function odpovez(odpoved) {
+      // keepalive: the tap on the link leaves for the Play Store at once.
+      fetch("/api/play", {
+        method: "POST", credentials: "same-origin", keepalive: true,
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recenze: odpoved }),
+      }).catch(function () { /* not recorded: asked again next time — harmless */ });
+      // After the click's own default action (following the link).
+      setTimeout(function () { karta.remove(); }, 0);
+    }
+    odkaz.addEventListener("click", function () { odpovez("hotovo"); });
+    pozdeji.addEventListener("click", function () { odpovez("pozdeji"); });
+    akce.appendChild(odkaz);
+    akce.appendChild(pozdeji);
+    karta.appendChild(akce);
+    var kam = doc.querySelector(".obsah") || doc.querySelector("main") || doc.body;
+    kam.insertBefore(karta, kam.firstChild);
+  }
+
   function predplatne(vAplikaci) {
     var mista = doc.querySelectorAll("[data-predplatne-play]");
     // /api/play exists only with the subscription module; /api/ja always.
@@ -265,6 +305,7 @@
         api("/api/play", "POST", { obnov: true }).catch(function () { return null; });
         return;
       }
+      if (info.recenze && info.balicek) zadostORecenzi(info.balicek);
       if (!mista.length) return;
       sluzbaPlay().then(function (sluzba) {
         // The demo shows the offer with its terms (the reviewer checks them)
