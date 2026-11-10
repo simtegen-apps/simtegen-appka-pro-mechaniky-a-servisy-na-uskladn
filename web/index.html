@@ -340,16 +340,17 @@
              přijme. Vykresluje vykresliPozvanky(). -->
         <div id="pozvanky" class="pod-sebou" hidden></div>
 
-        <!-- Jednou za účet: kdo aplikaci čte anglicky (jazyk prohlížeče nebo
-             volba na úvodu) a na účtu volbu ještě nemá, ji tu jedním klepnutím
-             potvrdí pro všechna svá zařízení — nebo se vrátí k češtině. Obě
-             tlačítka volbu uloží, takže se nabídka už neukáže. -->
+        <!-- Jednou za účet bez volby jazyka, a jen tomu, kdo nejspíš čte
+             anglicky (prohlížeč mimo cs/sk, nebo před přihlášením přepnul na
+             angličtinu). Aplikace je do té doby česky jako dřív; nikdo se
+             nepřepne sám. Obě tlačítka volbu uloží k účtu, takže se nabídka
+             už neukáže. Dvojjazyčně, každá půlka ve svém jazyce. -->
         <div class="hlaska" id="jazyk-nabidka" hidden>
-          <p data-t="jazyk.nabidka">Aplikace je teď anglicky. Ponechat angličtinu na všech vašich zařízeních?</p>
+          <p><span lang="en">Use Pneusklad in English?</span> ·
+            <span lang="cs">Používat aplikaci v angličtině?</span></p>
           <div class="radka">
-            <button type="button" class="tlacitko vedlejsi" id="jazyk-ponechat"
-                    data-t="jazyk.ponechat">Ponechat angličtinu</button>
-            <button type="button" class="tlacitko vedlejsi" id="jazyk-cesky" lang="cs">Čeština</button>
+            <button type="button" class="tlacitko vedlejsi" id="jazyk-anglicky" lang="en">English</button>
+            <button type="button" class="tlacitko vedlejsi" id="jazyk-cesky" lang="cs">Ponechat češtinu</button>
           </div>
           <div id="jazyk-zprava" class="zprava" aria-live="polite"></div>
         </div>
@@ -3572,8 +3573,13 @@
     // predvolby), aby mechanik měl angličtinu na dílenském tabletu i na
     // telefonu. Volba osoby, ne servisu: majitel může zůstat u češtiny.
     const NAZVY_JAZYKU = { cs: "Čeština", en: "English" };
+    // Značky v adrese pro jedno nové načtení: srovnání s účtem (hodnota =
+    // jazyk stránky před ním) a přepnutí v Nastavení (hodnota = jazyk, do
+    // kterého vede Vrátit). Hned po načtení zmizí.
     const ZNACKA_Z_UCTU = "jazyk-z-uctu";
+    const ZNACKA_PREPNUTO = "jazyk-zmenen";
     let jazykUctu;  // "cs" | "en" | null (nevolil) — známo až po přihlášení
+    let predPrihlasenimAnglicky = false;
 
     function jinyJazyk() {
       return SimteGen.jazyk() === "cs" ? "en" : "cs";
@@ -3601,16 +3607,39 @@
 
     // Přihlášenému se volba nejdřív uloží na účet; když to nejde, jazyk se
     // nepřepne — jinak by ho příští otevření vrátilo podle účtu zpátky.
-    async function zvolJazyk(jazyk, zpravaId) {
+    async function zvolJazyk(jazyk, zpravaId, zNastaveni) {
       if (document.body.classList.contains("prihlasen") && !await ulozJazykNaUcet(jazyk)) {
         if (zpravaId) zprava(zpravaId, SimteGen.t("jazyk.chyba"), true);
         return;
+      }
+      if (zNastaveni) {
+        // Stránka se načte znovu (simtegen.js); značka ji vrátí do Nastavení
+        // a nabídne Vrátit do jazyka, který byl předtím.
+        const adresa = new URL(location.href);
+        adresa.searchParams.set(ZNACKA_PREPNUTO, SimteGen.jazyk());
+        history.replaceState(history.state, "", adresa.toString());
       }
       SimteGen.nastavJazyk(jazyk);
     }
 
     $("hlavicka-jazyk").addEventListener("click", () => zvolJazyk(jinyJazyk()));
-    $("nast-jazyk").addEventListener("click", () => zvolJazyk(jinyJazyk(), "nast-jazyk-zprava"));
+    $("nast-jazyk").addEventListener("click", () => zvolJazyk(jinyJazyk(), "nast-jazyk-zprava", true));
+
+    // Po přepnutí v Nastavení: zpět do Nastavení a Vrátit. Vrací true, když
+    // se obrazovka otevřela tady.
+    function poPrepnutiJazyka() {
+      const adresa = new URL(location.href);
+      const predtim = adresa.searchParams.get(ZNACKA_PREPNUTO);
+      if (!predtim) return false;
+      adresa.searchParams.delete(ZNACKA_PREPNUTO);
+      history.replaceState({ obrazovka: "obrazovka-nastaveni", uroven: 0 }, "", adresa.toString());
+      stav.predObrazovkou = "obrazovka-nastaveni";
+      ukaz("obrazovka-nastaveni");
+      if (predtim !== SimteGen.jazyk() && (predtim === "cs" || predtim === "en")) {
+        SimteGen.vratitelne(SimteGen.t("jazyk.ulozeno"), () => zvolJazyk(predtim));
+      }
+      return true;
+    }
 
     // Přepínač šablony v patičce přepíná sám (a stránku hned načte znovu);
     // přihlášenému k tomu volbu uložíme na účet — keepalive doběhne i přes
@@ -3626,42 +3655,50 @@
       }).catch(() => {});
     }, true);
 
-    // Po přihlášení má přednost volba na účtu. Vrací true, když se stránka
-    // právě načítá znovu v jazyce účtu (pak už se nic nevykresluje).
+    // Po přihlášení rozhoduje účet. Kdo jazyk nikdy nezvolil (null), má
+    // češtinu jako před buildem 15 — i s telefonem nastaveným anglicky:
+    // nikdo se nepřepne sám, angličtinu si zapne nabídkou na Dnes. Vrací
+    // true, když se stránka právě načítá znovu (pak už se nic nevykresluje).
     function srovnejJazyk(volba) {
       jazykUctu = volba;
       const adresa = new URL(location.href);
       if (adresa.searchParams.has(ZNACKA_Z_UCTU)) {
         // Druhé načtení po srovnání: značka z adresy pryč a dál nic. Kdyby
         // prohlížeč volbu neuložil, stránka by se jinak načítala dokola.
+        predPrihlasenimAnglicky = adresa.searchParams.get(ZNACKA_Z_UCTU) === "en";
         adresa.searchParams.delete(ZNACKA_Z_UCTU);
         history.replaceState(history.state, "", adresa.toString());
         return false;
       }
       // Odkaz s ?jazyk= (i kontrola v CI) platí, jak je napsaný.
       if (adresa.searchParams.has("jazyk")) return false;
-      if (!volba || volba === SimteGen.jazyk()) return false;
-      adresa.searchParams.set(ZNACKA_Z_UCTU, "1");
+      const cil = volba || "cs";
+      if (cil === SimteGen.jazyk()) return false;
+      adresa.searchParams.set(ZNACKA_Z_UCTU, SimteGen.jazyk());
       history.replaceState(history.state, "", adresa.toString());
-      SimteGen.nastavJazyk(volba);
+      SimteGen.nastavJazyk(cil);
       return true;
     }
 
-    // Jednou za účet: kdo čte anglicky (prohlížeč nebo volba na úvodu) a na
-    // účtu volbu nemá, ji tu potvrdí pro všechna zařízení. Česká obrazovka
-    // bez volby zůstává přesně jako dřív.
+    // Jednou za účet bez volby: jen tomu, kdo nejspíš čte anglicky —
+    // prohlížeč mimo češtinu a slovenštinu, nebo angličtina přepnutá na
+    // úvodu před přihlášením.
     function nabidniJazyk() {
-      $("jazyk-nabidka").hidden = !(jazykUctu === null && SimteGen.jazyk() !== "cs");
+      const prohlizec = String(navigator.language || "").toLowerCase();
+      const cizi = !/^(cs|sk)\b/.test(prohlizec) || predPrihlasenimAnglicky;
+      $("jazyk-nabidka").hidden = !(jazykUctu === null && cizi);
     }
 
-    $("jazyk-ponechat").addEventListener("click", async () => {
-      if (await ulozJazykNaUcet(SimteGen.jazyk())) {
+    async function zNabidky(jazyk) {
+      if (jazyk !== SimteGen.jazyk()) return zvolJazyk(jazyk, "jazyk-zprava");
+      if (await ulozJazykNaUcet(jazyk)) {
         $("jazyk-nabidka").hidden = true;
       } else {
         zprava("jazyk-zprava", SimteGen.t("jazyk.chyba"), true);
       }
-    });
-    $("jazyk-cesky").addEventListener("click", () => zvolJazyk("cs", "jazyk-zprava"));
+    }
+    $("jazyk-anglicky").addEventListener("click", () => zNabidky("en"));
+    $("jazyk-cesky").addEventListener("click", () => zNabidky("cs"));
 
     // ------------------------------------------------------------- Bootstrap
     async function nactiUcet() {
@@ -3730,6 +3767,7 @@
       ]);
       if (volba.ok && srovnejJazyk(volba.data.jazyk)) return;
       vykresliNastaveni();
+      if (poPrepnutiJazyka()) return;
       const aktivni = document.querySelector(".obrazovka.aktivni");
       // Po výpadku spojení zůstává obrazovka, na které mechanik byl.
       if (aktivni && aktivni.id !== "obrazovka-nacitani" && aktivni.id !== "obrazovka-prihlaseni") {

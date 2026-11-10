@@ -51,8 +51,7 @@ SimteGen.slovnik({
     "cenik.rozpis_sezona": "{nazev} · {cena}, za celou provozovnu.",
     "cenik.rozpis": "{nazev} · {cena} × {mesice}, za celou provozovnu.",
 
-    "jazyk.nabidka": "Aplikace je teď anglicky. Ponechat angličtinu na všech vašich zařízeních?",
-    "jazyk.ponechat": "Ponechat angličtinu",
+    "jazyk.ulozeno": "Jazyk uložen",
     "jazyk.chyba": "Volbu jazyka se nepodařilo uložit k vašemu účtu. Zkuste to prosím znovu.",
 
     "dnes.prazdno": "Tady uvidíte, která kola máte zítra sundat z regálu. Začněte první uskladněnou sadou — zapíšete ji tlačítkem dole.",
@@ -602,8 +601,7 @@ SimteGen.slovnik({
     "cenik.rozpis_sezona": "{nazev} · {cena}, for the whole workshop.",
     "cenik.rozpis": "{nazev} · {cena} × {mesice}, for the whole workshop.",
 
-    "jazyk.nabidka": "Pneusklad is now in English. Keep English on all your devices?",
-    "jazyk.ponechat": "Keep English",
+    "jazyk.ulozeno": "Language saved",
     "jazyk.chyba": "Your language choice could not be saved to your account. Please try again.",
 
     "dnes.prazdno": "Here you will see which wheels to take off the rack tomorrow. Start with your first stored set — add it with the button below.",

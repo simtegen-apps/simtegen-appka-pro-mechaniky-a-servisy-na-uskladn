@@ -134,7 +134,7 @@ a slova jsou ve `web/texty.js` v obou jazycích. Ve skriptu se píše
   ukáže jen obecnou větu.
 - **Volba jazyka** se pamatuje na účtu (tabulka `predvolby`,
   `/api/jazyk`) jako volba osoby, ne servisu. Po přihlášení má přednost
-  před prohlížečem. E-mail „Příprava na …“ (`/api/priprava`) jde
+  před prohlížečem. Účet bez volby je česky, i když má telefon anglicky. E-mail „Příprava na …“ (`/api/priprava`) jde
   v jazyce toho, kdo ho posílá.
 - **Ceník** má u variant a délek anglické texty (`*_en` v `cenik.js`).
   Při změně názvu nebo jednotky přepište obojí.

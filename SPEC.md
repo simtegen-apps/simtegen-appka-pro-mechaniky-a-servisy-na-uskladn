@@ -153,22 +153,26 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
    a odmítne každé ě, š, č, ř, ž, ů, ť, ď, ň na anglické obrazovce).
    Slovník podle českých vět by šel proti šabloně i kontrole. Výsledek pro
    zákazníka je stejný, česká obrazovka zůstává doslova stejná.
-2. **Kdo si jazyk ještě nezvolil, dostane jazyk prohlížeče.** Rozhoduje
-   šablona: `?jazyk=` → ruční volba v prohlížeči → jazyk prohlížeče
-   (slovenský = čeština) → angličtina. Kdo má prohlížeč česky, vidí
-   aplikaci jako v buildu 14. Kdo ho má anglicky, vidí ji rovnou anglicky
-   a na Dnes jednou nabídku „Pneusklad is now in English. Keep English on
-   all your devices?“ s tlačítky „Keep English“ a „Čeština“. Obě volbu
-   uloží k účtu a nabídka se už neukáže.
+2. **Přihlášený bez volby jazyka má češtinu, i s telefonem nastaveným
+   anglicky** (opraveno po recenzi). Úvod pro nepřihlášené vybírá šablona:
+   `?jazyk=` → ruční volba v prohlížeči → jazyk prohlížeče (slovenský =
+   čeština) → angličtina. Po přihlášení ale rozhoduje účet a bez volby
+   (`null`) je to čeština. Stránka se v tom případě jednou znovu načte
+   česky, ještě pod načítací kostrou. Nikdo se nepřepne sám. Na Dnes se
+   pak jednou ukáže dvojjazyčná nabídka „Use Pneusklad in English? ·
+   Používat aplikaci v angličtině?“ s tlačítky „English“ a „Ponechat
+   češtinu“, ale jen když prohlížeč není česky ani slovensky, nebo když
+   si zákazník angličtinu přepnul na úvodu před přihlášením. Obě tlačítka
+   volbu uloží k účtu a nabídka se už neukáže.
 3. **Ruční volbu si prohlížeč pamatuje (`sg-volba`).** Dělá to šablona
    a zásady to uvádějí (`vykresli_zasady.py`). Produkt sám do prohlížeče
    nic neukládá a `uloziste_v_prohlizeci` zůstává prázdné.
 4. **Přepnutí jazyka znamená nové načtení stránky.** Tak to dělá
-   `SimteGen.nastavJazyk`, proto po přepnutí v Nastavení není toast
-   s Vrátit. Zpět se přepne stejným řádkem a stránka se otevře na Dnes.
-   Když se volbu nepodaří uložit k účtu, jazyk se nepřepne a pod řádkem
-   je chyba („Your language choice could not be saved…“). Jinak by ho
-   příští otevření podle účtu vrátilo.
+   `SimteGen.nastavJazyk`. Po přepnutí v Nastavení se aplikace otevře zase
+   v Nastavení a ukáže „Jazyk uložen / Language saved“ s Vrátit (značka
+   `jazyk-zmenen` v adrese, hned se smaže). Když se volbu nepodaří uložit
+   k účtu, jazyk se nepřepne a pod řádkem je chyba („Your language choice
+   could not be saved…“). Jinak by ho příští otevření podle účtu vrátilo.
 5. **Jazyk účtu má po přihlášení přednost.** Liší-li se od jazyka
    stránky, stránka se jednou načte znovu v jazyce účtu, ještě pod
    načítací kostrou. Proti zacyklení je v adrese značka `jazyk-z-uctu`,
