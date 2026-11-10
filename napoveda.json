@@ -30,6 +30,10 @@
       "text": "Správce v Nastavení otevře Tým a pozve kolegu jeho e-mailem. Kolega se přihlásí stejně jako vy, odkazem z e-mailu, a na obrazovce Dnes pozvánku přijme. Dokud ji nepřijme, do vašeho servisu nevidí. Oprávnění jsou tři: správce může všechno, mechanik dělá běžnou práci bez nastavení a jen čtení se ničeho nedotkne.\n\nKolega může ze servisu kdykoli sám odejít v Nastavení na obrazovce Účet a data."
     },
     {
+      "nadpis": "Aplikace v angličtině",
+      "text": "Aplikaci můžete používat česky i anglicky. Jazyk si každý přihlášený zvolí sám v Nastavení, v sekci Účet, na řádku Jazyk aplikace. Volba se uloží k jeho účtu, takže platí na všech jeho zařízeních a ostatním v týmu jazyk nemění. Před přihlášením jazyk přepnete tlačítkem nahoře na úvodní obrazovce nebo v patičce.\n\nV angličtině jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Česky zůstávají přihlašovací e-mail, tato nápověda, obchodní podmínky a zásady zpracování údajů. Údaje, které zapíšete, se nepřekládají."
+    },
+    {
       "nadpis": "Stažení dat a smazání účtu",
       "text": "V Nastavení otevřete Účet a data. Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Tamtéž můžete účet se všemi daty smazat. Tento krok je nevratný, proto se vás aplikace ještě zeptá."
     }

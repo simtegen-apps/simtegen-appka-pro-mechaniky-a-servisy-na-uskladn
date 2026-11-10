@@ -1,8 +1,11 @@
-// GET  /api/clenove — who else may open this shop's account, and the
-//                     invitations waiting for the signed-in person.
-// POST /api/clenove {akce: pridat|zmenit|odebrat} — správce only.
-// POST /api/clenove {akce: prijmout|odmitnout} — the invited person, own invitation only.
-// POST /api/clenove {akce: odejit} — a colleague leaves the shop they work in.
+// GET  /api/clenove — who else may open this shop's account.
+// POST /api/clenove {akce: pridat|zmenit|odebrat} — change the team.
+//
+// Správce only, both reading and writing (the owner's decision after the
+// security review): the team list is the colleagues' e-mail addresses and
+// roles, a mechanic or a read-only colleague has no business with it. The
+// signed-in person's own membership — the invitations waiting for them,
+// accepting, declining, leaving a shop — is functions/api/clenstvi.js.
 //
 // There is no invitation e-mail and no separate password: the colleague signs
 // in with their own address through the ordinary one-time link. A row the
@@ -21,8 +24,7 @@
 // administer.
 
 import {
-  json, maVlastniData, nactiNastaveni, ocisti, odepriSpravu, smiSpravovat, ted,
-  CLENSTVI_NEPRIJATO, CLENSTVI_PRIJATO, ROLE,
+  json, nactiNastaveni, ocisti, odepriSpravu, smiSpravovat, ted, CLENSTVI_PRIJATO, ROLE,
 } from "../../spolecne.js";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
@@ -43,6 +45,7 @@ const POZVANEK_ZA_HODINU = 10;
 export async function onRequestGet(context) {
   const { env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   // prijato is the EFFECTIVE state (spolecne.CLENSTVI_PRIJATO): an old row
   // for someone who never signed in shows as waiting, like a new invitation.
@@ -52,28 +55,13 @@ export async function onRequestGet(context) {
     "WHERE c.uzivatel_id = ? ORDER BY c.email"
   ).bind(data.servis.id).all();
 
-  // mimo-uzivatele: the invitations addressed to the signed-in person live
-  // in other shops' rows; only the shop's name goes out, nothing else of it.
-  const pozvanky = await env.DB.prepare(
-    "SELECT c.id, c.role, n.nazev FROM clenove c JOIN uzivatele u ON u.id = ? " +
-    "LEFT JOIN nastaveni_servisu n ON n.uzivatel_id = c.uzivatel_id " +
-    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO} ORDER BY c.id`
-  ).bind(data.uzivatel.id).all();
-
-  return json({
-    clenove: clenove.results,
-    pozvanky: pozvanky.results.map((p) => ({
-      id: p.id, role: p.role, servis: p.nazev || "Pneuservis bez názvu",
-    })),
-    muze_spravovat: smiSpravovat(data.servis),
-    clen_ciziho: !data.servis.vlastni,
-    ja: data.uzivatel.email,
-  });
+  return json({ clenove: clenove.results });
 }
 
 export async function onRequestPost(context) {
   const { request, env, data } = context;
   if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
+  if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   let telo;
   try {
@@ -82,32 +70,9 @@ export async function onRequestPost(context) {
     return json({ chyba: "Tělo požadavku musí být JSON." }, 400);
   }
   const akce = ocisti(telo.akce, 20) || "pridat";
-
-  // The invited person's own steps — no správce right needed, and they touch
-  // only rows addressed to the signed-in e-mail.
-  if (akce === "prijmout") {
-    if (jeUkazka(data.uzivatel)) return json({ chyba: "V ukázce pozvánky přijímat nejde." }, 403);
-    return prijmout(env, data, Number(telo.id));
+  if (!["pridat", "zmenit", "odebrat"].includes(akce)) {
+    return json({ chyba: "Neznámá akce." }, 422);
   }
-  if (akce === "odmitnout") {
-    // mimo-uzivatele: the invitation sits in the inviting shop's rows.
-    await env.DB.prepare(
-      "DELETE FROM clenove WHERE id IN (SELECT c.id FROM clenove c JOIN uzivatele u ON u.id = ? " +
-      `WHERE c.id = ? AND c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO})`
-    ).bind(data.uzivatel.id, Number(telo.id)).run();
-    return json({ stav: "odmitnuto" });
-  }
-  if (akce === "odejit") {
-    if (data.servis.vlastni) {
-      return json({ chyba: "Ve vlastním servisu jste majitel, odejít z něj nejde." }, 422);
-    }
-    await env.DB.prepare(
-      "DELETE FROM clenove WHERE uzivatel_id = ? AND email = ?"
-    ).bind(data.servis.id, data.uzivatel.email).run();
-    return json({ stav: "odesel" });
-  }
-
-  if (!smiSpravovat(data.servis)) return odepriSpravu();
 
   if (akce === "odebrat") {
     await env.DB.prepare(
@@ -169,43 +134,4 @@ export async function onRequestPost(context) {
   ).bind(data.servis.id, email, role).first();
 
   return json({ stav: "pozvano", clen: vysledek });
-}
-
-// Accepting is the only way an invitation turns into access. The reasons it
-// can be refused go to the invited person alone — they are about their own
-// account.
-async function prijmout(env, data, id) {
-  // mimo-uzivatele: the invitation is a row of the inviting shop, found by
-  // the signed-in person's own address.
-  const pozvanka = await env.DB.prepare(
-    "SELECT c.id, c.uzivatel_id FROM clenove c JOIN uzivatele u ON u.id = ? " +
-    `WHERE c.id = ? AND c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_NEPRIJATO}`
-  ).bind(data.uzivatel.id, id).first();
-  if (!pozvanka) return json({ chyba: "Pozvánka nebyla nalezena." }, 404);
-
-  // Own records win (nactiKontext): accepting would change nothing, and
-  // saying so is better than a silent no-op.
-  if (await maVlastniData(env, data.uzivatel.id)) {
-    return json({
-      chyba: "Ve vlastním účtu už máte evidenci, a ta má přednost. Pozvánku přijměte "
-        + "z jiné e-mailové adresy, nebo nejdřív stáhněte data a smažte účet.",
-    }, 409);
-  }
-  // One person, one shop: the resolver takes the first accepted membership,
-  // a second one would be silently ignored rather than offering a choice.
-  // mimo-uzivatele: memberships of this address in any shop.
-  const jinde = await env.DB.prepare(
-    "SELECT c.id FROM clenove c JOIN uzivatele u ON u.id = ? " +
-    `WHERE c.email = u.email AND c.uzivatel_id != u.id AND ${CLENSTVI_PRIJATO}`
-  ).bind(data.uzivatel.id).first();
-  if (jinde) {
-    return json({
-      chyba: "Už pracujete v jiném servisu. Nejdřív z něj odejděte (Nastavení → Účet a data).",
-    }, 409);
-  }
-
-  await env.DB.prepare(
-    "UPDATE clenove SET prijato = 1, prijato_cas = ? WHERE uzivatel_id = ? AND id = ? AND email = ?"
-  ).bind(ted(), pozvanka.uzivatel_id, pozvanka.id, data.uzivatel.email).run();
-  return json({ stav: "prijato" });
 }

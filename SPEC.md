@@ -141,3 +141,130 @@ APLIKACE Z GOOGLE PLAY: přepínač funguje stejně. Pravidla platby se nemění
 - Přihlášený účet A stáhne GET /api/ucet/export a musí v něm vidět tabulku predvolby se svou volbou „en“.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě buildu 15 oproti specifikaci změnilo
+
+1. **Překlad jede přes jazykový systém šablony, ne přes vlastní
+   `web/preklad.js`.** Obnova šablony těsně před stavbou přinesla jazyky
+   do `simtegen.js` (`<meta name="simtegen-jazyky" content="cs en">`,
+   slovník `web/texty.js` se `SimteGen.slovnik`, klíče `data-t` v HTML,
+   `SimteGen.t` ve skriptu, přepínač `data-prepinac-jazyka`) a CI to
+   vynucuje (`kontrola_jazyku.py`; vizuální kontrola otevře `?jazyk=en`
+   a odmítne každé ě, š, č, ř, ž, ů, ť, ď, ň na anglické obrazovce).
+   Slovník podle českých vět by šel proti šabloně i kontrole. Výsledek pro
+   zákazníka je stejný, česká obrazovka zůstává doslova stejná.
+2. **Přihlášený bez volby jazyka má češtinu, i s telefonem nastaveným
+   anglicky** (opraveno po recenzi). Úvod pro nepřihlášené vybírá šablona:
+   `?jazyk=` → ruční volba v prohlížeči → jazyk prohlížeče (slovenský =
+   čeština) → angličtina. Po přihlášení ale rozhoduje účet a bez volby
+   (`null`) je to čeština. Stránka se v tom případě jednou znovu načte
+   česky, ještě pod načítací kostrou. Nikdo se nepřepne sám. Na Dnes se
+   pak jednou ukáže dvojjazyčná nabídka „Use Pneusklad in English? ·
+   Používat aplikaci v angličtině?“ s tlačítky „English“ a „Ponechat
+   češtinu“, ale jen když prohlížeč není česky ani slovensky, nebo když
+   si zákazník angličtinu přepnul na úvodu před přihlášením. Obě tlačítka
+   volbu uloží k účtu a nabídka se už neukáže.
+3. **Ruční volbu si prohlížeč pamatuje (`sg-volba`).** Dělá to šablona
+   a zásady to uvádějí (`vykresli_zasady.py`). Produkt sám do prohlížeče
+   nic neukládá a `uloziste_v_prohlizeci` zůstává prázdné.
+4. **Přepnutí jazyka znamená nové načtení stránky.** Tak to dělá
+   `SimteGen.nastavJazyk`. Po přepnutí v Nastavení se aplikace otevře zase
+   v Nastavení a ukáže „Jazyk uložen / Language saved“ s Vrátit (značka
+   `jazyk-zmenen` v adrese, hned se smaže). Když se volbu nepodaří uložit
+   k účtu, jazyk se nepřepne a pod řádkem je chyba („Your language choice
+   could not be saved…“). Jinak by ho příští otevření podle účtu vrátilo.
+5. **Jazyk účtu má po přihlášení přednost.** Liší-li se od jazyka
+   stránky, stránka se jednou načte znovu v jazyce účtu, ještě pod
+   načítací kostrou. Proti zacyklení je v adrese značka `jazyk-z-uctu`,
+   hned se smaže. Odkaz s `?jazyk=` (a kontrola v CI) platí, jak je
+   napsaný.
+6. **Přepínač je na třech místech:** v hlavičce úvodu jedno tlačítko
+   s druhým jazykem („English“ / „Čeština“), plný přepínač šablony
+   v patičce (CI ho vyžaduje) a řádek „Jazyk aplikace · Language“
+   v Nastavení → Účet. Přepnutí patičkou přihlášenému uloží volbu k účtu
+   také.
+7. **Čísla, peníze a data se v angličtině píšou anglicky** („CZK 129“,
+   „25 Oct“, „1,249“). Formát řídí `simtegen.js` podle jazyka stránky,
+   specifikace počítala s českým. Částky se nepřepočítávají, ceník je
+   dál jen v Kč.
+8. **Hlášky API se nepřekládají na serveru.** API mluví česky dál.
+   Anglická obrazovka je přeloží tabulkou `HLASKY_SERVERU` / `HLASKY_VZORY`
+   v `index.html` na klíče `chyba.*`. Hláška, kterou tabulka nezná, se
+   ukáže jako obecná anglická věta, nikdy česky. Nová hláška v API
+   potřebuje řádek v tabulce i ve slovníku.
+9. **Ceník má anglická jména u sebe.** `cenik.js` nese u variant
+   `nazev_en`, `jednotka_en`, `popis_en` a u délek `nazev_en`. Částky
+   jsou tytéž a `/api/ja` je posílá beze změny.
+10. **Česky zůstávají i tyto části:** `web/play.js` (nákup v aplikaci
+    z Google Play a pruh ukázky; šablona, needituje se), přihlašovací
+    e-mail a stránka `/api/overeni`, e-maily k fakturační objednávce,
+    nápověda a právní dokumenty. Odkazy na ně mají v angličtině dovětek
+    „In Czech:“ / „(both in Czech)“ a `lang="cs"`.
+11. **Akceptační scénář úvodu hledá stejné texty volněji**
+    (`>Víte, kde má …</h1>` místo celé značky), protože nadpis, body,
+    `<title>` a popisek e-mailu nesou atribut `data-t`. Nově kontroluje
+    i `simtegen-jazyky` a `texty.js`.
+12. **Přihlašovací odkaz přihlásí až tlačítkem (POST), ne otevřením
+    (GET).** Opravu vyžádala kontrola. Obnovený middleware šablony bere
+    `overeni.js` bez `onRequestPost` jako starou obsluhu, GET obslouží sám
+    a POST přepošle jako GET, na který Pages Functions obsluhu nenajdou.
+    Přihlášení pak vracelo 200 bez cookie relace a UAT ani zákazníci se
+    nepřihlásili. Teď GET ukáže „Přihlásit se jako …?“ a nic nemění.
+    Přihlásí až `POST /api/overeni` z tlačítka (formulář nebo JSON
+    `{token}`). Kde se skutečně posílají e-maily, přijme POST jen z vlastní
+    stránky. Jednorázový kód v cookie `potvrzeni_prihlaseni` odpadl,
+    stejnou ochranu dává POST s kontrolou Origin. Platí i ve vývojovém
+    režimu: odkaz otevře potvrzení a přihlásí tlačítko.
+13. **Nekanonická cesta API dostane 404** (opraveno po bezpečnostní
+    recenzi). Pojistky veřejných zápisů porovnávají cestu přesně (limity
+    a kontrola původu u `/api/prihlaseni`, brána v `functions/_middleware.js`
+    i v middleware šablony). Varianta `/api/prihlaseni/`, `/API/Prihlaseni`,
+    `//` nebo `%` v cestě by je mohla obejít. Produktový
+    `functions/_middleware.js` běží před vším ostatním a takovou cestu pod
+    `/api` odmítne dřív, než dojde k obsluze. Aplikace sama žádnou takovou
+    cestu nevolá.
+14. **Session cookie se jmenuje `__Host-relace`** (opraveno po
+    bezpečnostní recenzi). Cookie pod jménem `relace` mohla podstrčit
+    sesterská subdoména `*.simtegen.com` a přihlásit mechanika do cizího
+    účtu. Přihlášení se teď čte jen z `__Host-relace`
+    (`spolecne.jmenoRelace`), kterou smí nastavit jen tato aplikace. Starou
+    `relace` middleware šablony jen smaže, nikdy ji nepřesune. Kdo ji ještě
+    měl, přihlásí se jednou znovu odkazem. Výjimkou je lokální běh přes http
+    ve vývojovém režimu (UAT), tam zůstává `relace`. Manifest uvádí nové
+    jméno cookie.
+15. **Zdroje návštěv mají strop a limity v D1** (opraveno po bezpečnostní
+    recenzi). `functions/_middleware.js` pustí nejvýš 200 různých
+    (utm_source, utm_campaign) za den, další nový zdroj se započte jako
+    `jine`. `/api/navsteva` navíc počítá limity v D1 (`ochrana.vLimitu`):
+    20 za hodinu z jedné adresy a 1000 za hodinu celkem.
+16. **Správu týmu smí jen správce** (pokyn majitele po bezpečnostní
+    recenzi). `GET` i `POST /api/clenove` (seznam kolegů s e-maily
+    a rolemi, přidání, změna role, odebrání) vrací mechanikovi i „jen
+    čtení“ 403 „Tuto část smí měnit jen správce účtu.“. Kroky, které se
+    týkají jen vlastního členství přihlášeného, se beze změny přesunuly do
+    nového `functions/api/clenstvi.js`: pozvánky na Dnes, přijetí,
+    odmítnutí a „Odejít ze servisu“. Jinak by mechanik nemohl sám odejít
+    a člen cizího servisu by neviděl ani neodmítl pozvánku. Stránka
+    i scénář UAT „Pozvánka do týmu…“ volají pro přijetí novou cestu
+    (jen technický zápis, očekávání se nemění). Data, manifest ani zásady
+    se nemění, je to tatáž tabulka `clenove`.
+17. **Soubory změněné mimo původní rozsah buildu 15:**
+    - *obnova šablony, ne stavitel:* `.github/workflows/deploy.yml`,
+      `functions/api/_middleware.js`, `web/simtegen.js`, `web/play.js`,
+      `web/styl.css`, `web/_headers`, `DESIGN.md`, kontrolní skripty
+      (`*_kontrola.py`, `kontrola_jazyku.py`, `vykresli_*.py`),
+      `functions/api/kontrolni-prihlaseni.js`, `functions/api/prostredi.js`;
+    - *stavitel, vyžádané kontrolou nebo recenzí:*
+      `functions/api/overeni.js` (bod 12, mění hranici přihlášení,
+      schvaluje SimteGen), `spolecne.js`, `functions/api/odhlaseni.js`
+      a `functions/api/ucet/smazat.js` (bod 14), `functions/_middleware.js`
+      (body 13 a 15), `functions/api/navsteva.js` (bod 15),
+      `functions/api/clenove.js` a nový `functions/api/clenstvi.js`
+      (bod 16).
+18. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+    bez schválení nejdou spustit. Před CI je musí pustit člověk:
+    `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
+    téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
+    (Bezpečnost údajů, záznam v obchodě s větou o angličtině
+    v `dlouhy_popis`), `python vykresli_seo.py`, pak
+    `python kontrola_manifestu.py` a `python uat_kontrola.py`.

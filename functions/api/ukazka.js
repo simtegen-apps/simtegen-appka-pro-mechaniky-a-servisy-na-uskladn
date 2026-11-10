@@ -17,28 +17,17 @@
 import {
   cookieHlavicka, json, novyToken, otisk, tabulkySUzivatelem, ted,
 } from "../../spolecne.js";
+import { adresaKlienta, vLimitu } from "../../ochrana.js";
 
 const DOMENA = "@ukazka.invalid";
 const TRVANI = 24 * 3600;
-// Per data centre and hour, without storing who asked (no IP): enough for
-// real visitors, a wall for a script filling the database.
-const LIMIT = 60;
-
-async function vLimitu() {
-  try {
-    const hodina = Math.floor(Date.now() / 3600000);
-    const klic = new Request(`https://limit.simtegen.invalid/ukazka/${hodina}`);
-    const ulozeno = await caches.default.match(klic);
-    const pocet = ulozeno ? Number(await ulozeno.text()) || 0 : 0;
-    if (pocet >= LIMIT) return false;
-    await caches.default.put(klic, new Response(String(pocet + 1), {
-      headers: { "Cache-Control": "max-age=3600" },
-    }));
-    return true;
-  } catch {
-    return true;
-  }
-}
+// Per network address and per product an hour, counted in D1 as a digest
+// (ochrana.js, never the address): enough for real visitors, a wall for a
+// script filling the database. The old per-data-centre cache counter was
+// dodged by spreading over the network and let everything through when
+// the cache failed; this one refuses instead.
+const LIMIT_IP = 5;
+const LIMIT_CELKEM = 60;
 
 async function uklid(env) {
   // A few expired demos per new one: housekeeping without a scheduler, and
@@ -70,7 +59,10 @@ export async function onRequestPost(context) {
     ukazka = null;
   }
   if (!ukazka || !Array.isArray(ukazka.kroky)) return json({ chyba: "Ukázka tu není." }, 404);
-  if (!(await vLimitu())) return json({ chyba: "Ukázek je teď moc, zkus to za chvíli." }, 429);
+  if (!(await vLimitu(env, "ukazka_ip", adresaKlienta(request, env), LIMIT_IP, 3600))
+      || !(await vLimitu(env, "ukazka", "vse", LIMIT_CELKEM, 3600))) {
+    return json({ chyba: "Ukázek je teď moc, zkus to za chvíli." }, 429);
+  }
 
   await uklid(env);
   const email = `ukazka-${novyToken().slice(0, 16)}${DOMENA}`;
@@ -89,5 +81,5 @@ export async function onRequestPost(context) {
   } catch {
     // no predplatne table: nothing is paid in this product
   }
-  return json({ kroky: ukazka.kroky }, 200, { "Set-Cookie": cookieHlavicka(relace, TRVANI) });
+  return json({ kroky: ukazka.kroky }, 200, { "Set-Cookie": cookieHlavicka(relace, TRVANI, request, env) });
 }

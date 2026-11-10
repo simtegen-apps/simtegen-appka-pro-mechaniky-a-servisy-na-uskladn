@@ -44,7 +44,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-WRANGLER = "wrangler@3"
+WRANGLER = "wrangler@3.114.17"
 SCENARE = Path("uat") / "scenare.json"
 # bezpecnostni_kontrola's public list, plus /api/ja: it answers a stranger
 # 200 {"prihlasen": false} on purpose — that is how the page picks the
@@ -55,11 +55,21 @@ VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js"
                        # the login screen breaks too, no session to ask for.
                        "functions/api/chyba-stranky.js",
                        "functions/api/ja.js", "functions/api/nahlasit.js",
+                       # The visitor's country for the default currency: two letters, no data.
+                       "functions/api/prostredi.js",
                        "functions/api/ukazka.js",
+                       # The check account (signed request, see the file);
+                       # unsigned it answers 400/403/404 like any refusal.
+                       "functions/api/kontrolni-prihlaseni.js",
                        # Where customers come from: wraps /api/* after the
                        # product's own handler, never answers by itself.
                        "functions/api/_middleware.js"}
 UCTY = {"A": "uat-a@example.cz", "B": "uat-b@example.cz"}
+# The accounts that fill the OLD version with data before a new migration
+# runs over it (migrace_na_datech) — other addresses than A and B, so the
+# new version's scenarios start on fresh accounts beside the old rows.
+STARE_UCTY = {"A": "stary-a@example.cz", "B": "stary-b@example.cz"}
+SMAZANI_UCTU = "POST /api/ucet/smazat"
 UKAZKA = Path("play") / "ukazka.json"
 UKAZKOVY_UCET = "ukazka@example.cz"
 _METODY = {"onRequestGet": "GET", "onRequestPost": "POST", "onRequestPut": "PUT",
@@ -139,6 +149,9 @@ _OTEVIRAC = urllib.request.build_opener(_BezPresmerovani)
 class Klient:
     def __init__(self, zaklad: str, kdo: str):
         self.zaklad, self.kdo, self.cookie = zaklad, kdo, ""
+        # Every GET that answered 2xx: after a migration the same account
+        # asks again, and what it could read it must still read.
+        self.cteni: list[str] = []
 
     def pozadavek(self, metoda: str, cesta: str, telo=None) -> tuple[int, str, dict]:
         data = None if telo is None else json.dumps(telo, ensure_ascii=False).encode("utf-8")
@@ -149,6 +162,8 @@ class Klient:
             req.add_header("Cookie", self.cookie)
         try:
             with _OTEVIRAC.open(req, timeout=30) as r:
+                if metoda == "GET" and 200 <= r.status < 300:
+                    self.cteni.append(cesta)
                 return r.status, r.read().decode("utf-8", "replace"), dict(r.headers)
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode("utf-8", "replace"), dict(e.headers or {})
@@ -164,7 +179,13 @@ class Klient:
             return f"/api/prihlaseni vrátil {kod} bez odkazu ve vývojovém režimu: {text[:150]}"
         cesta = odkaz[odkaz.index("/api/"):]
         kod, text, hlavicky = self.pozadavek("GET", cesta)
-        m = re.search(r"(relace=[^;]+)", hlavicky.get("Set-Cookie", "") or "")
+        if kod == 200 and not hlavicky.get("Set-Cookie"):
+            # The link shows a confirmation page; its button's POST logs in
+            # (a GET must not: mail scanners open links). A version from
+            # before that answers the GET with the session straight away.
+            token = cesta.split("token=", 1)[-1].split("&", 1)[0]
+            kod, text, hlavicky = self.pozadavek("POST", "/api/overeni", {"token": token})
+        m = re.search(r"((?:__Host-)?relace=[^;]+)", hlavicky.get("Set-Cookie", "") or "")
         if not m:
             return f"přihlašovací odkaz vrátil {kod} bez cookie relace"
         self.cookie = m.group(1)
@@ -328,47 +349,80 @@ def zkontroluj(root: Path | None = None, *, povinne: bool = False) -> tuple[list
         return [], f"akceptační testy přeskočeny: {e}"
 
 
+# What wrangler (node, npx, workerd) may inherit: what the system needs to
+# start a process and find npm's cache — on Windows and on Linux CI alike.
+# An allowlist rather than a list of secrets to drop: whatever this check
+# runs under (CI with deploy secrets, a workstation) stays with this
+# process. Compared upper-cased: Windows names are case-insensitive.
+_PROSTREDI_POVOLENE = frozenset({
+    "PATH", "PATHEXT", "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC", "OS",
+    "TEMP", "TMP", "TMPDIR", "RUNNER_TEMP",
+    "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "HOME", "USERNAME", "USER", "LOGNAME",
+    "APPDATA", "LOCALAPPDATA", "PROGRAMDATA",
+    "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432",
+    "COMMONPROGRAMFILES", "COMMONPROGRAMFILES(X86)", "COMMONPROGRAMW6432",
+    "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
+    "LANG", "LANGUAGE", "TZ", "TERM",
+    "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR",
+    "NPM_CONFIG_CACHE", "NPM_CONFIG_PREFIX", "NPM_CONFIG_USERCONFIG", "NPM_CONFIG_GLOBALCONFIG",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR",
+})
+
+
+def _prostredi_wrangleru() -> dict:
+    """The allowlisted environment, plus the switches wrangler is run with.
+    Mail keys stay out, so login runs in development mode."""
+    env = {k: v for k, v in os.environ.items()
+           if k.upper() in _PROSTREDI_POVOLENE or k.upper().startswith("LC_")}
+    env.update({"CI": "true", "WRANGLER_SEND_METRICS": "false", "NO_COLOR": "1"})
+    return env
+
+
 class ApiNenabehlo(Exception):
     """The product's own fault: migrations fail, the server dies on start."""
 
 
 @contextlib.contextmanager
-def api_produktu(root: Path, npx: str):
+def api_produktu(root: Path, npx: str, stav: Path | None = None):
     """The product running as Cloudflare runs it, on a free local port, with
     a fresh local D1 — yields the base URL. Shared by the acceptance tests
     and the store screenshots (vizualni_kontrola --obchod), so the pictures
     show exactly what the tests exercised. Raises Prostredi (the machine)
-    or ApiNenabehlo (the product)."""
+    or ApiNenabehlo (the product). `stav` keeps the local D1 outside the
+    throwaway copy, so a second run (another version) opens the same
+    database — wrangler then applies only the migrations it has not yet."""
     sablona = root / "wrangler.toml.sablona"
     if not sablona.exists():
         raise ApiNenabehlo("wrangler.toml.sablona chybí — bez něj nejde API spustit.")
     prac = Path(tempfile.mkdtemp(prefix="simtegen-uat-"))
-    # The product as the repo has it, minus history and local state; mail keys
-    # stay out of the environment so login runs in development mode.
+    # The product as the repo has it, minus history and local state — and
+    # minus npm's own configuration: the product has no dependencies, and
+    # npx must fetch wrangler the same way whatever lies in the folder.
     shutil.copytree(root, prac / "p", ignore=shutil.ignore_patterns(
-        ".git", "node_modules", ".wrangler", "__pycache__", ".dev.vars", "wrangler.toml"))
+        ".git", "node_modules", ".wrangler", "__pycache__", ".dev.vars", "wrangler.toml",
+        ".npmrc", ".yarnrc", ".yarnrc.yml", "package.json", "package-lock.json"))
     kopie = prac / "p"
     (kopie / "wrangler.toml").write_text(
         sablona.read_text(encoding="utf-8").replace("__PROJEKT__", "uat")
         .replace("__DB_ID__", "00000000-0000-4000-8000-000000000001")
         .replace("__DB_NAHLED_ID__", "00000000-0000-4000-8000-000000000002"), encoding="utf-8")
-    env = {k: v for k, v in os.environ.items()
-           if k not in ("RESEND_API_KEY", "EMAIL_ODESILATEL", "CLOUDFLARE_API_TOKEN")}
-    env.update({"CI": "true", "WRANGLER_SEND_METRICS": "false", "NO_COLOR": "1"})
+    env = _prostredi_wrangleru()
     server = None
     log = None
     try:
         kod, vystup = _wrangler(npx, ["--version"], kopie, env, 300)
         if kod != 0:
             raise Prostredi(f"wrangler se nepodařilo stáhnout nebo spustit: {vystup.strip()[-200:]}")
-        kod, vystup = _wrangler(npx, ["d1", "migrations", "apply", "uat-db", "--local"], kopie, env, 180)
+        trvale = ["--persist-to", str(stav)] if stav is not None else []
+        kod, vystup = _wrangler(npx, ["d1", "migrations", "apply", "uat-db", "--local", *trvale], kopie, env, 180)
         if kod != 0:
             raise ApiNenabehlo(f"migrace databáze neprojdou ani lokálně: {vystup.strip()[-400:]}")
 
         port = _volny_port()
         log = open(prac / "server.log", "wb")
         server = _spust([npx, "--yes", WRANGLER, "pages", "dev", "web", "--ip", "127.0.0.1",
-                         "--port", str(port), "--show-interactive-dev-session=false"], kopie, env, log)
+                         "--port", str(port), "--show-interactive-dev-session=false",
+                         "--binding", "VYVOJ=ano", *trvale], kopie, env, log)
         zaklad = f"http://127.0.0.1:{port}"
         konec = time.monotonic() + 90
         while True:
@@ -413,6 +467,91 @@ def jen_scenare(root: Path, scenare: list[dict], npx: str) -> dict[str, list[str
             if chyba:
                 raise ApiNenabehlo(f"přihlášení účtu {kdo} nefunguje: {chyba}")
         return {s["nazev"]: _spust_scenare([s], klienti) for s in scenare}
+
+
+def migrace_na_datech(stara: Path, nova: Path, npx: str) -> tuple[list[str], str]:
+    """(problems, note) — the new version's migrations over a database the
+    OLD version filled with data, as production will be.
+
+    Every other run starts on an empty database, where a migration that
+    breaks on existing rows (a unique index over duplicates, a rebuilt table
+    whose NOT NULL column the old rows leave empty, a backfill that trips on
+    real values) passes — and fails first in production, at the deploy's
+    migration step, or worse, succeeds and leaves the app unable to read
+    what customers stored. So:
+      1. the old version (`stara`, main) runs, its scenarios and demo data
+         fill the database as the old accounts — scenarios that delete the
+         account are left out, they would take their rows with them;
+      2. the new version (`nova`) starts over THE SAME database: its new
+         migrations apply on rows; failing = the build's problem;
+      3. the old accounts still logged in ask again for everything they
+         could read: never 5xx, never logged out (a migration must not
+         sign every customer out), the export still works;
+      4. the new version's scenarios run on fresh accounts beside the old
+         rows.
+    A note (no problems) when the old version cannot even fill anything —
+    then this run proves nothing and says so. Raises Prostredi (the machine)."""
+    prac = Path(tempfile.mkdtemp(prefix="simtegen-migrace-"))
+    stav = prac / "d1"
+    try:
+        stare_scenare, chyby = _zkontroluj_scenare(stara)
+        stare_scenare = [] if chyby else [
+            sc for sc in stare_scenare
+            if not any(str(k.get("pozadavek", "")).startswith(SMAZANI_UCTU) for k in sc["kroky"])]
+        stari: list[Klient] = []
+        try:
+            with api_produktu(stara, npx, stav=stav) as zaklad:
+                klienti = {"nikdo": Klient(zaklad, "nikdo")}
+                for kdo, email in STARE_UCTY.items():
+                    klienti[kdo] = Klient(zaklad, kdo)
+                    if klienti[kdo].prihlas(email):
+                        return [], "stará verze nejde přihlásit — migrace na datech neověřena"
+                # The old version's own failures are not this build's.
+                _spust_scenare(stare_scenare, klienti)
+                ucastnici = [klienti["A"], klienti["B"]]
+                if (stara / UKAZKA).exists():
+                    ukazka = Klient(zaklad, "ukazka")
+                    if not ukazka.prihlas(UKAZKOVY_UCET):
+                        spust_ukazku(stara, ukazka)
+                        ucastnici.append(ukazka)
+                stari = [k for k in ucastnici if k.pozadavek("GET", "/api/ja")[0] == 200]
+        except ApiNenabehlo as e:
+            return [], f"stará verze nenaběhla ({str(e)[:120]}) — migrace na datech neověřena"
+        if not any(k.cteni for k in stari):
+            return [], "stará verze nic neuložila (žádné scénáře ani ukázka) — migrace na datech neověřena"
+        try:
+            with api_produktu(nova, npx, stav=stav) as zaklad:
+                chyby = []
+                for k in stari:
+                    k.zaklad = zaklad
+                    cteni, k.cteni = list(dict.fromkeys(k.cteni)), []
+                    for cesta in cteni + ["/api/ucet/export"]:
+                        kod, text, _ = k.pozadavek("GET", cesta)
+                        if kod >= 500:
+                            chyby.append(f"po migraci spadl GET {cesta} účtu ze staré verze ({kod}): {text[:160]}")
+                        elif kod in (401, 403):
+                            chyby.append(f"po migraci účet ze staré verze na GET {cesta} vrací {kod} — "
+                                         "migrace odhlásila zákazníky nebo jim vzala přístup k jejich datům")
+                            break
+                klienti = {"nikdo": Klient(zaklad, "nikdo")}
+                for kdo, email in UCTY.items():
+                    klienti[kdo] = Klient(zaklad, kdo)
+                    chyba = klienti[kdo].prihlas(email)
+                    if chyba:
+                        return chyby + [f"na databázi staré verze nefunguje přihlášení: {chyba}"], ""
+                nove_scenare, chyby_sc = _zkontroluj_scenare(nova)
+                if not chyby_sc:
+                    chyby += [f"s daty staré verze: {c}" for c in _spust_scenare(nove_scenare, klienti)]
+                return chyby, ""
+        except ApiNenabehlo as e:
+            return [f"nová verze nad databází staré verze s daty nenaběhla — migrace neprojde na existujících "
+                    f"řádcích (v produkci by spadla při nasazení): {e}"], ""
+    finally:
+        for _ in range(30):
+            shutil.rmtree(prac, ignore_errors=True)
+            if not prac.exists():
+                break
+            time.sleep(0.5)
 
 
 def spust_ukazku(root: Path, klient: Klient) -> list[str]:

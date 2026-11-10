@@ -8,7 +8,7 @@
 // label is there when the page asks for a login link or counts a visit.
 //
 //   POST /api/prihlaseni  → the label goes onto the login link row
-//   GET  /api/overeni     → a NEW account takes the label of its link
+//   POST /api/overeni     → a NEW account takes the label of its link
 //                           (first touch; an older account keeps its own)
 //   POST /api/navsteva    → one more visit for that source (numbers only)
 //
@@ -34,6 +34,39 @@
 // a trial owned by the shop rather than the person), and only their own
 // predplatne.js knows. A member who does not pay for the subscription is
 // marked platce: false by the product and is left out.
+//
+// And the protection every product needs whatever its own code says
+// (bezpečnostní kontrola 7. 11. 2026) — here because this file reaches
+// every product on its next build, the product's handlers do not:
+//
+//   any write          → refused from a foreign Origin (or Sec-Fetch-Site):
+//                        every product is "the same site" under
+//                        simtegen.com, so SameSite=Lax alone lets a
+//                        compromised sibling post with our customer's
+//                        cookie; and a text/plain or urlencoded body is
+//                        refused where JSON is expected — request.json()
+//                        parses text/plain too, and a plain HTML form on any
+//                        page can send both without asking the browser first
+//   POST /api/prihlaseni → limits per network address, per mailbox (plus
+//                        addressing folded) and per product, counted in D1
+//                        (ochrana.js, migration 0940); and outside
+//                        development mode (VYVOJ=ano) an answer carrying the
+//                        link is replaced by a 503 — an older product's
+//                        handler fell back to the link whenever the mail
+//                        settings went missing
+//   /api/overeni       → in a product whose handler still logs in on GET,
+//                        GET only shows the confirmation page and its POST is
+//                        handed to that handler (mail scanners open links)
+//   every answer       → nosniff, no-store, a CSP for data, HSTS
+//   sessions           → renewed at most 90 days from the login; a session
+//                        under the old cookie name moves to the product's
+//                        new one (__Host-relace) and the old one is cleared
+
+import { RELACE_COOKIE, cookieHlavicka } from "../../spolecne.js";
+import {
+  adresaKlienta, adresaProPocitani, potvrzeniPrihlaseni, tokenZPotvrzeni, vLimitu, vyvoj,
+} from "../../ochrana.js";
+import * as overeniProduktu from "./overeni.js";
 
 const ZNAK = /[^a-z0-9._-]/g;
 
@@ -58,8 +91,7 @@ async function otisk(token) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function odkazPredOverenim(context) {
-  const token = new URL(context.request.url).searchParams.get("token") || "";
+async function odkazPredOverenim(context, token) {
   if (!/^[0-9a-f]{64}$/.test(token)) return null;
   const odkaz = await context.env.DB.prepare(
     "SELECT email, zdroj, kampan FROM prihlasovaci_odkazy WHERE otisk_tokenu = ? AND pouzito = 0"
@@ -172,59 +204,237 @@ async function sJa(context, odpoved) {
 // came back — the mechanic who opens the app every morning was asked for a
 // new link once a month, in the middle of work. Now every API call made in
 // the session's second half renews it to 30 days from now; a session is
-// never older than a year (then one new link). At most one write per
-// session per two weeks, so no cost on ordinary calls. Here and not in the
-// product's spolecne.js: this file is refreshed in every product on its
-// next build, together with the manifest wording that the policy prints
-// ("30 dní od posledního použití, nejdéle rok").
+// never older than 90 days (then one new link: a stolen cookie must not
+// live for a year). At most one write per session per two weeks, so no
+// cost on ordinary calls. Here and not in the product's spolecne.js: this
+// file is refreshed in every product on its next build, together with the
+// manifest wording that the policy prints ("30 dní od posledního použití,
+// nejdéle 90 dní").
 const DEN_S = 86400;
 const RELACE_DNI = 30;
-const RELACE_NEJDELE_DNI = 365;
+const RELACE_NEJDELE_DNI = 90;
+const STARA_RELACE = "relace";
+const SMAZAT_STAROU = `${STARA_RELACE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 
-function cookieRelace(request) {
+function ctiCookie(request, nazev) {
   const hlavicka = request.headers.get("Cookie") || "";
   for (const cast of hlavicka.split(";")) {
     const [k, ...v] = cast.trim().split("=");
-    if (k === "relace") return v.join("=");
+    if (k === nazev) return v.join("=");
   }
   return null;
 }
 
-async function prodluzRelaci(context, odpoved) {
+function jmenoRelace(request, env) {
+  // The product's own helper decides: "relace" in a product built before
+  // the prefix, "__Host-relace" in the template — and plain "relace" there
+  // too on a local http run in development mode (spolecne.js).
+  return String(cookieHlavicka("x", 0, request, env)).split("=")[0] || RELACE_COOKIE;
+}
+
+async function relaceVOdpovedi(context, odpoved) {
   const { request, env, data } = context;
-  // Logout, account deletion and a fresh login set their own cookie; a demo
-  // account lives 24 hours by design.
-  if (!data.uzivatel || odpoved.headers.has("Set-Cookie")
-      || String(data.uzivatel.email || "").endsWith(UKAZKOVY_UCET)) return odpoved;
-  const token = cookieRelace(request);
-  if (!token) return odpoved;
+  const nazev = jmenoRelace(request, env);
+  const novy = ctiCookie(request, nazev);
+  const stary = nazev !== STARA_RELACE ? ctiCookie(request, STARA_RELACE) : null;
+  let vysledek = odpoved;
+  const pridej = (cookie) => {
+    if (vysledek === odpoved) vysledek = new Response(odpoved.body, odpoved);
+    vysledek.headers.append("Set-Cookie", cookie);
+  };
+  // The old name goes whenever it shows up next to a product that moved
+  // on — it is either this customer's session (moved below) or a cookie
+  // somebody else planted.
+  if (stary) pridej(SMAZAT_STAROU);
+  // Logout, account deletion and a fresh login set their own cookie.
+  if (!data.uzivatel || odpoved.headers.has("Set-Cookie")) return vysledek;
+  const token = novy || stary;
+  if (!token) return vysledek;
   const otiskTokenu = await otisk(token);
   const radek = await env.DB.prepare(
     "SELECT expirace, vytvoreno FROM relace WHERE otisk_tokenu = ?"
   ).bind(otiskTokenu).first();
   const nyni = Math.floor(Date.now() / 1000);
-  if (!radek || radek.expirace - nyni > (RELACE_DNI / 2) * DEN_S) return odpoved;
-  const nova = Math.min(nyni + RELACE_DNI * DEN_S, Number(radek.vytvoreno) + RELACE_NEJDELE_DNI * DEN_S);
-  if (nova <= radek.expirace) return odpoved;
-  await env.DB.prepare(
-    "UPDATE relace SET expirace = ? WHERE otisk_tokenu = ? AND expirace < ?"
-  ).bind(nova, otiskTokenu, nova).run();
+  if (!radek || radek.expirace <= nyni) return vysledek;
+  let expirace = Number(radek.expirace);
+  // A demo account lives 24 hours by design: moved, never renewed.
+  const ukazka = String(data.uzivatel.email || "").endsWith(UKAZKOVY_UCET);
+  if (!ukazka && expirace - nyni <= (RELACE_DNI / 2) * DEN_S) {
+    const nova = Math.min(nyni + RELACE_DNI * DEN_S, Number(radek.vytvoreno) + RELACE_NEJDELE_DNI * DEN_S);
+    if (nova > expirace) {
+      await env.DB.prepare(
+        "UPDATE relace SET expirace = ? WHERE otisk_tokenu = ? AND expirace < ?"
+      ).bind(nova, otiskTokenu, nova).run();
+      expirace = nova;
+    }
+  }
+  if (novy && expirace === Number(radek.expirace)) return vysledek;
+  pridej(cookieHlavicka(token, expirace - nyni, request, env));
+  return vysledek;
+}
+
+// ── Protection ────────────────────────────────────────────────────────
+const BEZ_TELA = new Set(["GET", "HEAD", "OPTIONS"]);
+// Bodies a plain HTML form on any page can send without the browser
+// asking first (no CORS preflight) and that request.json() would still
+// parse or a handler might take as data. multipart stays allowed (a file
+// upload); the Origin check covers it.
+const FORMULAROVE = new Set(["text/plain", "application/x-www-form-urlencoded"]);
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
+const HODINA_S = 3600;
+const NEJDE_EMAIL = "Přihlašování e-mailem teď nefunguje. Zkuste to prosím později, nebo nám chybu nahlaste.";
+
+function odpovedJson(telo, status, hlavicky = {}) {
+  return new Response(JSON.stringify(telo), {
+    status, headers: { "Content-Type": "application/json; charset=utf-8", ...hlavicky },
+  });
+}
+
+function cislo(hodnota, vychozi) {
+  const n = Number.parseInt(String(hodnota ?? ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : vychozi;
+}
+
+function zCiziStranky(request, url) {
+  // Origin is what browsers send on every POST; Sec-Fetch-Site where an
+  // older one does not. A request with neither is no browser (SimteGen's
+  // own signed calls, curl) — and cookies ride only in browsers.
+  const puvod = request.headers.get("Origin");
+  if (puvod) return puvod !== url.origin;
+  const stranka = request.headers.get("Sec-Fetch-Site");
+  if (stranka) return stranka !== "same-origin" && stranka !== "none";
+  return false;
+}
+
+async function brzdaPrihlaseni(context) {
+  // Before the product's handler: a request over a limit never creates a
+  // link or reaches the mail service. The limits are per hour; the global
+  // one (LIMIT_PRIHLASENI_HODINA) keeps a script with many addresses from
+  // spending the firm's mail quota — and its name — for every product.
+  const { request, env } = context;
+  const moc = (zprava) => odpovedJson({ chyba: zprava }, 429, { "Retry-After": String(HODINA_S) });
+  if (!(await vLimitu(env, "prihlaseni_ip", adresaKlienta(request, env),
+    cislo(env.LIMIT_PRIHLASENI_IP, 10), HODINA_S))) {
+    return moc("Příliš mnoho pokusů. Zkuste to prosím za hodinu.");
+  }
+  let email = "";
+  try {
+    email = String((await request.clone().json()).email || "").trim().toLowerCase();
+  } catch {
+    return null; // the handler answers a body that is not JSON
+  }
+  if (!EMAIL.test(email)) return null; // the handler refuses it; nothing goes out
+  if (!(await vLimitu(env, "prihlaseni_adresa", adresaProPocitani(email), 3, HODINA_S))) {
+    return moc("Příliš mnoho pokusů. Zkuste to prosím za hodinu.");
+  }
+  if (!(await vLimitu(env, "prihlaseni_produkt", "vse", cislo(env.LIMIT_PRIHLASENI_HODINA, 200), HODINA_S))) {
+    return moc("Přihlašovacích e-mailů je teď příliš mnoho. Zkuste to prosím za chvíli.");
+  }
+  try {
+    // Expired links go when new ones are asked for (the policy promises 24
+    // hours) — a product nobody logs into must not keep them forever.
+    await env.DB.prepare(
+      "DELETE FROM prihlasovaci_odkazy WHERE expirace < ? OR pouzito = 1"
+    ).bind(Math.floor(Date.now() / 1000) - 23 * HODINA_S).run();
+  } catch {
+    // housekeeping, never the customer's problem
+  }
+  if (email.endsWith(".invalid") && !vyvoj(env)) {
+    // A reserved domain can never receive mail: no send, no bounce on the
+    // firm's sender. It answers like the real thing, so SimteGen's check
+    // after a deploy (overeni.py, kontrola@ukazka.invalid) sees what a
+    // customer would get — including the 503 of a product whose mail
+    // settings went missing — and never a link.
+    if (!env.RESEND_API_KEY || !env.EMAIL_ODESILATEL) return odpovedJson({ chyba: NEJDE_EMAIL }, 503);
+    return odpovedJson({ stav: "odeslano" }, 200);
+  }
+  return null;
+}
+
+async function bezOdkazu(odpoved, env) {
+  // The handler's answer, unless it carries the link outside development
+  // mode. Whatever the product's code does with missing mail settings, a
+  // login link only ever leaves by e-mail.
+  if (vyvoj(env) || !(odpoved.headers.get("Content-Type") || "").includes("json")) return odpoved;
+  let telo;
+  try {
+    telo = await odpoved.clone().json();
+  } catch {
+    return odpoved;
+  }
+  if (telo && typeof telo === "object" && ("odkaz" in telo || telo.stav === "vyvojovy_rezim")) {
+    return odpovedJson({ chyba: NEJDE_EMAIL }, 503);
+  }
+  return odpoved;
+}
+
+function zabezpec(odpoved, env) {
+  // Every /api/ answer: the browser must not guess a type, keep a copy,
+  // render data as a page or (outside development mode) try plain http.
+  // A product's handler that chose its own Cache-Control, CSP or Referrer
+  // policy keeps it; an HTML answer (the login confirmation) brings its own.
   const vysledek = new Response(odpoved.body, odpoved);
-  vysledek.headers.append("Set-Cookie",
-    `relace=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${nova - nyni}`);
+  const h = vysledek.headers;
+  h.set("X-Content-Type-Options", "nosniff");
+  if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!h.has("Cache-Control")) h.set("Cache-Control", "no-store");
+  if (!h.has("Content-Security-Policy") && !(h.get("Content-Type") || "").startsWith("text/html")) {
+    h.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  }
+  if (!vyvoj(env)) h.set("Strict-Transport-Security", "max-age=31536000");
   return vysledek;
 }
 
 export async function onRequest(context) {
-  const { request } = context;
-  const cesta = new URL(request.url).pathname;
+  return zabezpec(await obsluz(context), context.env);
+}
+
+async function obsluz(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const cesta = url.pathname;
+  if (!BEZ_TELA.has(request.method)) {
+    if (zCiziStranky(request, url)) {
+      return odpovedJson({ chyba: "Požadavek z cizí stránky jsme odmítli." }, 403);
+    }
+    const typ = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+    // The login confirmation is the one real form (ochrana.js).
+    if (FORMULAROVE.has(typ) && cesta !== "/api/overeni") {
+      return odpovedJson({ chyba: "Požadavek musí být ve formátu JSON." }, 415);
+    }
+  }
+
+  // A product whose handler still logs in on GET (built before the
+  // confirmation page): GET shows the page, the page's POST goes to that
+  // handler as the GET it understands.
+  const stareOvereni = cesta === "/api/overeni" && typeof overeniProduktu.onRequestPost !== "function";
+  if (stareOvereni && request.method === "GET") {
+    const token = url.searchParams.get("token") || "";
+    return /^[0-9a-f]{64}$/.test(token) ? potvrzeniPrihlaseni(token) : context.next();
+  }
+  let tokenOvereni = null;
+  let predat = null;
+  if (cesta === "/api/overeni" && request.method === "POST") {
+    tokenOvereni = await tokenZPotvrzeni(request.clone());
+    if (stareOvereni) {
+      const cil = new URL("/api/overeni", url);
+      cil.searchParams.set("token", tokenOvereni);
+      predat = new Request(cil.toString(), { method: "GET", headers: request.headers });
+    }
+  }
+
+  if (request.method === "POST" && cesta === "/api/prihlaseni") {
+    const zastaveno = await brzdaPrihlaseni(context);
+    if (zastaveno) return zastaveno;
+  }
+
   // The body is the handler's to read; a copy is taken before it does.
   const kopie = request.method === "POST" && (cesta === "/api/prihlaseni" || cesta === "/api/navsteva")
     ? request.clone() : null;
   let odkaz = null;
-  if (request.method === "GET" && cesta === "/api/overeni") {
+  if (tokenOvereni) {
     try {
-      odkaz = await odkazPredOverenim(context);
+      odkaz = await odkazPredOverenim(context, tokenOvereni);
     } catch {
       // Before the migration, or a bad token: the handler decides, not us.
     }
@@ -236,7 +446,10 @@ export async function onRequest(context) {
       // Without a name the mail says "Váš přihlašovací odkaz", as before.
     }
   }
-  const odpoved = await context.next();
+  let odpoved = predat ? await context.next(predat) : await context.next();
+  if (request.method === "POST" && cesta === "/api/prihlaseni") {
+    odpoved = await bezOdkazu(odpoved, env);
+  }
   try {
     await zapis(context, kopie, odkaz, odpoved);
   } catch {
@@ -252,7 +465,7 @@ export async function onRequest(context) {
   }
   if (vysledek.ok) {
     try {
-      vysledek = await prodluzRelaci(context, vysledek);
+      vysledek = await relaceVOdpovedi(context, vysledek);
     } catch {
       // A login that is not renewed today is renewed tomorrow.
     }

@@ -43,6 +43,12 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # the privacy policy describes them on its own (vykresli_zasady), so the
 # product's manifest need not — but they are still held to "numbers only".
 SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek"}
+# Abuse limits and single-use check signatures (migration 0940): security
+# plumbing like ZAKLADNI_TABULKY — digests that change every window, swept
+# within hours, never linked to an account, so neither export nor
+# deletion has anything to find there. The policy covers them under the
+# security records row.
+SABLONOVE_OCHRANNE = {"limity", "pouzite_podpisy"}
 
 # Column names that make a table personal data. An aggregate table (manifest
 # `agregaty`) may live without uzivatel_id only if none of these appear —
@@ -180,7 +186,7 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
                 continue
             nazev = match.group(1)
             tabulky.add(nazev)
-            if nazev in ZAKLADNI_TABULKY:
+            if nazev in ZAKLADNI_TABULKY or nazev in SABLONOVE_OCHRANNE:
                 continue
             if nazev in (manifest.get("agregaty") or []) or nazev in SABLONOVE_AGREGATY:
                 # Aggregates: allowed without uzivatel_id, forbidden to carry
@@ -376,7 +382,10 @@ def _zkontroluj_bezpecnost(manifest: dict, preskocit: set[Path]) -> list[str]:
         return ["chybí bezpecnostni_kontrola.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
     import bezpecnostni_kontrola
 
-    return [f"bezpečnost: {c}" for c in bezpecnostni_kontrola.zkontroluj(Path.cwd(), manifest, preskocit)]
+    chyby, upozorneni = bezpecnostni_kontrola.zkontroluj_vse(Path.cwd(), manifest, preskocit)
+    for u in upozorneni:
+        print("Upozornění: bezpečnost:", u)
+    return [f"bezpečnost: {c}" for c in chyby]
 
 
 def _zkontroluj_migrace() -> list[str]:
@@ -436,6 +445,20 @@ def _zkontroluj_vzhled() -> list[str]:
     if poznamka and not problemy:
         print("Vizuální kontrola:", poznamka)
     return [f"vzhled: {p}" for p in problemy]
+
+
+def _zkontroluj_safari() -> list[str]:
+    """The pages in WebKit as an iPhone (webkit_kontrola.py) — the browser
+    of every iPhone customer, which no other check renders. CI only; an
+    install that fails is a note, not a blocked deploy."""
+    if not Path("webkit_kontrola.py").exists():
+        return ["chybí webkit_kontrola.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
+    import webkit_kontrola
+
+    problemy, poznamka = webkit_kontrola.zkontroluj(Path.cwd())
+    if poznamka and not problemy:
+        print("Safari (WebKit):", poznamka)
+    return [f"safari: {p}" for p in problemy]
 
 
 def _zkontroluj_aplikaci(manifest: dict) -> list[str]:
@@ -500,19 +523,43 @@ def _generovane(manifest: dict) -> set[Path]:
     return vykresli_aplikaci.generovane_soubory(manifest)
 
 
+def _zkontroluj_jazyky() -> list[str]:
+    """Languages (DESIGN.md, Jazyky): the dictionary is complete and the
+    keys the pages use exist — shared with the other template."""
+    try:
+        import kontrola_jazyku
+    except ImportError:
+        return ["kontrola_jazyku.py chybí — je to infrastruktura šablony, obnoví ji stavba"]
+    return kontrola_jazyku.zkontroluj(WEB)
+
+
+def _upozorni_na_inline() -> None:
+    """bezpecnostni_kontrola.inline_skripty: pages with inline scripts or
+    on…= handlers. Printed, never a failure — builder-made pages have them,
+    and each one keeps 'unsafe-inline' in the CSP. A product that clears
+    the list can then drop it."""
+    if not Path("bezpecnostni_kontrola.py").exists():
+        return
+    import bezpecnostni_kontrola
+
+    for radek in bezpecnostni_kontrola.inline_skripty(Path.cwd()):
+        print("Upozornění: bezpečnost:", radek)
+
+
 def main() -> int:
     if not MANIFEST.exists():
         print("CHYBA: chybí data-manifest.json.")
         return 1
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     _PRESKOCIT.update(_generovane(manifest))
+    _upozorni_na_inline()
 
     chyby = (_zkontroluj_sit(manifest) + _zkontroluj_uloziste(manifest)
              + _zkontroluj_zasady(manifest) + _zkontroluj_tabulky(manifest)
              + _zkontroluj_design() + _zkontroluj_aplikaci(manifest) + _zkontroluj_seo(manifest)
-             + _zkontroluj_napovedu()
+             + _zkontroluj_napovedu() + _zkontroluj_jazyky()
              + _zkontroluj_bezpecnost(manifest, _PRESKOCIT) + _zkontroluj_migrace()
-             + _zkontroluj_vzhled() + _zkontroluj_uat())
+             + _zkontroluj_vzhled() + _zkontroluj_safari() + _zkontroluj_uat())
     if chyby:
         print("Kód se rozešel s data-manifest.json:")
         for chyba in chyby:

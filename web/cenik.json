@@ -1,13 +1,17 @@
 {
  "meny": [
-  "CZK"
+  "CZK",
+  "EUR",
+  "USD"
  ],
  "polozky": [
   {
    "id": "doporuceni",
    "nazev": "Standard",
    "ceny": {
-    "CZK": "129"
+    "CZK": "129",
+    "EUR": "4.90",
+    "USD": "5.90"
    },
    "jednotka": {
     "cs": "/ firma / měsíc",
@@ -18,7 +22,9 @@
    "id": "varianta-1",
    "nazev": "Sezónní vstup",
    "ceny": {
-    "CZK": "790"
+    "CZK": "790",
+    "EUR": "32.90",
+    "USD": "35.90"
    },
    "jednotka": {
     "cs": "/ sezóna (6 měsíců)",
@@ -29,7 +35,9 @@
    "id": "varianta-2",
    "nazev": "Větší provozovna",
    "ceny": {
-    "CZK": "229"
+    "CZK": "229",
+    "EUR": "9.90",
+    "USD": "10.90"
    },
    "jednotka": {
     "cs": "/ firma / měsíc",

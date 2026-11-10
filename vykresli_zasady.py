@@ -323,6 +323,11 @@ def vykresli_zasady(manifest: dict) -> str:
   <ul>
 {_radky_cookies(manifest)}
   </ul>
+  <p>Když si v aplikaci sami přepnete jazyk nebo měnu, prohlížeč si tuto volbu zapamatuje
+  (úložiště prohlížeče, položka <code>sg-volba</code>), aby se příště nemusela opakovat. Nic
+  jiného v ní není a nikam se neodesílá; smažete ji vymazáním dat stránky v prohlížeči.
+  Výchozí měnu volíme podle země, ze které se připojujete — tu zná náš poskytovatel
+  hostingu z připojení a nikde ji neukládáme.</p>
 
   <h2>Vaše práva</h2>
   <ul>

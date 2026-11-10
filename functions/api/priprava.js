@@ -23,6 +23,55 @@ const NAZVY_UKONU = {
   oprava: "oprava",
 };
 
+// The mail goes to the person who tapped the button, so it speaks the
+// language that person chose in the app (predvolby, migration 0011). No
+// choice = Czech, as before.
+const NAZVY_UKONU_EN = {
+  prezuti: "tyre change",
+  uskladneni: "storage",
+  vydej: "tyre release",
+  oprava: "repair",
+};
+
+function textCesky(den, polozky, nazev) {
+  const radky = polozky.map((p) => {
+    const kola = p.kod
+      ? `sada ${p.kod}, místo ${p.pozice || "neuvedeno"}`
+      : "bez uskladněné sady";
+    const disky = p.ukon === "prezuti"
+      ? (p.na_discich ? ", na discích" : ", bez disků") : "";
+    const kdy = p.cely_den ? "celý den" : p.cas;
+    return `${kdy}  ${p.nazev} — ${NAZVY_UKONU[p.ukon] || p.ukon}${disky}\n        ${kola}`;
+  });
+  return {
+    predmet: `Příprava na ${den} — ${polozky.length} objednávek`,
+    text: `Dobrý den,\n\npříprava na ${den} — ${polozky.length} objednávek:\n\n`
+      + `${radky.join("\n")}\n\n`
+      + "Kola s pneu si prosím připravte předem podle uvedených míst ve skladu.\n"
+      + `${nazev || "Pneusklad"}\n`,
+  };
+}
+
+function textAnglicky(den, polozky, nazev) {
+  const radky = polozky.map((p) => {
+    const kola = p.kod
+      ? `set ${p.kod}, rack position ${p.pozice || "not given"}`
+      : "no stored set";
+    const disky = p.ukon === "prezuti"
+      ? (p.na_discich ? ", on rims" : ", without rims") : "";
+    const kdy = p.cely_den ? "all day" : p.cas;
+    return `${kdy}  ${p.nazev} — ${NAZVY_UKONU_EN[p.ukon] || p.ukon}${disky}\n        ${kola}`;
+  });
+  const pocet = `${polozky.length} ${polozky.length === 1 ? "booking" : "bookings"}`;
+  return {
+    predmet: `Prepare for ${den} — ${pocet}`,
+    text: `Hello,\n\nto prepare for ${den} — ${pocet}:\n\n`
+      + `${radky.join("\n")}\n\n`
+      + "Please get the wheels ready in advance from the rack positions listed above.\n"
+      + `${nazev || "Pneusklad"}\n`,
+  };
+}
+
 async function seznam(env, uzivatelId, den) {
   const od = epochZDataCasu(den, "00:00") ?? (zacatekDne(ted()) + DEN);
   const nalezene = await env.DB.prepare(
@@ -71,20 +120,13 @@ export async function onRequestPost(context) {
   }
 
   const nastaveni = await nactiNastaveni(env, data.servis.id);
-  const radky = polozky.map((p) => {
-    const kola = p.kod
-      ? `sada ${p.kod}, místo ${p.pozice || "neuvedeno"}`
-      : "bez uskladněné sady";
-    const disky = p.ukon === "prezuti"
-      ? (p.na_discich ? ", na discích" : ", bez disků") : "";
-    const kdy = p.cely_den ? "celý den" : p.cas;
-    return `${kdy}  ${p.nazev} — ${NAZVY_UKONU[p.ukon] || p.ukon}${disky}\n        ${kola}`;
-  });
-  const text =
-    `Dobrý den,\n\npříprava na ${den} — ${polozky.length} objednávek:\n\n`
-    + `${radky.join("\n")}\n\n`
-    + "Kola s pneu si prosím připravte předem podle uvedených míst ve skladu.\n"
-    + `${nastaveni.nazev || "Pneusklad"}\n`;
+  const volba = await env.DB.prepare(
+    "SELECT jazyk FROM predvolby WHERE uzivatel_id = ?"
+  ).bind(data.uzivatel.id).first();
+  const anglicky = !!volba && volba.jazyk === "en";
+  const { predmet, text } = anglicky
+    ? textAnglicky(den, polozky, nastaveni.nazev)
+    : textCesky(den, polozky, nastaveni.nazev);
 
   if (!env.RESEND_API_KEY || !env.EMAIL_ODESILATEL) {
     return json({
@@ -121,7 +163,7 @@ export async function onRequestPost(context) {
     body: JSON.stringify({
       from: env.EMAIL_ODESILATEL,
       to: [data.uzivatel.email],
-      subject: `Příprava na ${den} — ${polozky.length} objednávek`,
+      subject: predmet,
       text,
     }),
   });

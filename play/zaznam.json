@@ -2,7 +2,7 @@
   "jazyk": "cs-CZ",
   "nazev": "Pneusklad: uskladnění pneu",
   "kratky_popis": "Evidence uskladněných pneu, štítky a objednávky pro malé pneuservisy.",
-  "dlouhy_popis": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.\n\nObjednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.\n\nPřed sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.\n\nDo servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.\n\nPrvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129 Kč měsíčně přes Google Play. Obnovuje se automaticky a zrušit ho můžete kdykoli v Google Play. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.",
+  "dlouhy_popis": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, registrační značku, rozměr, dezén, hloubku dezénu všech čtyř kol a místo v regálu. Aplikace sadě přidělí kód a vytiskne štítek na vaší tiskárně štítků (role 100 × 50 mm) nebo na archy A4.\n\nObjednávkový kalendář plní mechanik: zapíše, kdo kdy přijede a co se bude dělat. Den předem aplikace ukáže seznam kol, která je potřeba připravit, i s místem ve skladu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu.\n\nPřed sezónou uvidíte, koho obvolat na přezutí, které sady mají méně než 4 mm dezénu a kdo nemá zaplacené uskladnění.\n\nDo servisu se mohou přihlásit i kolegové s oprávněním správce, mechanik nebo jen čtení. Přihlašujete se odkazem z e-mailu, bez hesla. Aplikaci můžete používat česky i anglicky; jazyk si každý pracovník zvolí sám. Data jsou uložena v Evropské unii a kdykoli si je v aplikaci stáhnete nebo smažete.\n\nPrvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129 Kč měsíčně přes Google Play. Obnovuje se automaticky a zrušit ho můžete kdykoli v Google Play. Bez registrace si můžete vyzkoušet ukázku s vymyšlenými daty.",
   "kategorie": "BUSINESS",
   "kontakt_email": "support@simtegen.com",
   "hlavni_veta": "Kde leží čí kola a co zítra sundat",
@@ -225,6 +225,7 @@
         "volitelne": false,
         "zdroje": [
           "upominky",
+          "predvolby",
           "zdroj příchodu (odkaz z kampaně)"
         ]
       },

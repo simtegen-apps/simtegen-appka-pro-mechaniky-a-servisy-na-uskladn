@@ -6,29 +6,18 @@
 // šifrovaně firmě (schranka_sifra.js) a hotovo. Odpověď v aplikaci tu proto
 // není; kdo ji chce, napíše do zprávy kontakt.
 //
-// Brzda proti spamu bez databáze: nejvýš LIMIT hlášení za hodinu na jedno
-// datové centrum (Cache API). Hrubé, ale bez osobních údajů — a SimteGen má
-// vlastní strop na počet nových hlášení za den.
+// Brzda proti spamu: nejvýš LIMIT_IP hlášení za hodinu z jedné adresy
+// a LIMIT_CELKEM za hodinu celkem, počítané v D1 (ochrana.js — otisk, ne
+// IP adresa). Dřív to bylo počítadlo v cache jednoho datového centra, které
+// skript obešel přes jiné a které při chybě pustilo všechno; teď platí
+// všude a při chybě raději odmítne. SimteGen má navíc vlastní strop na
+// počet nových hlášení za den.
 
 import { jsonOdpoved, ocistiKontext, zrcadliHlaseni, MIN_DELKA, MAX_DELKA } from "../../schranka_sifra.js";
+import { adresaKlienta, vLimitu } from "../../ochrana.js";
 
-const LIMIT = 10;
-
-async function vLimitu() {
-  try {
-    const hodina = Math.floor(Date.now() / 3600000);
-    const klic = new Request(`https://limit.simtegen.invalid/nahlasit/${hodina}`);
-    const ulozeno = await caches.default.match(klic);
-    const pocet = ulozeno ? Number(await ulozeno.text()) || 0 : 0;
-    if (pocet >= LIMIT) return false;
-    await caches.default.put(klic, new Response(String(pocet + 1), {
-      headers: { "Cache-Control": "max-age=3600" },
-    }));
-    return true;
-  } catch {
-    return true;
-  }
-}
+const LIMIT_IP = 5;
+const LIMIT_CELKEM = 30;
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -43,7 +32,8 @@ export async function onRequestPost(context) {
   if (text.length > MAX_DELKA) {
     return jsonOdpoved({ chyba: `Zpráva je moc dlouhá (max ${MAX_DELKA} znaků).` }, 422);
   }
-  if (!(await vLimitu())) {
+  if (!(await vLimitu(env, "nahlasit_ip", adresaKlienta(request, env), LIMIT_IP, 3600))
+      || !(await vLimitu(env, "nahlasit", "vse", LIMIT_CELKEM, 3600))) {
     return jsonOdpoved({ chyba: "Teď přijímáme hodně hlášení — zkuste to prosím za hodinu." }, 429);
   }
   const cislo = await zrcadliHlaseni(env, "Hlášení (bez přihlášení)", {
