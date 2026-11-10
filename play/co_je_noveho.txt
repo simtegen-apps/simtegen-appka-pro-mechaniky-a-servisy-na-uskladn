@@ -1,1 +1,1 @@
-Úvodní obrazovka je přehlednější: hned nahoře vidíte, co aplikace umí (evidence pneu, tisk štítků, objednávky s připomínkou), kolik stojí a že prvních 30 dní je zdarma. Ve funkcích ani cenách se nic nemění.
+Aplikaci teď můžete používat i v angličtině. Jazyk si každý pracovník servisu zvolí sám v Nastavení → Účet a volba platí na všech jeho zařízeních. Anglicky jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Evidence, ceny ani objednávky se nemění.

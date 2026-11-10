@@ -27,3 +27,6 @@ binding = "DB"
 database_name = "__PROJEKT__-db-nahled"
 database_id = "__DB_NAHLED_ID__"
 migrations_dir = "db/migrace"
+
+[env.preview.vars]
+VYVOJ = "ano"

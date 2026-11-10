@@ -8,8 +8,14 @@
 // a screen id, a file name and a line — become "jine", and past
 // MAX_RADKU rows a day everything new lands in "jine" too: a stranger can
 // inflate the count, never grow the table without bound or write text into it.
+// Per network address at most LIMIT_IP marks an hour (ochrana.js): the
+// client sends five per page load, a script sending thousands would only
+// cost D1 writes for every product on the account.
 
 import { json } from "../../spolecne.js";
+import { adresaKlienta, vLimitu } from "../../ochrana.js";
+
+const LIMIT_IP = 60;
 
 const MAX_RADKU = 200;
 const OBRAZOVKA = /^[a-z0-9][a-z0-9_-]{0,39}$/;
@@ -22,6 +28,9 @@ export async function onRequestPost(context) {
     telo = await request.json();
   } catch {
     return json({ chyba: "Neplatný požadavek." }, 400);
+  }
+  if (!(await vLimitu(env, "chyba_ip", adresaKlienta(request, env), LIMIT_IP, 3600))) {
+    return json({ chyba: "Příliš mnoho požadavků." }, 429);
   }
   let obrazovka = OBRAZOVKA.test(String((telo && telo.obrazovka) || "")) ? String(telo.obrazovka) : "jine";
   let misto = MISTO.test(String((telo && telo.misto) || "")) ? String(telo.misto) : "jine";

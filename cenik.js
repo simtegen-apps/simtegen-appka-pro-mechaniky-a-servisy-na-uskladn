@@ -23,6 +23,10 @@
 // produkt predplatne_mesic = Standard). Ostatní varianty aplikace z Google
 // Play neukazuje ani v ceníku na úvodu: nabídka, kterou tam nejde zaplatit,
 // by ukazovala k placení jinde.
+//
+// `*_en` je tentýž text anglicky pro pracovníky, kteří si v aplikaci zvolili
+// angličtinu (build 15). Částky se nepřekládají ani nepřepočítávají — cena je
+// pořád v Kč, jen slova kolem ní mluví jazykem obrazovky.
 
 export const CENIK = {
   mena: "Kč",
@@ -30,8 +34,10 @@ export const CENIK = {
     {
       klic: "standard",
       nazev: "Standard",
+      nazev_en: "Standard",
       cena: 129,
       jednotka: "firma / měsíc",
+      jednotka_en: "business / month",
       obdobi: 1,
       vychozi: true,
       v_aplikaci: true,
@@ -39,22 +45,32 @@ export const CENIK = {
         + "štítků), objednávkový kalendář s připomínkou pro mechanika, "
         + "neomezený počet záznamů, 1–2 přihlášení. Kredit na štítky nad "
         + "rámec běžné spotřeby se dokupuje zvlášť.",
+      popis_en: "Records of stored tyres with label printing (your own label "
+        + "printer), a booking calendar with a reminder for the mechanic, "
+        + "unlimited records, 1–2 sign-ins. Label credit beyond normal use is "
+        + "bought separately.",
     },
     {
       klic: "sezona",
       nazev: "Sezónní vstup",
+      nazev_en: "Season pass",
       cena: 790,
       jednotka: "sezóna (6 měsíců)",
+      jednotka_en: "season (6 months)",
       obdobi: 6,
       popis: "",
+      popis_en: "",
     },
     {
       klic: "vetsi",
       nazev: "Větší provozovna",
+      nazev_en: "Larger workshop",
       cena: 229,
       jednotka: "firma / měsíc",
+      jednotka_en: "business / month",
       obdobi: 1,
       popis: "",
+      popis_en: "",
     },
   ],
 };
@@ -64,10 +80,10 @@ export const CENIK = {
 // na obojím stojí druhý nákup. Sezónní vstup se objednává po jedné sezóně
 // (viz delkyVarianty).
 export const OBDOBI = [
-  { mesice: 1, nazev: "1 měsíc" },
-  { mesice: 3, nazev: "3 měsíce" },
-  { mesice: 6, nazev: "6 měsíců", vychozi: true },
-  { mesice: 12, nazev: "12 měsíců" },
+  { mesice: 1, nazev: "1 měsíc", nazev_en: "1 month" },
+  { mesice: 3, nazev: "3 měsíce", nazev_en: "3 months" },
+  { mesice: 6, nazev: "6 měsíců", nazev_en: "6 months", vychozi: true },
+  { mesice: 12, nazev: "12 měsíců", nazev_en: "12 months" },
 ];
 
 // Zrcadlí klíč `cena_dph` v data-manifest.json, odkud ho generátor píše do

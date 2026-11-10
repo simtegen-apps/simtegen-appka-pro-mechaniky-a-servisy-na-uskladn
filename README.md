@@ -116,6 +116,37 @@ servisy, které dosud platily přes `nastaveni_servisu.plan`, a dala jim rok
 runwaye. Zkontrolujte `SELECT * FROM predplatne;` a upravte `plati_do`
 podle skutečné faktury.
 
+## Angličtina
+
+Od buildu 15 mluví aplikace česky i anglicky (jazykový systém šablony,
+DESIGN.md → Jazyky a měny). Čeština zůstává v HTML. Prvek, jehož text se
+překládá, má klíč `data-t="…"` (`data-t-placeholder`, `data-t-aria-label`)
+a slova jsou ve `web/texty.js` v obou jazycích. Ve skriptu se píše
+`SimteGen.t("klic", {promenna})`, počty `pocet(n, "sada")` (tvary
+`pocet.*` ve slovníku).
+
+- **Každý nový český text** v `index.html` potřebuje klíč v `texty.js`
+  (cs i en se stejnými `{proměnnými}`). Jinak ho `kontrola_jazyku.py`
+  nebo vizuální kontrola na `?jazyk=en` odmítne.
+- **Každá nová hláška API** (`{chyba: "…"}`) potřebuje řádek
+  v `HLASKY_SERVERU` (nebo `HLASKY_VZORY`, když obsahuje číslo či čas)
+  v `index.html` a klíč `chyba.*` ve slovníku. Jinak anglická obrazovka
+  ukáže jen obecnou větu.
+- **Volba jazyka** se pamatuje na účtu (tabulka `predvolby`,
+  `/api/jazyk`) jako volba osoby, ne servisu. Po přihlášení má přednost
+  před prohlížečem. E-mail „Příprava na …“ (`/api/priprava`) jde
+  v jazyce toho, kdo ho posílá.
+- **Ceník** má u variant a délek anglické texty (`*_en` v `cenik.js`).
+  Při změně názvu nebo jednotky přepište obojí.
+- **Česky zůstávají** přihlašovací e-mail a `/api/overeni` (šablona),
+  `web/play.js`, e-maily k fakturační objednávce, nápověda a právní
+  dokumenty.
+
+Slovník oboru: sada = tyre set, regál = rack, místo = rack position,
+štítek = label, uskladnění = storage, přezutí = tyre change, výdej =
+release, dezén = tread, SPZ = plate, objednávka = booking, správce /
+mechanik / jen čtení = admin / mechanic / read only.
+
 ## Google Play
 
 Pneusklad je od buildu 10 i aplikace v Google Play (Trusted Web Activity,

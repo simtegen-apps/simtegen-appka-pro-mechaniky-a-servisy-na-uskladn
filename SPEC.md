@@ -141,3 +141,69 @@ APLIKACE Z GOOGLE PLAY: přepínač funguje stejně. Pravidla platby se nemění
 - Přihlášený účet A stáhne GET /api/ucet/export a musí v něm vidět tabulku predvolby se svou volbou „en“.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě buildu 15 oproti specifikaci změnilo
+
+1. **Překlad jede přes jazykový systém šablony, ne přes vlastní
+   `web/preklad.js`.** Obnova šablony těsně před stavbou přinesla jazyky
+   do `simtegen.js` (`<meta name="simtegen-jazyky" content="cs en">`,
+   slovník `web/texty.js` se `SimteGen.slovnik`, klíče `data-t` v HTML,
+   `SimteGen.t` ve skriptu, přepínač `data-prepinac-jazyka`) a CI to
+   vynucuje (`kontrola_jazyku.py`; vizuální kontrola otevře `?jazyk=en`
+   a odmítne každé ě, š, č, ř, ž, ů, ť, ď, ň na anglické obrazovce).
+   Slovník podle českých vět by šel proti šabloně i kontrole. Výsledek pro
+   zákazníka je stejný, česká obrazovka zůstává doslova stejná.
+2. **Kdo si jazyk ještě nezvolil, dostane jazyk prohlížeče.** Rozhoduje
+   šablona: `?jazyk=` → ruční volba v prohlížeči → jazyk prohlížeče
+   (slovenský = čeština) → angličtina. Kdo má prohlížeč česky, vidí
+   aplikaci jako v buildu 14. Kdo ho má anglicky, vidí ji rovnou anglicky
+   a na Dnes jednou nabídku „Pneusklad is now in English. Keep English on
+   all your devices?“ s tlačítky „Keep English“ a „Čeština“. Obě volbu
+   uloží k účtu a nabídka se už neukáže.
+3. **Ruční volbu si prohlížeč pamatuje (`sg-volba`).** Dělá to šablona
+   a zásady to uvádějí (`vykresli_zasady.py`). Produkt sám do prohlížeče
+   nic neukládá a `uloziste_v_prohlizeci` zůstává prázdné.
+4. **Přepnutí jazyka znamená nové načtení stránky.** Tak to dělá
+   `SimteGen.nastavJazyk`, proto po přepnutí v Nastavení není toast
+   s Vrátit. Zpět se přepne stejným řádkem a stránka se otevře na Dnes.
+   Když se volbu nepodaří uložit k účtu, jazyk se nepřepne a pod řádkem
+   je chyba („Your language choice could not be saved…“). Jinak by ho
+   příští otevření podle účtu vrátilo.
+5. **Jazyk účtu má po přihlášení přednost.** Liší-li se od jazyka
+   stránky, stránka se jednou načte znovu v jazyce účtu, ještě pod
+   načítací kostrou. Proti zacyklení je v adrese značka `jazyk-z-uctu`,
+   hned se smaže. Odkaz s `?jazyk=` (a kontrola v CI) platí, jak je
+   napsaný.
+6. **Přepínač je na třech místech:** v hlavičce úvodu jedno tlačítko
+   s druhým jazykem („English“ / „Čeština“), plný přepínač šablony
+   v patičce (CI ho vyžaduje) a řádek „Jazyk aplikace · Language“
+   v Nastavení → Účet. Přepnutí patičkou přihlášenému uloží volbu k účtu
+   také.
+7. **Čísla, peníze a data se v angličtině píšou anglicky** („CZK 129“,
+   „25 Oct“, „1,249“). Formát řídí `simtegen.js` podle jazyka stránky,
+   specifikace počítala s českým. Částky se nepřepočítávají, ceník je
+   dál jen v Kč.
+8. **Hlášky API se nepřekládají na serveru.** API mluví česky dál.
+   Anglická obrazovka je přeloží tabulkou `HLASKY_SERVERU` / `HLASKY_VZORY`
+   v `index.html` na klíče `chyba.*`. Hláška, kterou tabulka nezná, se
+   ukáže jako obecná anglická věta, nikdy česky. Nová hláška v API
+   potřebuje řádek v tabulce i ve slovníku.
+9. **Ceník má anglická jména u sebe.** `cenik.js` nese u variant
+   `nazev_en`, `jednotka_en`, `popis_en` a u délek `nazev_en`. Částky
+   jsou tytéž a `/api/ja` je posílá beze změny.
+10. **Česky zůstávají i tyto části:** `web/play.js` (nákup v aplikaci
+    z Google Play a pruh ukázky; šablona, needituje se), přihlašovací
+    e-mail a stránka `/api/overeni`, e-maily k fakturační objednávce,
+    nápověda a právní dokumenty. Odkazy na ně mají v angličtině dovětek
+    „In Czech:“ / „(both in Czech)“ a `lang="cs"`.
+11. **Akceptační scénář úvodu hledá stejné texty volněji**
+    (`>Víte, kde má …</h1>` místo celé značky), protože nadpis, body,
+    `<title>` a popisek e-mailu nesou atribut `data-t`. Nově kontroluje
+    i `simtegen-jazyky` a `texty.js`.
+12. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+    bez schválení nejdou spustit. Před CI je musí pustit člověk:
+    `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
+    téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
+    (Bezpečnost údajů, záznam v obchodě s větou o angličtině
+    v `dlouhy_popis`), `python vykresli_seo.py`, pak
+    `python kontrola_manifestu.py` a `python uat_kontrola.py`.

@@ -260,7 +260,7 @@
       "Pomůže nám, když aplikaci ohodnotíte v Google Play. Hodnocení je veřejné " +
       "a co do něj napíšete, je jen na vás."));
     var akce = prvek("div", "sg-recenze-akce");
-    var odkaz = prvek("a", "tlacitko", "Ohodnotit v Google Play");
+    var odkaz = prvek("a", "tlacitko vedlejsi", "Ohodnotit v Google Play");
     // Android hands this address to the Play Store app (its detail page
     // carries the rating stars).
     odkaz.href = "https://play.google.com/store/apps/details?id=" + encodeURIComponent(balicek);

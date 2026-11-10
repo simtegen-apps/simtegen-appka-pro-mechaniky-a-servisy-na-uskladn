@@ -311,13 +311,14 @@
           "jako": "nikdo",
           "pozadavek": "GET /",
           "ocekavam": 200,
-          "obsahuje": ["<title>Evidence uskladněných pneu pro malé pneuservisy | Pneusklad</title>",
+          "obsahuje": [">Evidence uskladněných pneu pro malé pneuservisy | Pneusklad</title>",
                        "<meta name=\"description\" content=\"Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.\">",
-                       "<h1 class=\"titulek-velky\">Víte, kde má který zákazník uložené pneu?</h1>",
-                       "<strong>Evidence pneu</strong>", "<strong>Tisk štítků</strong>",
-                       "<strong>Objednávky s připomínkou</strong>",
+                       "<h1 class=\"titulek-velky\"", ">Víte, kde má který zákazník uložené pneu?</h1>",
+                       ">Evidence pneu</strong>", ">Tisk štítků</strong>",
+                       ">Objednávky s připomínkou</strong>",
                        "id=\"uvod-cena-cislo\"", "id=\"uvod-zkusebni\"",
-                       "<label for=\"email\">", "id=\"poslat-odkaz\""],
+                       "<label for=\"email\"", "id=\"poslat-odkaz\"",
+                       "<meta name=\"simtegen-jazyky\" content=\"cs en\">", "<script src=\"texty.js\"></script>"],
           "neobsahuje": ["Kde leží čí kola."]
         },
         {
@@ -647,6 +648,128 @@
           "pozadavek": "GET /api/sady?stav=uskladneno&q=UATREGAL-23",
           "ocekavam": 200,
           "neobsahuje": ["{lambda_kod}"]
+        }
+      ]
+    },
+    {
+      "nazev": "Jazyk aplikace: účet A si zvolí angličtinu a volba platí jen pro něj",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 200,
+          "obsahuje": ["\"stav\":\"ulozeno\"", "\"jazyk\":\"en\""]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/jazyk",
+          "ocekavam": 200,
+          "obsahuje": ["\"jazyk\":\"en\""]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/jazyk",
+          "ocekavam": 200,
+          "obsahuje": ["\"jazyk\":null"],
+          "neobsahuje": ["\"en\""]
+        }
+      ]
+    },
+    {
+      "nazev": "Jazyk aplikace: bez přihlášení nic, neznámý jazyk se neuloží",
+      "kroky": [
+        {
+          "jako": "nikdo",
+          "pozadavek": "GET /api/jazyk",
+          "ocekavam": 401,
+          "neobsahuje": ["\"jazyk\""]
+        },
+        {
+          "jako": "nikdo",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 401,
+          "neobsahuje": ["\"jazyk\""]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "de" },
+          "ocekavam": 422
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/jazyk",
+          "ocekavam": 200,
+          "obsahuje": ["\"jazyk\":\"en\""]
+        }
+      ]
+    },
+    {
+      "nazev": "Jazyk aplikace: v angličtině se sada uloží stejně a B ji nevidí",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Omega",
+            "telefon": "601000999",
+            "spz": "UAT9955",
+            "typ": "letni",
+            "rozmer": "195/65 R15",
+            "pozice": "UATREGAL-31",
+            "cena_skladovani": 800
+          },
+          "ocekavam": 200,
+          "uloz": { "omega_id": "sada.id", "omega_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady/{omega_id}",
+          "ocekavam": 200,
+          "obsahuje": ["{omega_kod}", "UATREGAL-31", "UAT-motorista-Omega"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady?stav=vse",
+          "ocekavam": 200,
+          "neobsahuje": ["UAT-motorista-Omega", "UATREGAL-31"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady/{omega_id}",
+          "ocekavam": 404,
+          "neobsahuje": ["UAT-motorista-Omega"]
+        }
+      ]
+    },
+    {
+      "nazev": "Jazyk aplikace: volba je v exportu dat účtu",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/ucet/export",
+          "ocekavam": 200,
+          "obsahuje": ["\"predvolby\"", "\"jazyk\":\"en\""]
         }
       ]
     }
