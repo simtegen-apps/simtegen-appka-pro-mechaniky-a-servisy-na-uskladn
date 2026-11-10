@@ -554,13 +554,13 @@
         },
         {
           "jako": "B",
-          "pozadavek": "POST /api/clenove",
+          "pozadavek": "POST /api/clenstvi",
           "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
           "ocekavam": 404
         },
         {
           "jako": "A",
-          "pozadavek": "POST /api/clenove",
+          "pozadavek": "POST /api/clenstvi",
           "telo": { "akce": "prijmout", "id": "{pozvanka_id}" },
           "ocekavam": 404
         },

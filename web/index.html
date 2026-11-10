@@ -3342,11 +3342,12 @@
       }));
 
     // Pozvánky do cizího servisu pro přihlášeného. Přijetí je jediná cesta,
-    // jak se pozvánka stane přístupem (functions/api/clenove.js) — nikdo
-    // jiný nikoho do svého servisu nepřesune.
+    // jak se pozvánka stane přístupem (functions/api/clenstvi.js — vlastní
+    // členství přihlášeného; správa týmu v /api/clenove je jen pro správce)
+    // — nikdo jiný nikoho do svého servisu nepřesune.
     async function nactiPozvanky() {
       const blok = $("pozvanky");
-      const { ok, data } = await api("/api/clenove", "GET");
+      const { ok, data } = await api("/api/clenstvi", "GET");
       const pozvanky = (ok && data.pozvanky) || [];
       blok.hidden = !pozvanky.length;
       // Věta je jeden klíč s {servis}; ten nechá SimteGen.t nedosazený a název
@@ -3365,7 +3366,7 @@
         </div>`).join("") + '<div id="pozvanky-zprava" class="zprava" aria-live="polite"></div>';
       blok.querySelectorAll(".pozvanka-prijmout").forEach((b) =>
         b.addEventListener("click", async () => {
-          const { ok: o, data: d } = await api("/api/clenove", "POST",
+          const { ok: o, data: d } = await api("/api/clenstvi", "POST",
             { akce: "prijmout", id: Number(b.dataset.id) });
           if (!o) return zprava("pozvanky-zprava", hlaska(d, SimteGen.t("pozvanka.chyba")), true);
           // Jiný servis = jiná evidence: celé načtení znovu, od Dnes.
@@ -3373,7 +3374,7 @@
         }));
       blok.querySelectorAll(".pozvanka-odmitnout").forEach((b) =>
         b.addEventListener("click", async () => {
-          const { ok: o, data: d } = await api("/api/clenove", "POST",
+          const { ok: o, data: d } = await api("/api/clenstvi", "POST",
             { akce: "odmitnout", id: Number(b.dataset.id) });
           if (!o) return zprava("pozvanky-zprava", hlaska(d, NEPOVEDLO()), true);
           nactiPozvanky();
@@ -3388,7 +3389,7 @@
         ano: SimteGen.t("ucet.odejit"), nebezpecne: true,
       });
       if (!odejit) return;
-      const { ok, data } = await api("/api/clenove", "POST", { akce: "odejit" });
+      const { ok, data } = await api("/api/clenstvi", "POST", { akce: "odejit" });
       if (!ok) return zprava("ucet-zprava", hlaska(data, NEPOVEDLO()), true);
       location.reload();
     });

@@ -237,7 +237,31 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
     (utm_source, utm_campaign) za den, další nový zdroj se započte jako
     `jine`. `/api/navsteva` navíc počítá limity v D1 (`ochrana.vLimitu`):
     20 za hodinu z jedné adresy a 1000 za hodinu celkem.
-16. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+16. **Správu týmu smí jen správce** (pokyn majitele po bezpečnostní
+    recenzi). `GET` i `POST /api/clenove` (seznam kolegů s e-maily
+    a rolemi, přidání, změna role, odebrání) vrací mechanikovi i „jen
+    čtení“ 403 „Tuto část smí měnit jen správce účtu.“. Kroky, které se
+    týkají jen vlastního členství přihlášeného, se beze změny přesunuly do
+    nového `functions/api/clenstvi.js`: pozvánky na Dnes, přijetí,
+    odmítnutí a „Odejít ze servisu“. Jinak by mechanik nemohl sám odejít
+    a člen cizího servisu by neviděl ani neodmítl pozvánku. Stránka
+    i scénář UAT „Pozvánka do týmu…“ volají pro přijetí novou cestu
+    (jen technický zápis, očekávání se nemění). Data, manifest ani zásady
+    se nemění, je to tatáž tabulka `clenove`.
+17. **Soubory změněné mimo původní rozsah buildu 15:**
+    - *obnova šablony, ne stavitel:* `.github/workflows/deploy.yml`,
+      `functions/api/_middleware.js`, `web/simtegen.js`, `web/play.js`,
+      `web/styl.css`, `web/_headers`, `DESIGN.md`, kontrolní skripty
+      (`*_kontrola.py`, `kontrola_jazyku.py`, `vykresli_*.py`),
+      `functions/api/kontrolni-prihlaseni.js`, `functions/api/prostredi.js`;
+    - *stavitel, vyžádané kontrolou nebo recenzí:*
+      `functions/api/overeni.js` (bod 12, mění hranici přihlášení,
+      schvaluje SimteGen), `spolecne.js`, `functions/api/odhlaseni.js`
+      a `functions/api/ucet/smazat.js` (bod 14), `functions/_middleware.js`
+      (body 13 a 15), `functions/api/navsteva.js` (bod 15),
+      `functions/api/clenove.js` a nový `functions/api/clenstvi.js`
+      (bod 16).
+18. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
     bez schválení nejdou spustit. Před CI je musí pustit člověk:
     `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
     téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
