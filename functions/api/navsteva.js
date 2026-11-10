@@ -9,8 +9,13 @@
 // number alone.
 
 import { hrubyLimit, json, zeStejneStranky } from "../../spolecne.js";
+import { adresaKlienta, vLimitu } from "../../ochrana.js";
 
 const STRANKY = new Set(["uvod", "cenik", "prihlaseni"]);
+// Counted in D1 (ochrana.js), not only in the worker's memory: a script
+// spread over many addresses and isolates still hits the product-wide cap.
+const ZA_HODINU_Z_ADRESY = 20;
+const ZA_HODINU_CELKEM = 1000;
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -21,6 +26,10 @@ export async function onRequestPost(context) {
   // 429, not 200: the template middleware counts the visit's source only on
   // a successful answer.
   if (!hrubyLimit(request, "navsteva", 20, 3600)) return json({ chyba: "Příliš mnoho požadavků." }, 429);
+  if (!(await vLimitu(env, "navsteva_vse", "vse", ZA_HODINU_CELKEM, 3600))
+      || !(await vLimitu(env, "navsteva_ip", adresaKlienta(request, env), ZA_HODINU_Z_ADRESY, 3600))) {
+    return json({ chyba: "Příliš mnoho požadavků." }, 429);
+  }
   let telo;
   try {
     telo = await request.json();

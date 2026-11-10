@@ -64,6 +64,42 @@ function branaVerejnychZapisu(context) {
   return null;
 }
 
+// A counted visit also counts its source: the template's middleware writes
+// one row of zdroje_navstev per (day, utm_source, utm_campaign) taken from
+// the Referer — a header any script sets to anything. Unbounded, random
+// labels would grow the table and bury the real sources. So at most
+// ZDROJU_ZA_DEN different sources a day; a new one above that is counted
+// as "jine", the same cap /api/chyba-stranky has. The label is cut exactly
+// as the template cuts it, so "known" means the row it would write.
+const ZDROJU_ZA_DEN = 200;
+
+function stitekZdroje(hodnota) {
+  const s = String(hodnota || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "-")
+    .replace(/-+/g, "-").slice(0, 40);
+  return s.replace(/^-|-$/g, "");
+}
+
+async function navstevaSeZdrojem(context) {
+  const { request, env } = context;
+  if (request.method !== "POST" || new URL(request.url).pathname !== "/api/navsteva") return null;
+  try {
+    const parametry = new URL(request.headers.get("Referer") || "").searchParams;
+    const zdroj = stitekZdroje(parametry.get("utm_source"));
+    if (!zdroj) return null;
+    const kampan = stitekZdroje(parametry.get("utm_campaign"));
+    const radek = await env.DB.prepare(
+      "SELECT COUNT(*) AS n, COALESCE(SUM(zdroj = ? AND kampan = ?), 0) AS tento " +
+      "FROM zdroje_navstev WHERE den = ?"
+    ).bind(zdroj, kampan, new Date().toISOString().slice(0, 10)).first();
+    if (!radek || radek.tento || radek.n < ZDROJU_ZA_DEN) return null;
+    const hlavicky = new Headers(request.headers);
+    hlavicky.set("Referer", `${new URL(request.url).origin}/?utm_source=jine`);
+    return new Request(request, { headers: hlavicky });
+  } catch {
+    return null; // no Referer to read, or no table yet: nothing gets written either
+  }
+}
+
 export async function onRequest(context) {
   const jinak = nekanonickaCesta(context.request);
   if (jinak) return jinak;
@@ -72,5 +108,6 @@ export async function onRequest(context) {
   context.data.uzivatel = await nactiUzivatele(context.request, context.env);
   context.data.servis = await nactiKontext(context.env, context.data.uzivatel);
   context.data.predplatne = await stavPredplatneho(context.env, context.data.servis);
-  return context.next();
+  const jinyZdroj = await navstevaSeZdrojem(context);
+  return jinyZdroj ? context.next(jinyZdroj) : context.next();
 }

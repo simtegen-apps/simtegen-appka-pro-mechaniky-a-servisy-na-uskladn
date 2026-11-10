@@ -71,22 +71,43 @@ export function ctiCookie(request, nazev) {
   return null;
 }
 
-export const RELACE_COOKIE = "relace";
+// The session cookie is "__Host-relace": a browser accepts that name only
+// from this exact host (Secure, Path=/, no Domain). Under the plain name
+// "relace" any sibling *.simtegen.com could set Domain=simtegen.com and slip
+// a mechanic the session of the attacker's own account — the motorists he
+// then types in would go there. So a login is read ONLY from the prefixed
+// name; an old plain "relace" is never trusted and never moved (the
+// template's functions/api/_middleware.js deletes it). Whoever still had
+// one signs in once more with a link.
+// The one exception: a local http run in development mode (acceptance
+// tests on 127.0.0.1), where a browser keeps no Secure cookie and no
+// sibling exists.
+export const RELACE_COOKIE = "__Host-relace";
+const RELACE_LOKALNE = "relace";
 export const RELACE_TRVANI = 30 * 24 * 3600; // matches manifest: 30 days
 export const ODKAZ_TRVANI = 3600; // link valid 1 hour; rows purged after 24 h
 
-export function cookieHlavicka(token, maxAge) {
+export function jmenoRelace(request, env) {
+  try {
+    if (env && env.VYVOJ === "ano" && new URL(request.url).protocol === "http:") return RELACE_LOKALNE;
+  } catch {
+    // no request: the safe name
+  }
+  return RELACE_COOKIE;
+}
+
+export function cookieHlavicka(token, maxAge, request, env) {
   // HttpOnly: the frontend never reads the session token — it only asks
   // /api/ja who it is. SameSite=Lax also blanks the cookie on cross-site
   // POSTs, which is the v1 CSRF story.
   return (
-    `${RELACE_COOKIE}=${token}; HttpOnly; Secure; SameSite=Lax; ` +
+    `${jmenoRelace(request, env)}=${token}; HttpOnly; Secure; SameSite=Lax; ` +
     `Path=/; Max-Age=${maxAge}`
   );
 }
 
 export async function nactiUzivatele(request, env) {
-  const token = ctiCookie(request, RELACE_COOKIE);
+  const token = ctiCookie(request, jmenoRelace(request, env));
   if (!token) return null;
   const radek = await env.DB.prepare(
     "SELECT u.id, u.email FROM relace r JOIN uzivatele u ON u.id = r.uzivatel_id " +

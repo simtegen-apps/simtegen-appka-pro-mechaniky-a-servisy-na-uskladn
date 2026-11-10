@@ -152,6 +152,6 @@ export async function onRequestPost(context) {
   await uklid(env, uzivatel.id);
 
   const hlavicky = new Headers({ Location: new URL("/", request.url).toString() });
-  hlavicky.append("Set-Cookie", cookieHlavicka(relaceToken, RELACE_TRVANI));
+  hlavicky.append("Set-Cookie", cookieHlavicka(relaceToken, RELACE_TRVANI, request, env));
   return new Response(null, { status: 303, headers: hlavicky });
 }

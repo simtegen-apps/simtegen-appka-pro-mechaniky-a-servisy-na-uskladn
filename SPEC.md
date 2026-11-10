@@ -223,7 +223,21 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
     `functions/_middleware.js` běží před vším ostatním a takovou cestu pod
     `/api` odmítne dřív, než dojde k obsluze. Aplikace sama žádnou takovou
     cestu nevolá.
-14. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+14. **Session cookie se jmenuje `__Host-relace`** (opraveno po
+    bezpečnostní recenzi). Cookie pod jménem `relace` mohla podstrčit
+    sesterská subdoména `*.simtegen.com` a přihlásit mechanika do cizího
+    účtu. Přihlášení se teď čte jen z `__Host-relace`
+    (`spolecne.jmenoRelace`), kterou smí nastavit jen tato aplikace. Starou
+    `relace` middleware šablony jen smaže, nikdy ji nepřesune. Kdo ji ještě
+    měl, přihlásí se jednou znovu odkazem. Výjimkou je lokální běh přes http
+    ve vývojovém režimu (UAT), tam zůstává `relace`. Manifest uvádí nové
+    jméno cookie.
+15. **Zdroje návštěv mají strop a limity v D1** (opraveno po bezpečnostní
+    recenzi). `functions/_middleware.js` pustí nejvýš 200 různých
+    (utm_source, utm_campaign) za den, další nový zdroj se započte jako
+    `jine`. `/api/navsteva` navíc počítá limity v D1 (`ochrana.vLimitu`):
+    20 za hodinu z jedné adresy a 1000 za hodinu celkem.
+16. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
     bez schválení nejdou spustit. Před CI je musí pustit člověk:
     `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
     téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
