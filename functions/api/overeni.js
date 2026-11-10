@@ -1,36 +1,53 @@
-// GET /api/overeni?token=... — the link from the email. Verifies the token,
-// creates the account on first login, opens a session, redirects home.
+// GET  /api/overeni?token=... — the link from the email. Only shows
+//                               "Přihlásit se jako x@y?" and a button.
+// POST /api/overeni {token}   — the button: verifies the token, creates the
+//                               account on first login, opens a session,
+//                               redirects home.
 //
-// Two steps, not one. Opened alone, the link only shows "Přihlásit se jako
-// x@y?" and a button; the session opens on the second request, which that
-// page makes. Before, the GET itself logged in and replaced whatever session
-// the browser had: an attacker could ask for a link to their OWN address and
-// slip it to a mechanic of another shop (a link, an image on a page, a QR
-// code) — the mechanic was quietly signed in to the attacker's account and
-// the motorists' names they typed went there. Now the page names the
-// account, and the second step only counts with a one-time code that the
-// page put into a SameSite=Strict cookie: a request from anywhere else does
-// not carry it. Mail scanners that open links no longer spend them, too.
+// Two steps, and the login is never a GET. Before, the GET itself logged in
+// and replaced whatever session the browser had: an attacker could ask for a
+// link to their OWN address and slip it to a mechanic of another shop (a
+// link, an image on a page, a QR code) — the mechanic was quietly signed in
+// to the attacker's account and the motorists' names they typed went there.
+// Mail scanners and link previews also open links with GET and spent them
+// before the customer clicked. Now the page names the account, and only its
+// POST logs in: a form on a foreign page sends a foreign Origin, which this
+// handler (where e-mail really goes out) and the template's middleware refuse.
 //
-// Still GET in both steps: the template's attribution middleware
-// (functions/api/_middleware.js, not ours to edit) labels a NEW account on
-// "GET /api/overeni → 303". Development deployments (no e-mail sending, the
-// link comes back in the API response, "not a real login boundary") keep the
-// single step — the acceptance tests sign in exactly that way.
+// The POST takes the form's urlencoded body or JSON {token} (the acceptance
+// tests post JSON). The template's middleware (functions/api/_middleware.js)
+// reads the token before us for attribution and treats a handler WITHOUT
+// onRequestPost as "logs in on GET" — then it answers GET itself and forwards
+// the POST as a GET that Pages never routes to onRequestGet. Hence both
+// handlers live here.
 
 import {
-  ctiCookie, cookieHlavicka, novyToken, otisk, ted, uklid, RELACE_TRVANI,
+  novyToken, otisk, ted, uklid, zeStejneStranky, cookieHlavicka, RELACE_TRVANI,
 } from "../../spolecne.js";
 
-const POTVRZENI_COOKIE = "potvrzeni_prihlaseni";
-const POTVRZENI_TRVANI = 600;
+const TOKEN = /^[0-9a-f]{64}$/;
 
 function html(text) {
   return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function potvrzovaciStranka(email, token, kod) {
+function chybova() {
+  return new Response(
+    "Přihlašovací odkaz je neplatný nebo vypršel. Nechte si prosím poslat nový.",
+    { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+  );
+}
+
+async function platnyOdkaz(env, token) {
+  if (!TOKEN.test(token)) return null;
+  return env.DB.prepare(
+    "SELECT id, email FROM prihlasovaci_odkazy " +
+    "WHERE otisk_tokenu = ? AND pouzito = 0 AND expirace > ?"
+  ).bind(await otisk(token), ted()).first();
+}
+
+function potvrzovaciStranka(email, token) {
   const telo = `<!doctype html>
 <html lang="cs">
 <head>
@@ -48,9 +65,8 @@ function potvrzovaciStranka(email, token, kod) {
     <p>Odkaz z e-mailu vás přihlásí k účtu s touto adresou. Pokud to není vaše
     adresa, nepokračujte — odkaz vám mohl poslat někdo jiný, aby se k němu
     dostala data, která zapíšete.</p>
-    <form method="get" action="/api/overeni">
+    <form method="post" action="/api/overeni">
       <input type="hidden" name="token" value="${html(token)}">
-      <input type="hidden" name="potvrzeni" value="${html(kod)}">
       <button class="tlacitko" type="submit">Přihlásit se</button>
     </form>
     <p><a href="/">Zpět na úvod bez přihlášení</a></p>
@@ -62,47 +78,50 @@ function potvrzovaciStranka(email, token, kod) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Referrer-Policy": "no-referrer",
+      // same-origin, not no-referrer: with no-referrer the browser sends
+      // "Origin: null" on the form's POST and the origin check refuses our
+      // own button.
+      "Referrer-Policy": "same-origin",
       "Content-Security-Policy":
         "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; "
         + "form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
       "X-Frame-Options": "DENY",
-      "Set-Cookie": `${POTVRZENI_COOKIE}=${kod}; HttpOnly; Secure; SameSite=Strict; `
-        + `Path=/api/overeni; Max-Age=${POTVRZENI_TRVANI}`,
     },
   });
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const url = new URL(request.url);
-  const token = url.searchParams.get("token") || "";
-  const domu = new URL("/", request.url).toString();
-
-  const chybova = () => new Response(
-    "Přihlašovací odkaz je neplatný nebo vypršel. Nechte si prosím poslat nový.",
-    { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } },
-  );
-
-  if (!/^[0-9a-f]{64}$/.test(token)) return chybova();
-
-  const digest = await otisk(token);
-  const odkaz = await env.DB.prepare(
-    "SELECT id, email FROM prihlasovaci_odkazy " +
-    "WHERE otisk_tokenu = ? AND pouzito = 0 AND expirace > ?"
-  ).bind(digest, ted()).first();
+  const token = new URL(request.url).searchParams.get("token") || "";
+  const odkaz = await platnyOdkaz(env, token);
   if (!odkaz) return chybova();
+  return potvrzovaciStranka(odkaz.email, token);
+}
 
-  // Real e-mail sending = a real login boundary: the person confirms which
-  // account they are entering, from a page only this site can produce.
-  const ostre = !!(env.RESEND_API_KEY && env.EMAIL_ODESILATEL);
-  if (ostre) {
-    const kod = url.searchParams.get("potvrzeni") || "";
-    const ulozeny = ctiCookie(request, POTVRZENI_COOKIE) || "";
-    if (!/^[0-9a-f]{64}$/.test(kod) || kod !== ulozeny) {
-      return potvrzovaciStranka(odkaz.email, token, novyToken());
-    }
+export async function onRequestPost(context) {
+  const { request, env } = context;
+
+  // Real e-mail sending = a real login boundary: only our own page may press
+  // the button. A development deployment (no mail, the link comes back in
+  // the API response) is posted to by scripts without an Origin.
+  if (env.RESEND_API_KEY && env.EMAIL_ODESILATEL && !zeStejneStranky(request)) {
+    return chybova();
   }
+
+  let token = "";
+  const typ = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+  try {
+    if (typ === "application/json") {
+      token = String(((await request.json()) || {}).token || "");
+    } else {
+      token = String((await request.formData()).get("token") || "");
+    }
+  } catch {
+    return chybova();
+  }
+
+  const odkaz = await platnyOdkaz(env, token);
+  if (!odkaz) return chybova();
 
   // Single-use before anything else: a replayed link must find it spent.
   await env.DB.prepare(
@@ -132,9 +151,7 @@ export async function onRequestGet(context) {
   // App-table retention rides along for the same reason.
   await uklid(env, uzivatel.id);
 
-  const hlavicky = new Headers({ Location: domu });
+  const hlavicky = new Headers({ Location: new URL("/", request.url).toString() });
   hlavicky.append("Set-Cookie", cookieHlavicka(relaceToken, RELACE_TRVANI));
-  hlavicky.append("Set-Cookie",
-    `${POTVRZENI_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/api/overeni; Max-Age=0`);
   return new Response(null, { status: 303, headers: hlavicky });
 }

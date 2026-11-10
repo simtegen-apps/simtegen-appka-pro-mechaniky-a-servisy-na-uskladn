@@ -200,7 +200,18 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
     (`>Víte, kde má …</h1>` místo celé značky), protože nadpis, body,
     `<title>` a popisek e-mailu nesou atribut `data-t`. Nově kontroluje
     i `simtegen-jazyky` a `texty.js`.
-12. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+12. **Přihlašovací odkaz přihlásí až tlačítkem (POST), ne otevřením
+    (GET).** Opravu vyžádala kontrola. Obnovený middleware šablony bere
+    `overeni.js` bez `onRequestPost` jako starou obsluhu, GET obslouží sám
+    a POST přepošle jako GET, na který Pages Functions obsluhu nenajdou.
+    Přihlášení pak vracelo 200 bez cookie relace a UAT ani zákazníci se
+    nepřihlásili. Teď GET ukáže „Přihlásit se jako …?“ a nic nemění.
+    Přihlásí až `POST /api/overeni` z tlačítka (formulář nebo JSON
+    `{token}`). Kde se skutečně posílají e-maily, přijme POST jen z vlastní
+    stránky. Jednorázový kód v cookie `potvrzeni_prihlaseni` odpadl,
+    stejnou ochranu dává POST s kontrolou Origin. Platí i ve vývojovém
+    režimu: odkaz otevře potvrzení a přihlásí tlačítko.
+13. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
     bez schválení nejdou spustit. Před CI je musí pustit člověk:
     `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
     téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
