@@ -1,0 +1,41 @@
+{
+ "meny": [
+  "CZK"
+ ],
+ "polozky": [
+  {
+   "id": "doporuceni",
+   "nazev": "Standard",
+   "ceny": {
+    "CZK": "129"
+   },
+   "jednotka": {
+    "cs": "/ firma / měsíc",
+    "en": "per company per month"
+   }
+  },
+  {
+   "id": "varianta-1",
+   "nazev": "Sezónní vstup",
+   "ceny": {
+    "CZK": "790"
+   },
+   "jednotka": {
+    "cs": "/ sezóna (6 měsíců)",
+    "en": "per month"
+   }
+  },
+  {
+   "id": "varianta-2",
+   "nazev": "Větší provozovna",
+   "ceny": {
+    "CZK": "229"
+   },
+   "jednotka": {
+    "cs": "/ firma / měsíc",
+    "en": "per company per month"
+   }
+  }
+ ],
+ "zkusebni_dni": 30
+}
