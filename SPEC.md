@@ -215,7 +215,15 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
     stránky. Jednorázový kód v cookie `potvrzeni_prihlaseni` odpadl,
     stejnou ochranu dává POST s kontrolou Origin. Platí i ve vývojovém
     režimu: odkaz otevře potvrzení a přihlásí tlačítko.
-13. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
+13. **Nekanonická cesta API dostane 404** (opraveno po bezpečnostní
+    recenzi). Pojistky veřejných zápisů porovnávají cestu přesně (limity
+    a kontrola původu u `/api/prihlaseni`, brána v `functions/_middleware.js`
+    i v middleware šablony). Varianta `/api/prihlaseni/`, `/API/Prihlaseni`,
+    `//` nebo `%` v cestě by je mohla obejít. Produktový
+    `functions/_middleware.js` běží před vším ostatním a takovou cestu pod
+    `/api` odmítne dřív, než dojde k obsluze. Aplikace sama žádnou takovou
+    cestu nevolá.
+14. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
     bez schválení nejdou spustit. Před CI je musí pustit člověk:
     `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
     téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`

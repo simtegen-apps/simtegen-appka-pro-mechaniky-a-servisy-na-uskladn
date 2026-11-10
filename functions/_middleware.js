@@ -31,6 +31,23 @@ const VEREJNE_ZAPISY = {
   "/api/prihlaseni": { max: 10, jenSEmaily: true },
 };
 
+// Every fence here and in the template's functions/api/_middleware.js
+// compares the path exactly ("/api/prihlaseni"). Pages routes the same
+// handler under variants of it — a trailing slash, possibly other letter
+// case — and a variant would walk past every limit and the Origin check. So
+// an /api/ path that is not written exactly as the handler's own is refused
+// before anything else runs: the app never calls those, nobody loses
+// anything, and the exact comparisons below stay true.
+function nekanonickaCesta(request) {
+  const cesta = new URL(request.url).pathname;
+  if (!/^\/api(?:\/|$)/i.test(cesta)) return null;
+  // Percent-encoding is one more spelling of the same path; no API path
+  // of this product needs it.
+  const kanonicka = cesta.replace(/\/{2,}/g, "/").replace(/\/+$/, "").toLowerCase();
+  if (cesta === kanonicka && cesta.startsWith("/api/") && !cesta.includes("%")) return null;
+  return json({ chyba: "Neznámá adresa." }, 404);
+}
+
 function branaVerejnychZapisu(context) {
   const { request, env } = context;
   if (request.method !== "POST") return null;
@@ -48,6 +65,8 @@ function branaVerejnychZapisu(context) {
 }
 
 export async function onRequest(context) {
+  const jinak = nekanonickaCesta(context.request);
+  if (jinak) return jinak;
   const zastaveno = branaVerejnychZapisu(context);
   if (zastaveno) return zastaveno;
   context.data.uzivatel = await nactiUzivatele(context.request, context.env);
