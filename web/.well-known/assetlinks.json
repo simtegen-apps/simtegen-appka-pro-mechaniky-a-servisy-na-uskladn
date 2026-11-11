@@ -6,7 +6,9 @@
     "target": {
       "namespace": "android_app",
       "package_name": "cz.simtegen.pneusklad",
-      "sha256_cert_fingerprints": []
+      "sha256_cert_fingerprints": [
+        "33:56:5B:1D:5E:84:6B:EF:B7:42:ED:92:D1:89:A2:7C:DB:A5:DC:1E:6F:13:93:C1:27:8C:A9:55:74:BB:5C:A2"
+      ]
     }
   }
 ]
