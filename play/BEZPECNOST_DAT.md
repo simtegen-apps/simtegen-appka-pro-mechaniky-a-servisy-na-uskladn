@@ -52,7 +52,7 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 | Osobní údaje (Personal info) | Jiné informace (Other info) | Ano | povinné | Funkce aplikace (App functionality) | sady |
 | Finanční údaje (Financial info) | Historie nákupů (Purchase history) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management) | predplatne, platby, objednavky_predplatneho, play_nakupy |
 | Finanční údaje (Financial info) | Jiné finanční údaje (Other financial info) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management) | sady, objednavky_predplatneho |
-| Zprávy (Messages) | Jiné zprávy v aplikaci (Other in-app messages) | Ano | volitelné | Funkce aplikace (App functionality), Komunikace vývojáře (Developer communications) | hlášení chyb (tlačítko Nahlásit chybu) |
+| Zprávy (Messages) | Jiné zprávy v aplikaci (Other in-app messages) | Ano | volitelné | Funkce aplikace (App functionality), Komunikace vývojáře (Developer communications) | hlaseni, hlášení chyb (tlačítko Nahlásit chybu) |
 | Aktivita v aplikaci (App activity) | Jiný obsah vytvořený uživatelem (Other user-generated content) | Ano | povinné | Funkce aplikace (App functionality) | zakaznici, sady, pohyby, objednavky |
 | Aktivita v aplikaci (App activity) | Interakce s aplikací (App interactions) | Ano | povinné | Funkce aplikace (App functionality), Správa účtu (Account management), Komunikace vývojáře (Developer communications), Analýza (Analytics) | upominky, predvolby, zdroj příchodu (odkaz z kampaně) |
 | Kalendář (Calendar) | Události v kalendáři (Calendar events) | Ano | povinné | Funkce aplikace (App functionality) | objednavky |

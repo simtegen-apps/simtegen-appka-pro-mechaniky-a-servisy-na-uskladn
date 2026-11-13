@@ -70,6 +70,9 @@ _KOMPRIMOVAT = {".html", ".htm", ".css", ".js", ".mjs", ".svg", ".json", ".txt",
 MAX_SNIMKU = 14           # what the reviewer can usefully look at in one turn
 SIROCE_OBRAZOVEK = 2      # screens shown at all three widths; the rest phone only
 MAX_PROBLEMU_NA_DRUH = 6  # per screen and kind — the first few say enough
+# DESIGN.md, Text: one explaining sentence, and all of them on one screen.
+MAX_SLOV_VETA = 20
+MAX_SLOV_PROZA = 50
 
 
 def najdi_prohlizec() -> str | None:
@@ -312,7 +315,7 @@ _MERENI = r"""
   const telefon = W < %(telefon)d;
   const out = {preteka: [], popisky: [], tlacitka: [], obrazky: [], kontrast: [], male: [],
                akce: [], drobne: [], kricici: [], format: [], tabindex: [], vykres: [],
-               texty_tlacitko: [], texty_technicke: [], texty_tykani: []};
+               texty_tlacitko: [], texty_technicke: [], texty_tykani: [], texty_moc: []};
   const vid = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return false;
@@ -492,9 +495,26 @@ _MERENI = r"""
       && getComputedStyle(el).backgroundColor === inkoust);
     if (hlavni.length > 1) out.akce.push(hlavni.slice(0, 4).map(popis).join(', '));
   }
+  // 9. Few words (DESIGN.md, Text): the owner called the v3 apps
+  // "přetextované" (12. 11. 2026). Explaining prose only — data rows,
+  // labels, buttons and the drawing are the app, not text to cut.
+  const slova = (s) => (s.match(/\p{L}[\p{L}\d'’-]*/gu) || []).length;
+  const PROZA = 'p, small, figcaption, .napoveda, .popis';
+  let proza = 0;
+  for (const el of koren.querySelectorAll(PROZA)) {
+    if (!vid(el) || el.closest('.sg-start, .sg-pruhy, .sg-ukazka-pruh, .sg-hlaseni, .panel, .toast, '
+                               + '.seznam-dilu, table, .platno, svg')) continue;
+    if (el.parentElement && el.parentElement.closest(PROZA)) continue;
+    const n = slova(el.innerText || '');
+    proza += n;
+    if (n > %(veta)d) pridej(out.texty_moc, popis(el) + ' — ' + n + ' slov (nejvýš %(veta)d)');
+  }
+  if (proza > %(proza)d) pridej(out.texty_moc, 'vysvětlujícího textu je na obrazovce ' + proza
+                                + ' slov (nejvýš %(proza)d)');
   return out;
 })()
-""" % {"telefon": TELEFON_DO, "max": MAX_PROBLEMU_NA_DRUH}
+""" % {"telefon": TELEFON_DO, "max": MAX_PROBLEMU_NA_DRUH,
+   "veta": MAX_SLOV_VETA, "proza": MAX_SLOV_PROZA}
 
 _DRUHY = {
     "preteka": "obsah přetéká do strany (vodorovné posouvání)",
@@ -514,6 +534,8 @@ _DRUHY = {
     "texty_technicke": "na obrazovce je technický text (undefined, null, Error, HTTP 500) — zákazník má vidět, "
                        "co se stalo a co s tím",
     "texty_tykani": "text tyká — zákazníkovi se vyká („Klikněte“, „váš“)",
+    "texty_moc": "moc vysvětlujícího textu — aplikace mluví tlačítky, nadpisy a daty; zkrať větu, odstavec pod "
+                 "nadpisem smaž (DESIGN.md, Text)",
     "fokus_skryty": "Tab skončí na prvku, který není vidět",
     "fokus_bez_znacky": "prvek po Tabu nemá viditelný fokus (outline, rámeček nebo stín)",
 }

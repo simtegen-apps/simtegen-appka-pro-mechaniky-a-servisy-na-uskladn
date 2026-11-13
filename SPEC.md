@@ -1,270 +1,148 @@
-# Specifikace — build 15
+# Specifikace — build 16
 
-Build 15 doplní do běžícího Pneuskladu angličtinu. Jazyk si volí každý pracovník servisu sám: na úvodu, v Nastavení → Účet, nebo jedním klepnutím z jednorázové nabídky. Volba se ukládá k jeho účtu, takže platí na telefonu i na dílenském tabletu. Česky mluvící servisy neuvidí žádnou změnu: v češtině se nový kód vůbec nespustí. Obrazovky, data, ceny ani tok práce se nemění. Česky zůstanou jen právní texty, nápověda a přihlašovací e-mail ze šablony, a to výslovně řečené.
+Build 16 zjednoduší hotový Pneusklad jen v textech a rozložení, funkce ani data se nemění. Úvod bude mít hlavní větu, podvětu, tři krátké přednosti, jednu kartu ceny s jedním tarifem a větou o zkušebním období a jedno tlačítko. Z hlavičky, z Dnes i z Nastavení zmizí volba jazyka. Jazyk se zvolí sám a ručně se mění jen jedním řádkem v Účtu. Přepínač měny v produktu nebude. Patička s právními odkazy na jednom malém řádku bude jen na úvodu a v Účtu, spodní menu se ukáže až po přihlášení. Zmizí vysvětlující odstavce pod nadpisy sekcí a prázdné stavy budou mít jeden řádek, česky i anglicky.
 
 ## Placená hodnota (proč přijde druhý nákup)
-Servis dál platí 129 Kč měsíčně za provozovnu za evidenci, kde leží čí kola, za štítky a za objednávky s připomínkou. Angličtina odstraní důvod odejít, když servis zaměstná mechanika, který nečte česky: celý tým zapisuje do jedné evidence, a předplatné se proto obnovuje každou sezónu (jaro i podzim), dokud kola leží v regálu.
+Servis dál platí 129 Kč měsíčně za provozovnu za evidenci, kde leží čí kola, za tisk štítků a za objednávky s připomínkou. Druhý nákup přichází každou sezónu, protože kola zůstávají v regálu a evidence se přenáší ze sezóny do sezóny. Tento build tu hodnotu chrání: platící zákazník appku označil za nepřehlednou a kratší obrazovky odstraní důvod odejít, aniž by se změnila jediná funkce nebo jediný údaj.
 
 ## Design (obrazovky, navigace, stavy)
-BARVA PRODUKTU: beze změny #c2410c, pálená oranžová. Je to barva pryže a výstražných štítků v dílně. Kontrast na papíře #f6f4ef je asi 6,7:1, tedy ≥ 4,5:1. Tmavá varianta #f07a45 zůstává v web/produkt.css. Návrhový systém v3 „Papír a výkres“ se nemění: žádná nová třída, barva ani rozměr.
+BARVA PRODUKTU: beze změny #c2410c (pálená oranžová). Je to barva pryže a výstražných štítků v dílně. Kontrast na papíře #f6f4ef vychází přibližně 4,7:1, tedy ≥ 4,5:1 (SPEC buildu 15 uváděl 6,7:1, to byla chyba výpočtu; CI to stejně přepočítá). web/produkt.css se nemění. Návrhový systém v3 se nemění: žádná nová třída ani barva. Do <style> v index.html přibudou jen pravidla viditelnosti (patička, menu) bez barev.
 
-ŽÁDNÁ NOVÁ OBRAZOVKA. Všech 15 obrazovek buildu 14 zůstává se stejným typem, stejnými sekcemi a stejnou hlavní akcí. V angličtině mají jen přeložené texty. Měnit se budou tři místa:
+TYPY OBRAZOVEK: všechny zůstávají PŘEHLED. Nástroj produkt nemá a mít nebude: zákazník nic neskládá, sada se zapisuje a štítek se tiskne. Obrazovky ani jejich hlavní akce se nemění:
+1) Načítání (#obrazovka-nacitani): .kostra, beze změny.
+2) Úvod a přihlášení (#obrazovka-prihlaseni), přehled. Na obrazovce je jen tohle:
+   - H1 .titulek-velky „Víte, kde má který zákazník uložené pneu?“ (beze změny, drží SEO a UAT)
+   - podvěta jako jeden <p> „Pro malé a mobilní pneuservisy. Bez instalace.“
+   - tři přednosti jako .seznam bez druhého řádku: „Evidence pneu přes všechny sezóny“, „Štítky z vaší tiskárny“, „Připomínka den před přezutím“
+   - ceník jako jedna .karta.vykres: .stitek „Standard“, .cislo-obri `<span data-cena="doporuceni">`, vedle `<span data-cena-jednotka="doporuceni">`, a jedna věta „Prvních 30 dní zdarma, bez karty.“ (počet dní ze zkusebni_dni)
+   - pole „E-mail provozovny“ s nápovědou „Pošleme vám odkaz, heslo nepotřebujete.“
+   - hlavní akce „Začít zdarma“ v .lista-dole
+   Zmizí: nadpis sekce Přihlášení, odstavec o datech v EU, druhé řádky předností, „Cena od“, celá sekce Ceník se třemi variantami, nadpis a odstavec sekce ukázky a tlačítko English.
+   - Ukázka: tlačítko data-ukazka (vedlejší) zůstává kvůli pravidlům Google Play, ale s třídou .jen-v-aplikaci. Na webu je tak na úvodu opravdu jedno tlačítko.
+   - Měna: částku dává simtegen.js podle země (CZ = Kč, Evropa = EUR, jinde USD), žádný data-prepinac-meny.
+   - Tablet a notebook: .mrizka s7 vlevo (H1, podvěta, přednosti) a s5 vpravo (karta ceny, e-mail, tlačítko). Patička je pod obsahem na celou šířku.
+   - Načítání: .kostra místo částky, dokud nedorazí cenik.json. Chyba: když se ceník nenačte, karta zůstane skrytá (žádný prázdný rám) a přihlášení funguje dál. Chyba odeslání odkazu se ukáže pod polem jako dosud.
+3) Dnes (#obrazovka-dnes), přehled, hlavní akce „Nová sada na uskladnění“. Zmizí nabídka #jazyk-nabidka. Prázdný stav: „Zapište první uskladněnou sadu.“ a vedlejší „Naplnit ukázkovými daty“ (data-ukazkova-data, jen vlastník). Sekce Stav dne, Najít a Dnešní objednávky zůstávají. Načítání .kostra, chyba .hlaska.chyba jako dosud.
+4) Sklad, přehled. Prázdný stav: „V regálu zatím nic neleží.“
+5) Zákazníci, přehled. Prázdný stav: „Zatím žádní zákazníci.“
+6) Zákazník a 7) Sada (detail), přehled, beze změny rozložení.
+8) Nová sada (průvodce 4 kroky), přehled. Zmizí odstavec pod „Hloubka dezénu“, pole dostane jen nápovědu „V mm, nepovinné.“
+9) Objednávky, přehled. Prázdný stav: „Tento týden žádné objednávky.“
+10) Nová objednávka, přehled, beze změny.
+11) Příprava kol, přehled. Prázdný stav: „Na tento den nic naplánováno.“
+12) Sezónní přehled, přehled. Zmizí odstavce pod třemi sekcemi (obvolat, opotřebené, nezaplacené), nadpis s počtem zůstane. Prázdný stav: „Přehled se naplní s první sadou.“
+13) Nastavení, přehled, hlavní akce „Uložit nastavení“. Zmizí odstavec pod Provoz a řádek „Jazyk aplikace · Language“. Řádky Předplatné, Tým a Účet a data zůstávají jako cesta do podobrazovek.
+14) Tým, přehled, hlavní akce „Přidat kolegu“. Zmizí odstavec o rolích (role jsou vidět na přepínači). Prázdný stav: „Zatím jste tu sami.“
+15) Účet a data (#obrazovka-ucet), přehled, hlavní akce „Stáhnout moje data“, vedlejší „Odhlásit se“. Sekce bez odstavců: Vaše data, Ukázková data, Odejít ze servisu (jen člen cizího servisu) a Smazání účtu (nevratnost řekne potvrzovací panel SimteGen.potvrd). Karta Doporučit kolegovi zůstane jen s tlačítkem. Nově přibudou jeden řádek „Jazyk“ se slotem `<div data-prepinac-jazyka>` (Čeština | English kreslí simtegen.js) a řádek „Nápověda“ (odkaz na napoveda.html, lang="cs"). Dole je patička.
+16) Předplatné, přehled, hlavní akce „Objednávka zavazující k platbě“ (jen web), v aplikaci nákup přes data-predplatne-play. Samostatná sekce Ceník s odstavci (seznam variant a „Cena je za provozovnu…“) zmizí. Ceny jsou vidět ve volbě varianty a v „Celkem k úhradě“ přímo v objednávce, takže volba varianty zůstává (je to funkce). Chyba načtení: jeden řádek „Stav předplatného se nepodařilo načíst.“ a tlačítko Zkusit znovu.
 
-1) Úvod a přihlášení (#obrazovka-prihlaseni). Typ: přehled, 3 sekce jako dosud.
-- Hlavní akce zůstává „Začít zdarma“ / „Start free“ (#poslat-odkaz) v .lista-dole.
-- Nově je v .hlavicka vpravo malé tlačítko #hlavicka-jazyk (.tlacitko vedlejsi). Ukáže se jen na úvodu. V češtině má text „English“ s lang="en", v angličtině „Čeština“ s lang="cs".
-- Je v hlavičce, ne v obsahu, aby nesesunulo H1, tři body a cenu pod ohyb (360×740).
-- Přepnutí přeloží stránku na místě a do adresy zapíše ?jazyk=en přes history.replaceState. Nic se neukládá, žádná cookie, žádné localStorage.
-- Odkaz ve tvaru https://pneusklad.simtegen.com/?jazyk=en otevře úvod rovnou anglicky. Statické české H1, body a meta pro vyhledávač zůstávají v HTML beze změny.
-- Volání POST /api/navsteva {stranka:"uvod"} a přihlašovací formulář zůstávají.
-- Po odeslání odkazu v angličtině hláška řekne: „We have sent a sign-in link to … The e-mail is in Czech — open the link in it and tap ‚Přihlásit se‘ (Sign in).“ Přihlašovací e-mail i stránka /api/overeni patří šabloně a zůstávají česky.
-- Odkazy na zásady, podmínky a nápovědu mají v angličtině dovětek „(in Czech)“.
-- Tablet a notebook: beze změny, tedy .mrizka s7 (H1 a body) + s5 (cena a přihlášení). Přepínač je v hlavičce na všech šířkách.
+PATIČKA: jen na úvodu a v Účtu. Řeší to body[data-obrazovka] nastavovaný v ukaz(id) a pravidlo .paticka { display:none }, kromě těchto dvou obrazovek. Obsah je jeden malý řádek .popisek: „Zásady · Podmínky · Smlouva o zpracování · Odstoupení“. Podmínky a Odstoupení mají data-objednavka, takže je aplikace z Google Play skryje. V angličtině řádek začíná „In Czech:“. Nahlásit chybu z patičky zmizí, zůstává v menu (tablet, notebook) a v hlavičce (telefon).
 
-2) Nastavení (#obrazovka-nastaveni). Typ: přehled, beze změny.
-- Do sekce „Účet“ přibude jeden .radek: „Jazyk aplikace · Language“ s hodnotou „Čeština“ / „English“ a tlačítkem „Switch to English“ / „Přepnout do češtiny“.
-- Vidí ho každá role, i mechanik a jen čtení. Sekci Účet vidí všichni a jazyk je osobní volba, ne nastavení servisu.
-- Jedno klepnutí: POST /api/jazyk, obsah se na místě přeloží a ukáže se SimteGen.vratitelne „Language saved“ s Vrátit.
-- Hlavní akce obrazovky zůstává „Uložit nastavení“ (správce). Tablet a notebook: .dva-sloupce jako dosud, řádek je v pravém sloupci v sekci Účet.
+NAVIGACE: beze změny 4 položky (Dnes · Sklad · Objednávky · Nastavení). Na telefonu se spodní pás ukáže až po přihlášení (body:not(.prihlasen) .navigace skryté pod 768 px a .lista-dole pak sedí u spodní hrany). Na tabletu a notebooku zůstává před přihlášením levý pruh jen se značkou a Nahlásit chybu. Kliky: hlavní hodnota je na 0–1 klepnutí (Dnes, Sklad), štítek na 2 (Sklad → sada → Tisk), jazyk na 3 (Nastavení → Účet a data → řádek Jazyk). Každá podobrazovka má dál vlastní šipku Zpět.
 
-3) Dnes (#obrazovka-dnes). Typ: přehled, beze změny.
-- Nahoře může jednou přibýt .hlaska (info), dvojjazyčná: „Use Pneusklad in English? · Používat aplikaci v angličtině?“. Má dvě tlačítka .vedlejsi: „English“ a „Ponechat češtinu“.
-- Ukáže se jen přihlášenému, který ještě jazyk nezvolil (GET /api/jazyk vrátí null) a jehož navigator.language nezačíná na cs ani sk.
-- Obě tlačítka volbu uloží, takže se nabídka už nikdy neukáže. Hlavní akce „Nová sada na uskladnění“ zůstává.
-- Účel: anglicky mluvící mechanik se přihlásí odkazem z e-mailu v novém okně, kde se volba z úvodu ztratí (nic se neukládá v prohlížeči). Tady ji nastaví jedním klepnutím.
-- Stávající zákazník bez volby zůstává v češtině. Nikdo se nepřepne sám.
+JAZYK: volí se sám. Před přihlášením platí volba šablony (?jazyk=, ruční volba, jazyk prohlížeče, slovenština = čeština). Po přihlášení má přednost uložená volba účtu (/api/jazyk), bez volby (null) zůstane automatika a nic se nevynucuje. Ruční změna jde jen přes řádek v Účtu. Uloží se k účtu jako dosud a po novém načtení se aplikace vrátí do Účtu a ukáže „Jazyk uložen“ s Vrátit.
 
-NAVIGACE: beze změny, 4 položky. V angličtině Today · Storage · Bookings · Settings. Hlavní hodnota zůstává na 1–2 klepnutích. Jazyk je na 2 klepnutích (Settings → řádek Language) nebo na 1 klepnutí z úvodu či z nabídky. Každá podobrazovka má dál šipku Zpět („Back“) se záložní cestou a nic nespoléhá na tlačítko prohlížeče.
-
-SLOVNÍK OBORU, aby byla angličtina všude stejná:
-- sada = tyre set, regál = rack, pozice = rack position, štítek = label
-- uskladnění = storage, přezutí = tyre change, výdej = release
-- dezén = tread, hloubka dezénu = tread depth, SPZ = plate
-- objednávka = booking, Připravit kola = Prepare wheels, Sezónní přehled = Season overview
-- správce / mechanik / jen čtení = admin / mechanic / read only
-- Předplatné = Subscription, Účet a data = Account and data
-
-Formát čísel, peněz a dat zůstává český („1 249 Kč“, „25. 10.“): servis účtuje v Kč v Česku a stejně vypadají vytištěné štítky. „Dnes / Zítra / Včera“ ze SimteGen.datum se přeloží na Today / Tomorrow / Yesterday. Počty jdou přes anglické tvary (1 set / 3 sets) a dny v týdnu na Mon–Sun.
-
-STAVY PRO NOVÁ MÍSTA:
-- Načítání: #obrazovka-nacitani s .kostra zůstává, dokud nedoběhne /api/ja a GET /api/jazyk (paralelně). Anglický uživatel tak nevidí probliknutí češtiny.
-- Prázdný: nenastane, volba má vždy dvě hodnoty.
-- Chyba při uložení: rozhraní se přepne aspoň pro toto otevření a ukáže .hlaska.chyba v cílovém jazyce: „Your language choice was not saved — next time the app opens in Czech. Try again.“ s tlačítkem Try again.
-- Offline: platí SimteGen.kdoJsem() / SimteGen.offline(obnov). Když GET /api/jazyk selže, zůstane poslední jazyk stránky. Pruh offline ze šablony se v angličtině přeloží.
-- Ostatní obrazovky mají prázdné, načítací i chybové stavy přesně jako v buildu 14. Jejich věty jsou ve slovníku přeložené.
-
-APLIKACE Z GOOGLE PLAY: přepínač funguje stejně. Pravidla platby se nemění: karta data-objednavka se v aplikaci dál neukáže a přeložené texty nesmí zmínit fakturu ani placení mimo Google Play. Záznam v obchodě zůstává český (generátor zná jen cs-CZ).
+TEXTY: slovní limity podle nové části Text v DESIGN.md. Cíle stavby: H1 ≤ 8 slov, podvěta ≤ 8, přednost ≤ 5, tlačítko ≤ 4, prázdný stav jedna věta ≤ 8 slov, žádný .popisek pod .sekce-titulek. Angličtina se zkrátí stejně, například „Record your first stored set.“, „Nothing on the rack yet.“, „First 30 days free, no card.“
 
 ## Plán
-1. Migrace db/migrace/0011_predvolby.sql založí novou tabulku:
-   CREATE TABLE predvolby (uzivatel_id INTEGER PRIMARY KEY REFERENCES uzivatele(id) ON DELETE CASCADE, jazyk TEXT NOT NULL CHECK (jazyk IN ('cs','en')), zmeneno INTEGER NOT NULL DEFAULT (unixepoch()));
-   - Klíčem je uzivatel_id osoby, ne servisu. Do nastaveni_servisu jazyk nepatří, protože ty sdílí celý tým.
-   - Migrace nic nemaže ani nepřepisuje, schvalovací podpis tedy nepotřebuje. Export i smazání účtu ji zahrnou automaticky přes uzivatel_id.
-2. data-manifest.json, do `ukladame` přidat entitu:
-   {"entita": "predvolby", "ucel": "jazyk aplikace, který si pracovník servisu sám zvolil (čeština nebo angličtina)", "pole": "odkaz na účet, zvolený jazyk aplikace, čas poslední změny", "retence": "do smazání účtu zákazníkem", "play_typy": ["akce_v_aplikaci"], "play_ucely": ["funkce"], "play_volitelne": true}
-   - Řádek vznikne jen při výslovné volbě.
-   - uloziste_v_prohlizeci zůstává [], cookies a služby se nemění.
-3. Nový endpoint functions/api/jazyk.js, vzorem je functions/api/navod.js:
-   - GET vrátí {jazyk: "cs" | "en" | null}.
-   - POST {jazyk} uloží přes INSERT … ON CONFLICT(uzivatel_id) DO UPDATE a vrátí {stav: "ulozeno", jazyk}.
-   - Nepřihlášený dostane 401 „Nejste přihlášeni.“, neznámý jazyk 422 „Neznámý jazyk.“.
-   - Endpoint pracuje s data.uzivatel.id (osoba). Nekontroluje roli ani předplatné, protože jazyk je osobní volba, ne zápis do evidence.
-4. Nový soubor web/preklad.js, statický a bez závislostí:
-   - Slovník PREKLAD_EN {česká věta: anglická}. Pokryje všechny texty z web/index.html, české chybové hlášky z functions/api/* (produktové i šablonové, např. /api/prihlaseni) a viditelné texty šablony (offline pruh, Vrátit, Zrušit, pruh a karty z simtegen.js/play.js, ukázková data).
-   - Krátký seznam regexů pro věty s čísly a pro Dnes/Zítra/Včera.
-   - window.Preklad = {jazyk(), nastav(j), t(text, hodnoty), tvary(cz)}.
-   - V angličtině projde #appka a body. Překládá textové uzly a atributy placeholder, aria-label, title a alt, pamatuje si originály ve WeakMap a MutationObserverem přeloží i vše, co se vloží později (toasty, panely, potvrzení, odpovědi API).
-   - Přepnutí zpět do češtiny vrátí originály a observer odpojí. Věta mimo slovník zůstane česky, nic nespadne.
-   - V češtině se nic nespouští.
-5. web/index.html:
-   - Načíst preklad.js hned za simtegen.js. Nastavit document.documentElement.lang podle jazyka.
-   - Start obnov(): po stavu `prihlasen` z SimteGen.kdoJsem() paralelně zavolat GET /api/jazyk a teprve pak opustit #obrazovka-nacitani. U nepřihlášeného rozhodne ?jazyk=en.
-   - Přidat #hlavicka-jazyk (jen na úvodu), řádek Jazyk v sekci Účet v Nastavení a jednorázovou .hlaska nabídky na Dnes podle Designu.
-   - Texty skládané v JS s hodnotami obalit Preklad.t("… {n} …", {n}). Platí to i pro titulky obrazovek v hlavičce, názvy dnů v .tyden, document.title, SimteGen.potvrd/zeptej volby {ano, ne}, SimteGen.pocet tvary přes Preklad.tvary.
-   - Obalit i text kalendářní připomínky .ics (název a popis události) a popisky polí na štítku sady (data na štítku zůstávají, jak je pracovník zapsal).
-   - Po přepnutí jazyka znovu vykreslit aktuální obrazovku stávající funkcí ukaz(id).
-   - Neměnit ID, volání /api/navsteva, přihlašovací formulář, data-objednavka, data-predplatne-play, data-ukazka ani data-ukazkova-data.
-6. functions/api/priprava.js: přečíst predvolby.jazyk odesílatele (data.uzivatel.id). Při `en` poslat předmět a text e-mailu „Prepare for … — n bookings“ anglicky, včetně anglických názvů úkonů (NAZVY_UKONU_EN). Limit 5 e-mailů denně zůstává.
-7. uat/scenare.json: přidat akceptační scénáře z pole akceptace (jazyk A, oddělení A/B, 401, 422, export, sady beze změny v EN).
-8. Spustit generátory: python vykresli_zasady.py, python vykresli_aplikaci.py (BEZPECNOST_DAT, zaznam.json), python kontrola_manifestu.py a python uat_kontrola.py. V tomto prostředí Python neběží, takže je musí před CI spustit člověk. Napsat to do SPEC.md.
-9. play/co_je_noveho.txt přepsat, například: „Aplikaci teď můžete používat i v angličtině. Jazyk si každý pracovník servisu zvolí sám v Nastavení → Účet nebo na úvodní obrazovce a volba platí na všech jeho zařízeních. Evidence, štítky ani objednávky se nemění.“
-10. README.md: krátká sekce „Angličtina“. Každý nový český text v index.html nebo v hlášce API potřebuje řádek v web/preklad.js, jinak se v angličtině ukáže česky. Doplnit i slovník oboru.
-11. SPEC.md: specifikace buildu 15 a seznam toho, co zůstává česky.
-12. Nesahat na: simtegen.js, play.js, ukazka-uctu.js, ukazka.js, prihlaseni.js, overeni.js, ja.js, _middleware.js obou úrovní, 0910_zdroje.sql, styl.css, ikony.svg ani na .github/. Generované soubory needitovat ručně.
+1. Obnova šablony (stavba, ne stavitel): převzít aktuální DESIGN.md (nová část Text), web/styl.css, web/simtegen.js, web/ikony.svg a kontrolní skripty. Přečíst novou část Text a pokud jsou její limity přísnější než cíle ve specifikaci, platí limity šablony.
+2. web/index.html, úvod: přestavět #obrazovka-prihlaseni podle Designu. Cena přes data-cena="doporuceni" a data-cena-jednotka="doporuceni" z web/cenik.json, žádný data-prepinac-meny. Smazat #uvod-cenik-sekce a vykresliUvod() zjednodušit na větu o zkušebním období. Obal tlačítka data-ukazka dostane .jen-v-aplikaci. Zachovat #email, #poslat-odkaz, POST /api/navsteva {stranka:"uvod"} a celou cestu přihlášení beze změny.
+3. web/index.html, jazyk: odstranit #hlavicka-jazyk, #jazyk-nabidka, řádek #nast-jazyk a k nim JS (nabidniJazyk, zNabidky, predPrihlasenimAnglicky, obsluhu tlačítek). V srovnejJazyk() při volbě null jazyk nevynucovat (cil = volba || SimteGen.jazyk()). V #obrazovka-ucet přidat jeden .radek se slotem data-prepinac-jazyka. Stávající zachycení kliku v [data-prepinac-jazyka] (POST /api/jazyk s keepalive) doplnit o značku jazyk-zmenen, aby se aplikace po novém načtení vrátila do Účtu (poPrepnutiJazyka → ukaz("obrazovka-ucet")).
+4. web/index.html, patička a menu: v ukaz(id) nastavit document.body.dataset.obrazovka. Do <style> přidat: .paticka viditelná jen pro obrazovka-prihlaseni a obrazovka-ucet. Pod 768 px body:not(.prihlasen) .navigace { display:none } a .lista-dole { bottom: env(safe-area-inset-bottom) }. Patičku přepsat na jeden řádek právních odkazů s „·“, Nápovědu přesunout jako řádek do Účtu, Nahlásit chybu z patičky odstranit.
+5. web/index.html, sekce: smazat všechny .popisek přímo pod .sekce-titulek (provoz, tým, účet, ukázková data, odejít, smazání, hloubka dezénu, tři sekce Sezónního přehledu ve funkci sekce(), Ceník na Předplatném). Zrušit samostatnou sekci Ceník na Předplatném. Kartu Doporučit zkrátit na tlačítko. ID, data-objednavka, data-predplatne-play, data-ukazka a data-ukazkova-data zůstávají.
+6. web/texty.js: zkrátit české i anglické texty podle limitů (prázdné stavy, přednosti, podvěta, nápověda e-mailu, zkušební věta, patička). Smazat klíče, které nikdo nepoužívá (uvod.*_popis, nast.provoz_popis, tym.popis, ucet.*_popis, jazyk.nabidka…, nast.jazyk…). Oba jazyky musí mít stejné klíče a {proměnné} (kontrola_jazyku.py).
+7. uat/scenare.json: scénář úvodu upravit na nové přednosti a na data-cena="doporuceni" místo #uvod-cena-cislo. Doplnit neobsahuje: „hlavicka-jazyk“, „jazyk-nabidka“, „data-prepinac-meny“. Přidat scénáře z pole akceptace. Scénář „Ceník a zkušební doba…“ (/api/ja) zůstává, server se nemění.
+8. napoveda.json: téma „Aplikace v angličtině“ přepsat (jazyk se volí sám, ručně v Nastavení → Účet a data → Jazyk) a téma Tým (odchod ze servisu) srovnat s novými názvy. Vygeneruje vykresli_napovedu.py.
+9. play/co_je_noveho.txt přepsat, například: „Aplikace je přehlednější: kratší texty, jednodušší úvodní obrazovka a méně odstavců. Jazyk se nastaví sám podle telefonu, změníte ho v Nastavení → Účet a data. Evidence, štítky, objednávky ani ceny se nemění.“
+10. README.md (krátká poznámka o jazyce a patičce) a SPEC.md (specifikace buildu 16 a seznam souborů změněných mimo rozsah).
+11. Bez zásahu: data-manifest.json (žádná nová entita, služba, cookie ani úložiště, sg-volba už v zásadách je), migrace, functions/** včetně _middleware.js, overeni.js a jazyk.js, cenik.js, web/cenik.json, web/play.js, web/produkt.css, .github/. Modul SCHRÁNKA (hlaseni.js, migrace hlášení) do tohoto buildu nepatří: majitel zakázal měnit funkce a data a hlášení dnes obsluhuje nahlasit.js. Je to samostatná stavba.
+12. Generátory pustí člověk (Python tu neběží): python vykresli_napovedu.py, python vykresli_seo.py (meta zůstávají, ale kontrola porovnává), python vykresli_aplikaci.py a pak python kontrola_manifestu.py, python kontrola_jazyku.py, python uat_kontrola.py a vizualni_kontrola.py.
 
 ## Soubory
-- db/migrace/0011_predvolby.sql
-- functions/api/jazyk.js
-- functions/api/priprava.js
-- web/preklad.js
 - web/index.html
-- data-manifest.json
+- web/texty.js
 - uat/scenare.json
+- napoveda.json
+- web/napoveda.html (generuje vykresli_napovedu.py)
 - play/co_je_noveho.txt
 - README.md
 - SPEC.md
-- web/zasady.html (generuje vykresli_zasady.py)
-- web/podminky.html (generuje vykresli_zasady.py)
-- web/zpracovatelska-smlouva.html (generuje vykresli_zasady.py)
-- ZAZNAM_O_ZPRACOVANI.md (generuje vykresli_zasady.py)
-- play/BEZPECNOST_DAT.md (generuje vykresli_aplikaci.py)
-- play/zaznam.json (generuje vykresli_aplikaci.py)
+- obnova šablony, ne stavitel: DESIGN.md, web/styl.css, web/simtegen.js, web/ikony.svg, kontrolní skripty (*_kontrola.py, kontrola_jazyku.py, vykresli_*.py); kdyby obnova přinesla změny v functions/api/_middleware.js, web/play.js nebo .github/workflows/deploy.yml, uvést je v PR jako obnovu šablony
 
 ## Rizika
-- **Slovník se rozejde s textem.** Když někdo později změní českou větu v index.html, v API nebo v šabloně (simtegen.js a play.js se obnovují při každé stavbě), anglický uživatel ji uvidí česky. Nic se nerozbije. Pravidlo jde do README a validace obsahuje průchod všemi obrazovkami v EN. Automatickou kontrolu do CI přidat nejde, protože .github/ patří člověku.
-- **Přihlašovací e-mail a stránka /api/overeni zůstávají česky.** Patří šabloně, kterou produkt nesmí měnit. Anglická hláška na úvodu to předem vysvětlí a řekne, na co klepnout. Trvalé řešení je požadavek na šablonu, aby přijala jazyk, a SimteGen ho má dostat jako úkol.
-- **Česky zůstávají i právní texty, nápověda a další dokumenty.** Jde o zásady, podmínky, zpracovatelskou smlouvu, formulář odstoupení, nápovědu (napoveda.html), e-maily k fakturační objednávce předplatného, záznam v Google Play a ukázková data (česká jména motoristů jsou v ČR věrohodná). Závazné jsou české právní texty. Pokud zákazník potřebuje i anglické podmínky nebo anglický Play záznam, je to další zadání pro majitele.
-- **Neznám přesný důvod zákazníka.** Předpoklad je, že jde o pracovníky servisu. Pokud jde o motoristy (anglické štítky pro cizince), řeší to i tento návrh: popisky štítku se řídí jazykem toho, kdo tiskne. Zákaznický portál pro motoristy ale produkt nemá a nepřibude. Majitel by to měl při schválení potvrdit.
-- **Smíšený tým.** Majitel tiskne české štítky, mechanik anglické, takže v regálu můžou viset oba. Údaje (kód, jméno, SPZ, rozměr, pozice) jsou stejné, liší se jen popisky polí.
-- **Stávající zákazníci.** Bez uložené volby zůstává čeština. Jednorázovou nabídku uvidí jen ten, kdo má prohlížeč v jiném jazyce než cs a sk, a jedním klepnutím „Ponechat češtinu“ ji navždy zavře.
-- **Výkon a čitelnost.** MutationObserver běží jen v angličtině a jen hledá ve slovníku, takže je to zanedbatelné. Anglické texty jsou většinou kratší, přesto je potřeba zkontrolovat zalomení tlačítek na 320 px.
-- **SEO.** Anglický úvod vzniká jen v JS, statický český obsah i meta se nemění a hreflang ani anglické URL se nepřidávají. Vyhledávače tak dál vidí jen češtinu, a to je záměr.
-- **Generátory.** Python v tomto prostředí neběží. Bez spuštění vykresli_zasady.py a vykresli_aplikaci.py CI spadne na rozdílu zásad a Bezpečnosti údajů, takže je musí pustit člověk.
+- Jazyk se volí sám: stávající česky mluvící uživatel s telefonem nastaveným anglicky, který jazyk nikdy nezvolil, uvidí po buildu aplikaci anglicky. Majitel to výslovně chce. Návrat je jedno klepnutí v Účtu a volba se uloží k účtu. Zmíní to co_je_noveho.txt a nápověda.
+- Měna podle země: zahraniční návštěvník uvidí na úvodu 4,90 € (schválený web/cenik.json), ale fakturační objednávka je dál jen v Kč a v aplikaci platí cena z Google Play. Podle šablony je to záměr, ale majitel by měl potvrdit, že na úvodu stačí cena v jiné měně a placení zůstává v Kč.
+- Jeden tarif na úvodu: Sezónní vstup a Větší provozovna zmizí z úvodu, ale v objednávce na Předplatném se dál dají vybrat, protože majitel zakázal měnit funkce. Kdyby chtěl prodávat jen Standard, je to změna ceníku a objednávky a patří do jiného zadání.
+- Neznámé limity slov: nová část Text v DESIGN.md v repu zatím není, přijde s obnovou šablony. Cíle ve specifikaci jsou odhad. Při přísnější kontrole se texty zkrátí víc, struktura zůstává.
+- Patička na jednom řádku na 360 px: „Zásady · Podmínky · Smlouva o zpracování · Odstoupení“ je na hraně šířky. Kdyby se nevešla, zkrátí se popisky odkazů (názvy dokumentů na stránkách zůstanou celé), řádek se nezalomí.
+- Ukázka jen v aplikaci: kontrola Google Play hledá data-ukazka v aplikaci, kde zůstává. Kdyby vizuální kontrola vyžadovala viditelné tlačítko i na webu, vrátí se jako vedlejší tlačítko bez odstavce.
+- Tablet bez menu před přihlášením: zůstává levý pruh se značkou a Nahlásit chybu. Kdyby recenzent chtěl i tam plochu bez menu, je to jedno pravidlo v CSS.
+- Generátory a kontroly tu nejdou spustit (Python ani Node), před CI je musí pustit člověk.
 
 ## Jak ověřit
-1. Na telefonu (Chrome 360×740) otevřít anonymně https://pneusklad.simtegen.com. Úvod je česky beze změny a vpravo v hlavičce je „English“. Klepnout na něj: celý úvod je anglicky (Start free, Try the demo, ceník), cena je pořád „129 Kč“ a nad ohybem. V adrese je ?jazyk=en.
-2. Zadat e-mail a „Start free“. Hláška je anglicky a vysvětluje, že e-mail je česky. Otevřít odkaz a přihlásit se. Na Dnes se ukáže nabídka „Use Pneusklad in English?“ (prohlížeč v angličtině), klepnout na English.
-3. Projít v angličtině všechny obrazovky: Today, Storage, set detail, New set (4 kroky a štítek), Bookings, New booking, Prepare wheels, Season overview, Settings, Team, Account and data, Subscription. Kontroluje se, že tam nezůstala žádná česká věta mimo vysvětlené výjimky. Zkusit i chybu (vypnout síť → anglický pruh offline a Try again), Vrátit u výdeje sady a potvrzovací dialog smazání.
-4. Vytisknout štítek sady: popisky jsou anglicky, údaje beze změny. Uložit připomínku .ics: název a popis události jsou anglicky. „Send me the list by e-mail“: e-mail přijde anglicky.
-5. Otevřít aplikaci na druhém zařízení stejným účtem: rovnou anglicky, bez probliknutí češtiny.
-6. Settings → Language → „Přepnout do češtiny“: vše je zpět česky, toast s Vrátit funguje.
-7. Přihlásit se českým účtem servisu bez volby (prohlížeč česky): aplikace vypadá a chová se přesně jako v buildu 14, žádná nabídka.
-8. V aplikaci z Google Play přepnout na English: karta předplatného ukazuje jen nákup přes Google Play, nikde není faktura ani převod.
-9. Account and data → stáhnout data: v exportu je tabulka predvolby s „en“. CI (kontrola manifestu, zásady, aplikace, UAT, vizuální kontrola) je zelené.
+1. Telefon 360×740, anonymní okno, https://pneusklad.simtegen.com: vidíte jen H1, podvětu, tři krátké přednosti, kartu „Standard 129 Kč / firma / měsíc“ s větou „Prvních 30 dní zdarma, bez karty.“, pole e-mailu a jedno černé tlačítko „Začít zdarma“. Dole nesmí být spodní menu, tlačítko English ani přepínač měny. Pod tím je jeden řádek právních odkazů.
+2. Totéž přes VPN z Německa: cena je 4,90 € a přepínač měny nikde není.
+3. Přihlásit se odkazem: spodní menu se objeví a patička zmizí na Dnes, Skladu, Objednávkách i Nastavení. Nový účet: na Dnes je jednořádkový prázdný stav, „Nová sada na uskladnění“ a „Naplnit ukázkovými daty“.
+4. Projít Sklad, Zákazníky, Objednávky, Přípravu, Sezónní přehled, Nastavení, Tým a Předplatné: pod nadpisy sekcí nesmí být žádný vysvětlující odstavec a prázdné stavy mají jeden řádek. Zapsat sadu, vytisknout štítek, založit objednávku a připravit kola: vše funguje jako v buildu 15.
+5. Nastavení → Účet a data: je tu řádek Jazyk (Čeština | English), řádek Nápověda a dole patička. Přepnout na English: aplikace se znovu otevře v Účtu, anglicky, s „Language saved“ a Vrátit. Na druhém zařízení se stejným účtem je rovnou anglicky.
+6. Totéž s ?jazyk=en a na tabletu 820 px a notebooku 1440 px: úvod ve dvou sloupcích, patička na celou šířku, levé menu jen se značkou a Nahlásit chybu.
+7. Aplikace z Google Play: na úvodu je navíc vedlejší „Vyzkoušet ukázku“, v patičce jen Zásady a Smlouva o zpracování, nikde faktura ani převod.
+8. CI zelené: kontrola jazyků, vizuální kontrola (počet slov, jedno černé tlačítko, 13 px, EN bez diakritiky), UAT a kontrola manifestu.
 
 ## Akceptační scénáře (CI je spustí proti API)
-- Přihlášený účet A pošle POST /api/jazyk {"jazyk":"en"} a pak GET /api/jazyk musí vidět odpověď 200 s jazykem „en“.
-- Přihlášený účet B po volbě účtu A zavolá GET /api/jazyk a GET /api/sady a musí vidět jazyk null (ne „en“) a žádnou sadu účtu A.
-- Nepřihlášený návštěvník zavolá GET i POST /api/jazyk a musí dostat 401 bez jakýchkoli údajů.
-- Přihlášený účet A pošle POST /api/jazyk {"jazyk":"de"} a musí dostat 422 a GET /api/jazyk dál vrací „en“.
-- Přihlášený účet A s jazykem „en“ založí přes POST /api/sady novou sadu a musí ji dostat přes GET /api/sady/{id} se stejným kódem a pozicí v regálu jako dosud.
-- Přihlášený účet A stáhne GET /api/ucet/export a musí v něm vidět tabulku predvolby se svou volbou „en“.
+- Nepřihlášený návštěvník otevře GET / a musí vidět nadpis „Víte, kde má který zákazník uložené pneu?“, data-cena="doporuceni", pole e-mailu a #poslat-odkaz, a nesmí vidět hlavicka-jazyk, jazyk-nabidka ani data-prepinac-meny.
+- Přihlášený účet A založí přes POST /api/sady sadu s pozicí v regálu a pak ji dostane přes GET /api/sady/{id} se stejným kódem a pozicí, tedy evidence funguje beze změny.
+- Přihlášený účet B po zápisu účtu A zavolá GET /api/sady a GET /api/jazyk a nesmí vidět žádnou sadu účtu A ani jeho jazykovou volbu.
+- Přihlášený účet A pošle POST /api/jazyk {"jazyk":"en"} a GET /api/jazyk musí vrátit „en“, které je i v GET /api/ucet/export v tabulce predvolby.
+- Nepřihlášený návštěvník zavolá GET /api/ja a musí vidět ceník se Standardem za 129 a "zkusebni_dni":30, bez jakéhokoli e-mailu.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
 
-## Co se při stavbě buildu 15 oproti specifikaci změnilo
+## Co se při stavbě oproti specifikaci změnilo
 
-1. **Překlad jede přes jazykový systém šablony, ne přes vlastní
-   `web/preklad.js`.** Obnova šablony těsně před stavbou přinesla jazyky
-   do `simtegen.js` (`<meta name="simtegen-jazyky" content="cs en">`,
-   slovník `web/texty.js` se `SimteGen.slovnik`, klíče `data-t` v HTML,
-   `SimteGen.t` ve skriptu, přepínač `data-prepinac-jazyka`) a CI to
-   vynucuje (`kontrola_jazyku.py`; vizuální kontrola otevře `?jazyk=en`
-   a odmítne každé ě, š, č, ř, ž, ů, ť, ď, ň na anglické obrazovce).
-   Slovník podle českých vět by šel proti šabloně i kontrole. Výsledek pro
-   zákazníka je stejný, česká obrazovka zůstává doslova stejná.
-2. **Přihlášený bez volby jazyka má češtinu, i s telefonem nastaveným
-   anglicky** (opraveno po recenzi). Úvod pro nepřihlášené vybírá šablona:
-   `?jazyk=` → ruční volba v prohlížeči → jazyk prohlížeče (slovenský =
-   čeština) → angličtina. Po přihlášení ale rozhoduje účet a bez volby
-   (`null`) je to čeština. Stránka se v tom případě jednou znovu načte
-   česky, ještě pod načítací kostrou. Nikdo se nepřepne sám. Na Dnes se
-   pak jednou ukáže dvojjazyčná nabídka „Use Pneusklad in English? ·
-   Používat aplikaci v angličtině?“ s tlačítky „English“ a „Ponechat
-   češtinu“, ale jen když prohlížeč není česky ani slovensky, nebo když
-   si zákazník angličtinu přepnul na úvodu před přihlášením. Obě tlačítka
-   volbu uloží k účtu a nabídka se už neukáže.
-3. **Ruční volbu si prohlížeč pamatuje (`sg-volba`).** Dělá to šablona
-   a zásady to uvádějí (`vykresli_zasady.py`). Produkt sám do prohlížeče
-   nic neukládá a `uloziste_v_prohlizeci` zůstává prázdné.
-4. **Přepnutí jazyka znamená nové načtení stránky.** Tak to dělá
-   `SimteGen.nastavJazyk`. Po přepnutí v Nastavení se aplikace otevře zase
-   v Nastavení a ukáže „Jazyk uložen / Language saved“ s Vrátit (značka
-   `jazyk-zmenen` v adrese, hned se smaže). Když se volbu nepodaří uložit
-   k účtu, jazyk se nepřepne a pod řádkem je chyba („Your language choice
-   could not be saved…“). Jinak by ho příští otevření podle účtu vrátilo.
-5. **Jazyk účtu má po přihlášení přednost.** Liší-li se od jazyka
-   stránky, stránka se jednou načte znovu v jazyce účtu, ještě pod
-   načítací kostrou. Proti zacyklení je v adrese značka `jazyk-z-uctu`,
-   hned se smaže. Odkaz s `?jazyk=` (a kontrola v CI) platí, jak je
-   napsaný.
-6. **Přepínač je na třech místech:** v hlavičce úvodu jedno tlačítko
-   s druhým jazykem („English“ / „Čeština“), plný přepínač šablony
-   v patičce (CI ho vyžaduje) a řádek „Jazyk aplikace · Language“
-   v Nastavení → Účet. Přepnutí patičkou přihlášenému uloží volbu k účtu
-   také.
-7. **Čísla, peníze a data se v angličtině píšou anglicky** („CZK 129“,
-   „25 Oct“, „1,249“). Formát řídí `simtegen.js` podle jazyka stránky,
-   specifikace počítala s českým. Částky se nepřepočítávají, ceník je
-   dál jen v Kč.
-8. **Hlášky API se nepřekládají na serveru.** API mluví česky dál.
-   Anglická obrazovka je přeloží tabulkou `HLASKY_SERVERU` / `HLASKY_VZORY`
-   v `index.html` na klíče `chyba.*`. Hláška, kterou tabulka nezná, se
-   ukáže jako obecná anglická věta, nikdy česky. Nová hláška v API
-   potřebuje řádek v tabulce i ve slovníku.
-9. **Ceník má anglická jména u sebe.** `cenik.js` nese u variant
-   `nazev_en`, `jednotka_en`, `popis_en` a u délek `nazev_en`. Částky
-   jsou tytéž a `/api/ja` je posílá beze změny.
-10. **Česky zůstávají i tyto části:** `web/play.js` (nákup v aplikaci
-    z Google Play a pruh ukázky; šablona, needituje se), přihlašovací
-    e-mail a stránka `/api/overeni`, e-maily k fakturační objednávce,
-    nápověda a právní dokumenty. Odkazy na ně mají v angličtině dovětek
-    „In Czech:“ / „(both in Czech)“ a `lang="cs"`.
-11. **Akceptační scénář úvodu hledá stejné texty volněji**
-    (`>Víte, kde má …</h1>` místo celé značky), protože nadpis, body,
-    `<title>` a popisek e-mailu nesou atribut `data-t`. Nově kontroluje
-    i `simtegen-jazyky` a `texty.js`.
-12. **Přihlašovací odkaz přihlásí až tlačítkem (POST), ne otevřením
-    (GET).** Opravu vyžádala kontrola. Obnovený middleware šablony bere
-    `overeni.js` bez `onRequestPost` jako starou obsluhu, GET obslouží sám
-    a POST přepošle jako GET, na který Pages Functions obsluhu nenajdou.
-    Přihlášení pak vracelo 200 bez cookie relace a UAT ani zákazníci se
-    nepřihlásili. Teď GET ukáže „Přihlásit se jako …?“ a nic nemění.
-    Přihlásí až `POST /api/overeni` z tlačítka (formulář nebo JSON
-    `{token}`). Kde se skutečně posílají e-maily, přijme POST jen z vlastní
-    stránky. Jednorázový kód v cookie `potvrzeni_prihlaseni` odpadl,
-    stejnou ochranu dává POST s kontrolou Origin. Platí i ve vývojovém
-    režimu: odkaz otevře potvrzení a přihlásí tlačítko.
-13. **Nekanonická cesta API dostane 404** (opraveno po bezpečnostní
-    recenzi). Pojistky veřejných zápisů porovnávají cestu přesně (limity
-    a kontrola původu u `/api/prihlaseni`, brána v `functions/_middleware.js`
-    i v middleware šablony). Varianta `/api/prihlaseni/`, `/API/Prihlaseni`,
-    `//` nebo `%` v cestě by je mohla obejít. Produktový
-    `functions/_middleware.js` běží před vším ostatním a takovou cestu pod
-    `/api` odmítne dřív, než dojde k obsluze. Aplikace sama žádnou takovou
-    cestu nevolá.
-14. **Session cookie se jmenuje `__Host-relace`** (opraveno po
-    bezpečnostní recenzi). Cookie pod jménem `relace` mohla podstrčit
-    sesterská subdoména `*.simtegen.com` a přihlásit mechanika do cizího
-    účtu. Přihlášení se teď čte jen z `__Host-relace`
-    (`spolecne.jmenoRelace`), kterou smí nastavit jen tato aplikace. Starou
-    `relace` middleware šablony jen smaže, nikdy ji nepřesune. Kdo ji ještě
-    měl, přihlásí se jednou znovu odkazem. Výjimkou je lokální běh přes http
-    ve vývojovém režimu (UAT), tam zůstává `relace`. Manifest uvádí nové
-    jméno cookie.
-15. **Zdroje návštěv mají strop a limity v D1** (opraveno po bezpečnostní
-    recenzi). `functions/_middleware.js` pustí nejvýš 200 různých
-    (utm_source, utm_campaign) za den, další nový zdroj se započte jako
-    `jine`. `/api/navsteva` navíc počítá limity v D1 (`ochrana.vLimitu`):
-    20 za hodinu z jedné adresy a 1000 za hodinu celkem.
-16. **Správu týmu smí jen správce** (pokyn majitele po bezpečnostní
-    recenzi). `GET` i `POST /api/clenove` (seznam kolegů s e-maily
-    a rolemi, přidání, změna role, odebrání) vrací mechanikovi i „jen
-    čtení“ 403 „Tuto část smí měnit jen správce účtu.“. Kroky, které se
-    týkají jen vlastního členství přihlášeného, se beze změny přesunuly do
-    nového `functions/api/clenstvi.js`: pozvánky na Dnes, přijetí,
-    odmítnutí a „Odejít ze servisu“. Jinak by mechanik nemohl sám odejít
-    a člen cizího servisu by neviděl ani neodmítl pozvánku. Stránka
-    i scénář UAT „Pozvánka do týmu…“ volají pro přijetí novou cestu
-    (jen technický zápis, očekávání se nemění). Data, manifest ani zásady
-    se nemění, je to tatáž tabulka `clenove`.
-17. **Soubory změněné mimo původní rozsah buildu 15:**
-    - *obnova šablony, ne stavitel:* `.github/workflows/deploy.yml`,
-      `functions/api/_middleware.js`, `web/simtegen.js`, `web/play.js`,
-      `web/styl.css`, `web/_headers`, `DESIGN.md`, kontrolní skripty
-      (`*_kontrola.py`, `kontrola_jazyku.py`, `vykresli_*.py`),
-      `functions/api/kontrolni-prihlaseni.js`, `functions/api/prostredi.js`;
-    - *stavitel, vyžádané kontrolou nebo recenzí:*
-      `functions/api/overeni.js` (bod 12, mění hranici přihlášení,
-      schvaluje SimteGen), `spolecne.js`, `functions/api/odhlaseni.js`
-      a `functions/api/ucet/smazat.js` (bod 14), `functions/_middleware.js`
-      (body 13 a 15), `functions/api/navsteva.js` (bod 15),
-      `functions/api/clenove.js` a nový `functions/api/clenstvi.js`
-      (bod 16).
-18. **Generátory ani kontroly stavitel nespustil.** Python ani Node tu
-    bez schválení nejdou spustit. Před CI je musí pustit člověk:
-    `python vykresli_zasady.py`, `python vykresli_napovedu.py` (nové
-    téma „Aplikace v angličtině“), `python vykresli_aplikaci.py`
-    (Bezpečnost údajů, záznam v obchodě s větou o angličtině
-    v `dlouhy_popis`), `python vykresli_seo.py`, pak
-    `python kontrola_manifestu.py` a `python uat_kontrola.py`.
+1. **Nápověda zůstala v patičce, ne jako řádek v Účtu.** Generátor `vykresli_napovedu.py` vyžaduje v `index.html` přesně odkaz `<a href="napoveda.html">Nápověda</a>`. Patička je v Účtu vidět, takže je Nápověda na stejném místě, jen v řádku s právními odkazy.
+2. **Řádek Jazyk kreslí obnovená šablona jako výběr** (`<select>` s popiskem „Jazyk“), ne jako dvě tlačítka. V patičce šablona nic nekreslí. Produkt změnu výběru zachytí dřív než šablona, aby se volba nejdřív uložila k účtu. Když se uložení nepodaří, výběr se vrátí a pod řádkem se ukáže chyba. Jinak by jazyk při příštím otevření vrátila volba uložená k účtu.
+3. **V Účtu zmizel nadpis „Vaše data“.** Bez odstavce by pod ním nic nebylo. Stažení dat je hlavní akce dole.
+4. **Limity slov stavba převzala z `vizualni_kontrola.py`**: nejvýš 20 slov v jednom textu (`p`, `.napoveda`) a 50 na obrazovce. Nová část Text v DESIGN.md v repu zatím není.
+   - Kvůli limitu jsou zkrácené i věty na Předplatném (stav, kdo kupuje, souhlas s podmínkami), nápověda formátu štítku v Nastavení a pozvánka do týmu.
+   - Právně závazný souhlas spotřebitele (§ 1837) zůstal doslova.
+5. **Značka v menu** je „SimteGen“ místo „simtegen“, stejně jako ji za běhu opravuje šablona.
+6. **Modul SCHRÁNKA je zapojený** (po recenzi; je to pokyn majitele). Obrazovka Účet a data má:
+   - kartu „Napište nám“: pole zprávy a vedlejší tlačítko „Odeslat zprávu“ → `POST /api/hlaseni`;
+   - pod ní seznam vlastních zpráv se stavem (Přijato, Řešíme, Vyřízeno, Odloženo), datem a odpovědí → `GET /api/hlaseni`;
+   - stavy: kostra při načítání, jednořádkový prázdný stav, chyba s radou;
+   - nic z toho nehlídá předplatné, takže psát nám jde i po jeho vypršení;
+   - tlačítko Nahlásit chybu ze šablony posílá přihlášenému na stejný endpoint, takže se jeho zpráva objeví ve stejném seznamu.
+
+   Tabulka i endpoint přišly s obnovou šablony, nová funkce ani data tím nevznikají.
+7. **Soubory mimo rozsah stavby:**
+   - *obnova šablony, ne stavitel:*
+     - `web/simtegen.js`, `web/styl.css`, `DESIGN.md`, kontrolní skripty a generátory (`*_kontrola.py`, `vykresli_*.py`);
+     - `functions/api/hlaseni.js`, `schranka_sifra.js`, `db/migrace/0003_hlaseni.sql`;
+     - případně další soubory, které obnova přinesla (`functions/api/_middleware.js`, `web/play.js`, `.github/workflows/deploy.yml`) — je potřeba je ověřit v diffu PR;
+   - *stavitel:*
+     - `data-manifest.json`: entita `hlaseni` a přesný popis služby GitHub (bod 8);
+     - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen);
+     - `functions/api/hlaseni.js`, vyžádala bezpečnostní recenze. Soubor přišel s obnovou šablony a stejnou opravu by měla dostat i šablona, jinak ji příští obnova přepíše.
+       - Limit hlášení se počítá atomicky před zápisem přes `ochrana.vLimitu`: 5 za hodinu na účet, 30 za hodinu a 200 za den na celý produkt.
+       - Dřív to byl `SELECT COUNT` a pak `INSERT`, takže paralelní požadavky limit obešly a každý založil řádek i issue ve veřejném repozitáři.
+       - Ukázkové a kontrolní účty firmy (`@ukazka.invalid`) se do GitHubu nezrcadlí, jejich řádek v aplikaci zůstává.
+
+   Nevzniká žádné nové úložiště v prohlížeči ani cookie. `sg-volba` už zásady uvádějí.
+8. **Oprava po kontrole manifestu:**
+   - Obnova šablony přinesla `db/migrace/0003_hlaseni.sql` a `functions/api/hlaseni.js` (schránka). Manifest proto deklaruje entitu `hlaseni` (hlášení a dotazy zákazníka a naše odpovědi, do smazání účtu).
+   - Popis služby GitHub už netvrdí, že se hlášení v aplikaci neukládá.
+   - Karta tarifu na úvodu na tabletu nepřetéká: číslo se řídí šířkou okna a jednotka se zalomí pod něj.
+   - Nápověda má kratší úvod a témata jako krátké kroky (limit 20 slov na odstavec) a nové téma „Jak nám napsat“.
+   - Řádek patičky se na telefonu do 400 px zalomí do dvou řádků. Celý má asi 64 znaků a na 360 px se vejde asi 43, takže by nestačilo ani zkrácení popisků. Na tabletu a notebooku je na jednom řádku, v aplikaci z Google Play (bez Podmínek a Odstoupení) i na telefonu.
+9. **Oprava po kontrole migrace na datech staré verze:** změněn `functions/api/overeni.js`. Jde o soubor mimo rozsah stavby; je to změna stavitele, ne obnova šablony, a vyžádala si ji kontrola.
+   - **Co kontrola hlásila:** u účtů ze staré verze zopakovala i stránku „Přihlásit se jako …?“ z už použitého jednorázového odkazu. Dostala 403 a ohlásila to jako odhlášení zákazníků.
+   - **Migrace `0003_hlaseni.sql`** jen zakládá novou tabulku a nikoho neodhlašuje.
+   - **Teď:** použitý nebo vypršelý odkaz otevřený z e-mailu dostane stránku „Odkaz už neplatí“ s cestou zpět na úvod a kódem 410 Gone místo holého textu s 403.
+   - **Beze změny:** přihlášení dál umí jen tlačítko (POST) a ten neplatný odkaz odmítá s 403, hranice přihlášení se nemění.
+10. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
+   - `python vykresli_napovedu.py`
+   - `python vykresli_zasady.py`
+   - `python vykresli_seo.py`
+   - `python vykresli_aplikaci.py`
+   - pak `python kontrola_manifestu.py`, `python kontrola_jazyku.py`, `python uat_kontrola.py` a `vizualni_kontrola.py`

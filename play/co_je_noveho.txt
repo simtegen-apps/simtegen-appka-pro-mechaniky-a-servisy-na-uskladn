@@ -1,1 +1,1 @@
-Aplikaci teď můžete používat i v angličtině. Jazyk si každý pracovník servisu zvolí sám v Nastavení → Účet a volba platí na všech jeho zařízeních. Anglicky jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Evidence, ceny ani objednávky se nemění.
+Aplikace je přehlednější: kratší texty, jednodušší úvodní obrazovka a méně vysvětlujících odstavců. Jazyk se nastaví sám podle telefonu, změníte ho v Nastavení na obrazovce Účet a data. Tamtéž nám nově napíšete a uvidíte naši odpověď. Evidence, štítky, objednávky ani ceny se nemění.

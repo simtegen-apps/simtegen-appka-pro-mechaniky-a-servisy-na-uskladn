@@ -236,6 +236,20 @@
         "funkce"
       ],
       "play_volitelne": true
+    },
+    {
+      "entita": "hlaseni",
+      "ucel": "hlášení a dotazy zákazníka a naše odpovědi; o odpovědi vás upozorníme e-mailem (s textem odpovědi, nejvýš jednou za odpověď)",
+      "pole": "odkaz na účet, text hlášení, stav, odpověď, číslo záznamu v systému podpory, čas vytvoření a poslední změny",
+      "retence": "do smazání účtu zákazníkem",
+      "play_typy": [
+        "zpravy"
+      ],
+      "play_ucely": [
+        "funkce",
+        "komunikace"
+      ],
+      "play_volitelne": true
     }
   ],
   "agregaty": [
@@ -257,7 +271,7 @@
     },
     {
       "nazev": "GitHub",
-      "ucel": "předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá",
+      "ucel": "evidence hlášení zákazníků pro podporu (text hlášení, technické údaje o stránce a anonymní otisk účtu s údajem, zda je předplatné zaplacené, a stářím účtu — šifrovaně, GitHub vidí jen nečitelný blok; bez e-mailu a jména)",
       "domena": "api.github.com",
       "dpa": "https://github.com/customer-terms/github-data-protection-agreement"
     },
