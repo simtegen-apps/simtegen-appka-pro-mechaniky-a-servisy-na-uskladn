@@ -132,10 +132,16 @@ a slova jsou ve `web/texty.js` v obou jazycích. Ve skriptu se píše
   v `HLASKY_SERVERU` (nebo `HLASKY_VZORY`, když obsahuje číslo či čas)
   v `index.html` a klíč `chyba.*` ve slovníku. Jinak anglická obrazovka
   ukáže jen obecnou větu.
-- **Volba jazyka** se pamatuje na účtu (tabulka `predvolby`,
-  `/api/jazyk`) jako volba osoby, ne servisu. Po přihlášení má přednost
-  před prohlížečem. Účet bez volby je česky, i když má telefon anglicky. E-mail „Příprava na …“ (`/api/priprava`) jde
-  v jazyce toho, kdo ho posílá.
+- **Jazyk se volí sám** (od buildu 16): `?jazyk=` → ruční volba v tomto
+  prohlížeči → jazyk prohlížeče (slovenština = čeština). Ručně se mění jen
+  řádkem „Jazyk“ na obrazovce Účet a data (`<div data-prepinac-jazyka>`,
+  kreslí ho `simtegen.js`; jinde ho nepřidávejte). Přihlášenému se ruční
+  volba uloží na účet (tabulka `predvolby`, `/api/jazyk`) jako volba
+  osoby, ne servisu, a po přihlášení má přednost. Účet bez volby (`null`)
+  nic nevnucuje. E-mail „Příprava na …“ (`/api/priprava`) jde v jazyce
+  toho, kdo ho posílá.
+- **Měna** na úvodu se řídí zemí (`simtegen.js`, `data-cena`), přepínač
+  měny produkt nemá. Fakturační objednávka je dál jen v Kč.
 - **Ceník** má u variant a délek anglické texty (`*_en` v `cenik.js`).
   Při změně názvu nebo jednotky přepište obojí.
 - **Česky zůstávají** přihlašovací e-mail a `/api/overeni` (šablona),
@@ -146,6 +152,21 @@ Slovník oboru: sada = tyre set, regál = rack, místo = rack position,
 štítek = label, uskladnění = storage, přezutí = tyre change, výdej =
 release, dezén = tread, SPZ = plate, objednávka = booking, správce /
 mechanik / jen čtení = admin / mechanic / read only.
+
+## Úvod, patička a texty (build 16)
+
+- **Úvod** má jen hlavní větu, podvětu, tři krátké přednosti, kartu
+  jednoho tarifu (`data-cena="doporuceni"` z `web/cenik.json`, měnu dává
+  země) s větou o zkušebním období a tlačítko „Začít zdarma“. „Vyzkoušet
+  ukázku“ je jen v aplikaci z Google Play (`.jen-v-aplikaci`).
+- **Patička** (nápověda a právní odkazy na jednom řádku) je vidět jen na
+  úvodu a v Účtu — řídí to `body[data-obrazovka]`, který nastavuje
+  `ukaz()`. Nahlásit chybu je v menu a v hlavičce telefonu.
+- **Spodní menu** na telefonu je až po přihlášení.
+- **Texty:** pod nadpisem sekce žádný vysvětlující odstavec, prázdný stav
+  jedna krátká věta. Vizuální kontrola počítá slova (`p`, `.napoveda`):
+  nejvýš 20 v jedné větě a 50 na obrazovce (DESIGN.md, Text). Angličtina
+  se drží stejně krátká.
 
 ## Google Play
 

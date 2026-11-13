@@ -18,6 +18,30 @@ je hodnota ve výkresu, ne v čísle.
 Každá obrazovka má jednu věc, kvůli které existuje — ta je největší a
 první; všechno ostatní ustoupí.
 
+## Text — málo slov (měří se, nad limit stavba neprojde)
+
+Majitel appky v3 popsal jako „strašně přetextované a složité“. Aplikace
+mluví tlačítky, nadpisy a daty, ne odstavci. `vizualni_kontrola.py` počítá
+vysvětlující text (`p`, `small`, `.napoveda`, `.popis`, `figcaption`) na
+každé obrazovce:
+
+- **Jedna vysvětlující věta nejvýš 20 slov**, na obrazovce **nejvýš 50
+  slov** vysvětlování dohromady. Data (seznamy, řádky, výkres) se nepočítají.
+- **Pod nadpisem sekce žádný odstavec**, co vysvětluje, k čemu sekce je.
+  Nadpis „Předplatné“ s datem konce stačí; „Předplatné odemyká…“ ne.
+- **Prázdný stav jednou krátkou větou** a tlačítkem („Zatím žádné zakázky.“
+  + „Nová zakázka“), ne návodem.
+- **Úvodní stránka** (nepřihlášený): nadpis, jedna věta pod ním, obrázek nebo
+  výkres, nejvýš tři přednosti po jednom řádku (bez podřádků), jedna cena —
+  jen ta, kterou jde koupit (tarif „zatím nejde“ se nezobrazuje), zkušební
+  doba jednou větou, „Vyzkoušet ukázku“ a přihlášení. Nic dalšího.
+- **Patička** jen na úvodu a v Účtu: právní odkazy jedním řádkem drobného
+  písma (zásady, podmínky, smlouva, odstoupení) a „Nahlásit chybu“. Ne
+  v každé obrazovce, ne jako seznam pod sebou, ne přepínač jazyka.
+- **Spodní menu až po přihlášení** — nepřihlášenému nemá co ukázat.
+- Název tarifu bez firmy a produktu („Standard“, ne „SimteGen Kusovník -
+  Standard“); popis tarifu nejvýš jeden řádek.
+
 ## Podpis firmy (co má každá appka)
 
 - **Úvodní obrazovka s logem SimteGen** při každém startu — dělá ji
@@ -334,11 +358,15 @@ SimteGen.slovnik({
   celá věta s `{proměnnou}` je jeden klíč.
 - **Hláška ze serveru** se zákazníkovi neukazuje doslova, když produkt mluví víc
   jazyky: API vrací i `kod` a stránka ukáže `SimteGen.t("chyba." + kod)`.
-- **Přepínač** `<div data-prepinac-jazyka></div>` patří do patičky nebo účtu —
-  kreslí ho `simtegen.js` (názvy jazyků v jejich vlastní řeči).
-- **Výběr:** ruční volba zákazníka, jinak jazyk prohlížeče (slovenský dostane
-  češtinu), jinak angličtina. `?jazyk=en` v adrese otevře stránku anglicky (tak
-  ji kontroluje CI). Produkt bez `simtegen-jazyky` je celý česky — i pruhy šablony.
+- **Jazyk je automaticky jazyk zařízení** (slovenský dostane češtinu, jiný
+  než čeština angličtinu). Ručně se mění jen v **Účtu jedním řádkem**
+  „Jazyk · Čeština ▾“: `<div data-prepinac-jazyka></div>` v obrazovce Účet
+  (nastavení) — kreslí ho `simtegen.js` jako řádek s výběrem. **Nikdy
+  v patičce, hlavičce úvodu ani jako nabídka „Switch to English?“** —
+  takhle žádná aplikace nevypadá. Přepínač v patičce se nevykreslí.
+- **Výběr:** ruční volba zákazníka, jinak jazyk prohlížeče, jinak angličtina.
+  `?jazyk=en` v adrese otevře stránku anglicky (tak ji kontroluje CI). Produkt
+  bez `simtegen-jazyky` je celý česky — i pruhy šablony.
 - **Angličtina** je přirozená, ne doslovný překlad: krátké věty, sloveso na
   tlačítku („Save the order“), oslovení „you“, bez slangu. Jména a data
   zákazníka (ukázková data) se nepřekládají.
@@ -348,17 +376,16 @@ schválení — stavitel ho needituje a ceny v jiných měnách nikdy nepočít�
 
 ```html
 <p><span data-cena="mesic"></span> <span data-cena-jednotka="mesic"></span></p>
-<div data-prepinac-meny></div>
 ```
 
-- `simtegen.js` doplní částku v měně zákazníka: Česko Kč, Evropa EUR, jinde USD
-  (země z připojení, `/api/prostredi`; nikde se neukládá), ruční volba přepínačem
-  má přednost. Kreslí-li produkt ceny sám, vezme je ze `SimteGen.cenik()` a na
-  událost `sg-mena` je překreslí.
+- `simtegen.js` doplní částku v měně zákazníka **automaticky**: Česko Kč,
+  Evropa EUR, jinde USD (země z připojení, `/api/prostredi`; nikde se
+  neukládá). **Přepínač měny se nekreslí** — zákazník měnu nevolí, stejně jako
+  v obchodě. Kreslí-li produkt ceny sám, vezme je ze `SimteGen.cenik()`.
 - Položka, která v dané měně cenu nemá, se ukáže v Kč — nikdy přepočtená.
 - Platba v aplikaci z Google Play ukazuje cenu, kterou vrátí Google (`play.js`).
 
-Volbu jazyka a měny si prohlížeč pamatuje (`sg-volba`), jen když ji zákazník
+Volbu jazyka si prohlížeč pamatuje (`sg-volba`), jen když ji zákazník
 sám přepnul — zásady to uvádějí; jiné ukládání v prohlížeči tím nevzniká.
 
 ## Potvrzení a vrácení

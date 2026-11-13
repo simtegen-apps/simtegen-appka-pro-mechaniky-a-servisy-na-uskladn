@@ -155,6 +155,15 @@
     body:not(.jen-cteni) .jen-cteni-zprava { display: none !important; }
     body.spravce .jen-mechanik-zprava { display: none !important; }
     body:not(.prihlasen) .navigace > button[data-obrazovka] { display: none !important; }
+    /* Build 16: patička jen na úvodu a v Účtu (data-obrazovka na <body>
+       nastavuje ukaz()), spodní menu na telefonu až po přihlášení — před
+       ním by byl dole prázdný pás. Hlavní akce úvodu pak sedí u spodní
+       hrany. Tablet a notebook mají levý pruh se značkou a Nahlásit chybu. */
+    body:not([data-obrazovka="obrazovka-prihlaseni"]):not([data-obrazovka="obrazovka-ucet"]) .paticka { display: none; }
+    @media (max-width: 767px) {
+      body:not(.prihlasen) .navigace { display: none; }
+      body:not(.prihlasen) .lista-dole { bottom: env(safe-area-inset-bottom); }
+    }
 
     /* Google Play. Sekce s ukázkou zmizí spolu s tlačítkem (styl.css ho
        skryje, dokud play.js nenajde /ukazka.json). Nákup přes Google Play
@@ -200,7 +209,7 @@
     <nav class="navigace" aria-label="Hlavní menu" data-t-aria-label="nav.menu">
       <a class="znacka" href="/" aria-label="SimteGen">
         <span class="znacka-ctverec" aria-hidden="true"></span>
-        <span class="znacka-slovo">simtegen</span>
+        <span class="znacka-slovo">SimteGen</span>
       </a>
       <button data-obrazovka="obrazovka-dnes" aria-current="page" data-t="nav.dnes">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -235,10 +244,6 @@
       </button>
       <h1 id="hlavicka-titulek">Pneusklad</h1>
       <span class="stitek" id="hlavicka-znacka"></span>
-      <!-- Jen na úvodu: druhý jazyk jedním klepnutím, napsaný v jeho vlastní
-           řeči (kdo neumí česky, „English“ najde). Plný přepínač šablony je
-           v patičce; tady by se dvě tlačítka na 360 px do hlavičky nevešla. -->
-      <button class="tlacitko vedlejsi" id="hlavicka-jazyk" type="button" lang="en" hidden>English</button>
       <button class="nahlasit-chybu jen-telefon" type="button" aria-label="Nahlásit chybu"
               data-t-aria-label="nahlasit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -257,73 +262,55 @@
       </section>
 
       <!-- ------------------------ Úvod a přihlášení ----------------------- -->
-      <!-- Texty nadpisu a tří bodů dal markeťák — je to zároveň
-           obsah pro vyhledávače, proto stojí staticky v HTML. Cena se
-           zkušební dobou musí být vidět bez posouvání (telefon 360×740). -->
+      <!-- Build 16: hlavní věta, jedna podvěta, tři krátké přednosti, jeden
+           tarif a jedno tlačítko — nic dalšího. Nadpis a přednosti stojí
+           staticky v HTML (obsah pro vyhledávače). Částku a jednotku tarifu
+           doplní simtegen.js z web/cenik.json v měně podle země zákazníka;
+           přepínač měny tu záměrně není. -->
       <section id="obrazovka-prihlaseni" class="obrazovka">
         <div class="mrizka">
         <div class="sekce s7">
           <h1 class="titulek-velky" data-t="uvod.nadpis">Víte, kde má který zákazník uložené pneu?</h1>
+          <p data-t="uvod.podveta">Pro malé a mobilní pneuservisy. Bez instalace.</p>
           <ul class="seznam">
-            <li class="radek">
-              <span class="hlavni"><strong data-t="uvod.evidence">Evidence pneu</strong>
-                <span data-t="uvod.evidence_popis">Čí sada je kde, sezónu po sezóně</span></span>
-            </li>
-            <li class="radek">
-              <span class="hlavni"><strong data-t="uvod.stitky">Tisk štítků</strong>
-                <span data-t="uvod.stitky_popis">Kód sady z vaší tiskárny štítků</span></span>
-            </li>
-            <li class="radek">
-              <span class="hlavni"><strong data-t="uvod.objednavky">Objednávky s připomínkou</strong>
-                <span data-t="uvod.objednavky_popis">Den předem víte, co sundat z regálu</span></span>
-            </li>
+            <li class="radek"><span class="hlavni"><strong data-t="uvod.evidence">Evidence pneu přes všechny sezóny</strong></span></li>
+            <li class="radek"><span class="hlavni"><strong data-t="uvod.stitky">Štítky z vaší tiskárny</strong></span></li>
+            <li class="radek"><span class="hlavni"><strong data-t="uvod.objednavky">Připomínka den před přezutím</strong></span></li>
           </ul>
         </div>
 
         <div class="s5 pod-sebou">
+          <!-- Jeden tarif, který jde koupit (i přes Google Play). Dokud ceník
+               nedorazí, stojí tu kostra; když nedorazí vůbec, karta zůstane
+               skrytá — nikdy prázdný rám — a přihlášení funguje dál. -->
+          <div class="kostra vysoka" id="uvod-cena-kostra" aria-hidden="true"></div>
           <div class="karta vykres" id="uvod-cena" hidden>
-            <p class="stitek" data-t="uvod.cena_od">Cena od</p>
+            <p class="stitek" id="uvod-tarif"></p>
             <div class="cislo-radek">
-              <span class="cislo-obri" id="uvod-cena-cislo">—</span>
-              <p><span data-t="uvod.mesicne">měsíčně</span><br><span data-t="uvod.za_firmu">za firmu</span></p>
+              <span class="cislo-obri" data-cena="doporuceni"></span>
+              <p><span data-cena-jednotka="doporuceni"></span></p>
             </div>
-            <p class="popisek" id="uvod-zkusebni"></p>
+            <p id="uvod-zkusebni"></p>
           </div>
 
-          <div class="sekce">
-            <h2 class="sekce-titulek"><span data-t="uvod.prihlaseni">Přihlášení</span></h2>
-            <div class="pole">
-              <label for="email" data-t="uvod.email">E-mail provozovny</label>
-              <input id="email" type="email" autocomplete="email" inputmode="email"
-                     enterkeyhint="send" placeholder="servis@email.cz" data-t-placeholder="uvod.email_vzor">
-              <span class="napoveda" data-t="uvod.email_napoveda">Pošleme vám přihlašovací odkaz. Heslo nepotřebujete.</span>
-            </div>
-            <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
-            <p class="popisek" data-t="uvod.data_eu">Data jsou v databázi v Evropské unii. Kdykoli si je
-            stáhnete nebo smažete přímo v aplikaci.</p>
+          <div class="pole">
+            <label for="email" data-t="uvod.email">E-mail provozovny</label>
+            <input id="email" type="email" autocomplete="email" inputmode="email"
+                   enterkeyhint="send" placeholder="servis@email.cz" data-t-placeholder="uvod.email_vzor">
+            <span class="napoveda" data-t="uvod.email_napoveda">Pošleme vám odkaz, heslo nepotřebujete.</span>
           </div>
+          <div id="prihlaseni-zprava" class="zprava" aria-live="polite"></div>
 
           <div class="lista-dole">
             <button class="tlacitko" id="poslat-odkaz" type="button" data-t="uvod.zacit">Začít zdarma</button>
           </div>
-        </div>
 
-        <!-- Ukázka bez přihlášení (pravidla Google Play: kontrolor se
-             e-mailovým odkazem nepřihlásí). Dočasný účet a jeho data obsluhuje
-             web/play.js; sekce se ukáže, jen když ukázka existuje. -->
-        <div class="sekce sekce-ukazka">
-          <h2 class="sekce-titulek"><span data-t="uvod.bez_registrace">Bez registrace</span></h2>
-          <p class="popisek" data-t="uvod.ukazka_popis">Dočasný účet s vymyšlenými daty na 24 hodin:
-          sklad s pozicemi v regálu, objednávky na zítřek i sezónní přehled.</p>
-          <button type="button" class="tlacitko vedlejsi" data-ukazka data-t="uvod.ukazka">Vyzkoušet ukázku</button>
-        </div>
-
-        <!-- Všechny varianty až pod přihlášením; nahoře stačí „cena od“.
-             Plní vykresliUvod() a karta ceny je s ním skrytá i odkrytá. -->
-        <div class="sekce" id="uvod-cenik-sekce" hidden>
-          <h2 class="sekce-titulek"><span data-t="cenik.nadpis">Ceník</span></h2>
-          <div class="radky" id="uvod-cenik"></div>
-          <p class="popisek" id="uvod-cenik-obsah"></p>
+          <!-- Ukázka bez přihlášení jen v aplikaci z Google Play (kontrolor
+               se e-mailovým odkazem nepřihlásí). Na webu má úvod jediné
+               tlačítko. Dočasný účet obsluhuje web/play.js. -->
+          <div class="sekce-ukazka jen-v-aplikaci">
+            <button type="button" class="tlacitko vedlejsi" data-ukazka data-t="uvod.ukazka">Vyzkoušet ukázku</button>
+          </div>
         </div>
         </div>
       </section>
@@ -340,26 +327,10 @@
              přijme. Vykresluje vykresliPozvanky(). -->
         <div id="pozvanky" class="pod-sebou" hidden></div>
 
-        <!-- Jednou za účet bez volby jazyka, a jen tomu, kdo nejspíš čte
-             anglicky (prohlížeč mimo cs/sk, nebo před přihlášením přepnul na
-             angličtinu). Aplikace je do té doby česky jako dřív; nikdo se
-             nepřepne sám. Obě tlačítka volbu uloží k účtu, takže se nabídka
-             už neukáže. Dvojjazyčně, každá půlka ve svém jazyce. -->
-        <div class="hlaska" id="jazyk-nabidka" hidden>
-          <p><span lang="en">Use Pneusklad in English?</span> ·
-            <span lang="cs">Používat aplikaci v angličtině?</span></p>
-          <div class="radka">
-            <button type="button" class="tlacitko vedlejsi" id="jazyk-anglicky" lang="en">English</button>
-            <button type="button" class="tlacitko vedlejsi" id="jazyk-cesky" lang="cs">Ponechat češtinu</button>
-          </div>
-          <div id="jazyk-zprava" class="zprava" aria-live="polite"></div>
-        </div>
-
-        <!-- Nový účet bez jediné sady: věta, co sem patří, a cesta dál.
+        <!-- Nový účet bez jediné sady: jeden řádek, co sem patří, a cesta dál.
              Hlavní akcí zůstává „Nová sada na uskladnění“ dole v liště. -->
         <div class="prazdno" id="dnes-prazdno" hidden>
-          <p data-t="dnes.prazdno">Tady uvidíte, která kola máte zítra sundat z regálu. Začněte
-          první uskladněnou sadou — zapíšete ji tlačítkem dole.</p>
+          <p data-t="dnes.prazdno">Zapište první uskladněnou sadu.</p>
           <button type="button" class="tlacitko vedlejsi jen-vlastnik jen-zapis"
                   id="dnes-ukazka" data-t="ukazka.naplnit">Naplnit ukázkovými daty</button>
           <div id="dnes-prazdno-zprava" class="zprava" aria-live="polite"></div>
@@ -578,8 +549,6 @@
 
         <div class="krok" id="krok-3">
           <h2 class="sekce-titulek"><span data-t="ns.krok3">Hloubka dezénu</span></h2>
-          <p class="popisek" data-t="ns.hloubka_popis">V milimetrech. Nechte prázdné, pokud jste neměřili —
-          do přehledu opotřebení se pak sada nezapočítá.</p>
           <div class="mriz-kol">
             <div class="pole"><label for="ns-h-lp" data-t="ns.lp">Levá přední</label>
               <input id="ns-h-lp" inputmode="decimal" autocomplete="off" placeholder="—"></div>
@@ -590,6 +559,7 @@
             <div class="pole"><label for="ns-h-pz" data-t="ns.pz">Pravá zadní</label>
               <input id="ns-h-pz" inputmode="decimal" autocomplete="off" placeholder="—"></div>
           </div>
+          <p class="napoveda" data-t="ns.hloubka_napoveda">V mm, nepovinné.</p>
           <p class="hlaska varovani" id="ns-varovani" hidden></p>
         </div>
 
@@ -805,8 +775,6 @@
         <div class="pod-sebou">
         <div class="jen-spravce sekce">
           <h2 class="sekce-titulek"><span data-t="nast.provoz">Provoz</span></h2>
-          <p class="popisek" data-t="nast.provoz_popis">Podle toho vám appka u objednávek napoví, kdy máte
-          otevřeno a kdy už je plno.</p>
           <div class="dvojice">
             <div class="pole"><label for="nast-otevreno-od" data-t="nast.otevreno_od">Otevřeno od</label>
               <input id="nast-otevreno-od" type="time" step="300" value="08:00"></div>
@@ -850,15 +818,7 @@
                 <span data-t="nast.ucet_popis">Stažení dat, odhlášení, smazání účtu</span></span>
               <span class="vpravo" aria-hidden="true">›</span>
             </button>
-            <!-- Jazyk je volba osoby, ne servisu: vidí ho každá role. Uloží
-                 se k účtu (/api/jazyk), takže platí na všech zařízeních. -->
-            <button class="radek" id="nast-jazyk" type="button">
-              <span class="hlavni"><strong data-t="nast.jazyk">Jazyk aplikace · Language</strong>
-                <span id="nast-jazyk-hodnota" lang="cs">Čeština</span></span>
-              <span class="vpravo" id="nast-jazyk-akce" lang="en">Switch to English</span>
-            </button>
           </div>
-          <div id="nast-jazyk-zprava" class="zprava" aria-live="polite"></div>
           <p class="hlaska varovani jen-cteni-zprava" data-t="nast.jen_cteni">Máte přístup jen pro čtení.
           Zapisovat sady a objednávky může mechanik nebo správce.</p>
           <button class="tlacitko vedlejsi" id="nast-navod" type="button" data-t="nast.navod">Zobrazit návod</button>
@@ -876,9 +836,6 @@
         <div class="dva-sloupce">
         <div class="sekce">
           <h2 class="sekce-titulek"><span data-t="tym.kolegove">Kolegové</span></h2>
-          <p class="popisek" data-t="tym.popis">Kolega se přihlásí svým e-mailem — stejným odkazem
-          jako vy — a uvidí váš servis. Správce může všechno, mechanik dělá
-          běžnou práci bez nastavení, „jen čtení“ se nesmí ničeho dotknout.</p>
           <div id="tym-seznam" class="seznam" aria-live="polite"></div>
         </div>
         <div class="sekce">
@@ -907,14 +864,16 @@
         <div class="dva-sloupce">
         <div class="pod-sebou">
         <div class="sekce">
-          <h2 class="sekce-titulek"><span data-t="ucet.data">Vaše data</span></h2>
-          <p class="popisek" data-t="ucet.data_popis">Celou evidenci sad, zákazníků a objednávek si
-          stáhnete jako soubor. Data jsou v databázi v Evropské unii.</p>
+          <!-- Jazyk se volí sám (jazyk telefonu, slovenština = čeština).
+               Ručně jen tady: jeden řádek „Jazyk“, který kreslí simtegen.js.
+               Přihlášenému se volba uloží k účtu (/api/jazyk) — viz Jazyk
+               ve skriptu. -->
+          <div data-prepinac-jazyka></div>
+          <div id="ucet-jazyk-zprava" class="zprava" aria-live="polite"></div>
           <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
         </div>
 
         <div class="karta">
-          <p data-t="ucet.doporucit_otazka">Znáte kolegu z oboru, kterému by Pneusklad ušetřil práci?</p>
           <button type="button" class="tlacitko vedlejsi" data-doporucit="ucet"
                   data-t="ucet.doporucit">Doporučit kolegovi</button>
         </div>
@@ -923,8 +882,6 @@
         <div class="pod-sebou">
         <div class="jen-spravce sekce">
           <h2 class="sekce-titulek"><span data-t="ucet.ukazka">Ukázková data</span></h2>
-          <p class="popisek" data-t="ucet.ukazka_popis">Naplní účet vymyšlenými zákazníky a sadami, abyste si
-          appku mohli vyzkoušet. Skutečné záznamy zůstanou nedotčené.</p>
           <div class="radka">
             <button class="tlacitko vedlejsi jen-zapis" id="nast-ukazka-naplnit" type="button"
                     data-t="ukazka.naplnit">Naplnit ukázkovými daty</button>
@@ -935,15 +892,11 @@
 
         <div class="sekce" id="ucet-odejit-blok" hidden>
           <h2 class="sekce-titulek"><span data-t="ucet.odejit">Odejít ze servisu</span></h2>
-          <p class="popisek" data-t="ucet.odejit_popis">Pracujete v servisu, který patří jinému účtu. Odejdete-li,
-          přístup k jeho evidenci ztratíte, dokud vás správce znovu nepozve.</p>
           <button class="tlacitko vedlejsi" id="ucet-odejit" type="button" data-t="ucet.odejit">Odejít ze servisu</button>
         </div>
 
         <div class="sekce">
           <h2 class="sekce-titulek"><span data-t="ucet.smazani">Smazání účtu</span></h2>
-          <p class="popisek" data-t="ucet.smazani_popis">Smaže účet i celou evidenci. Než to uděláte, stáhněte
-          si data — vrátit to nejde.</p>
           <button class="tlacitko varovne" id="smazat-ucet" type="button" data-t="ucet.smazat">Smazat účet a všechna data</button>
         </div>
         </div>
@@ -964,8 +917,7 @@
         </div>
 
         <div id="pred-prazdno" class="prazdno" hidden>
-          <p data-t="pred.nezjisteno">Stav předplatného se nepodařilo zjistit. Zkontrolujte prosím
-          připojení.</p>
+          <p data-t="pred.nezjisteno">Stav předplatného se nepodařilo načíst.</p>
           <button class="tlacitko vedlejsi" id="pred-znovu" type="button" data-t="obecne.zkusit_znovu">Zkusit znovu</button>
         </div>
 
@@ -989,21 +941,12 @@
           </div>
 
           <div class="s7 pod-sebou">
-          <!-- Ceník všech variant jen na webu: v aplikaci z Google Play se
-               kupuje jen to, co nabízí Google Play, a cenu s podmínkami ukáže
-               sám panel nákupu. Varianty, které tam koupit nejde, by
-               ukazovaly k placení jinde. (Úvodní obrazovka ceník ukazuje.) -->
-          <div class="sekce" data-objednavka>
-            <h2 class="sekce-titulek"><span data-t="cenik.nadpis">Ceník</span></h2>
-            <!-- Přesně podle schválení majitele (cenik.js → /api/ja). -->
-            <div class="radky" id="pred-cenik"></div>
-            <p class="popisek" id="pred-cenik-obsah"></p>
-            <p class="popisek" data-t="pred.za_provozovnu">Cena je za celou provozovnu, ne za mechanika.
-            Ve zkušebním období neplatíte nic.</p>
-          </div>
-
+          <!-- Build 16: samostatná sekce Ceník zmizela. Cenu zvolené varianty
+               ukazuje „Celkem k úhradě“ přímo v objednávce (rozpis = cena ×
+               měsíce, za celou provozovnu); v aplikaci z Google Play cenu
+               s podmínkami ukáže panel nákupu. -->
           <p class="hlaska varovani jen-mechanik-zprava" data-t="pred.kupuje_spravce">Předplatné kupuje
-          správce účtu. Zaplacené období pak platí pro celý tým.</p>
+          správce účtu. Platí pro celý tým.</p>
 
           <div class="jen-spravce sekce">
             <h2 class="sekce-titulek"><span class="jen-v-aplikaci" data-t="pred.nakup">Nákup</span><span
@@ -1012,8 +955,7 @@
                  Google Play (cena, automatické obnovení, zrušení). -->
             <div data-predplatne-play></div>
             <p class="hlaska varovani jen-v-aplikaci jen-pozvany-zprava" data-t="pred.kupuje_majitel">V aplikaci
-            kupuje předplatné majitel účtu — ten, kdo provozovnu v Pneuskladu
-            založil. Zaplacené období pak platí pro celý tým.</p>
+            kupuje předplatné majitel účtu. Platí pro celý tým.</p>
 
             <!-- Fakturační objednávka: jen na webu. V aplikaci z Google Play ji
                  styl.css skryje (data-objednavka), dokud play.js nepotvrdí
@@ -1038,7 +980,7 @@
               <textarea id="pred-fakturace" rows="4"
                 placeholder="Název nebo jméno, adresa, IČO a DIČ (máte-li)"
                 data-t-placeholder="pred.fakturace_vzor"></textarea>
-              <span class="napoveda" data-t="pred.fakturace_napoveda">Podle nich vám provozovatel vystaví fakturu.</span>
+              <span class="napoveda" data-t="pred.fakturace_napoveda">Podle nich vystavíme fakturu.</span>
             </div>
             <label class="volba">
               <input type="checkbox" id="pred-spotrebitel">
@@ -1055,11 +997,11 @@
             </label>
             <!-- Odkazy vedou na české dokumenty (závazné jsou české právní
                  texty): v angličtině to říká dovětek za nimi. -->
-            <p class="popisek"><span data-t="pred.souhlas_podminky">Odesláním objednávky souhlasíte s</span>
+            <p class="popisek"><span data-t="pred.souhlas_podminky">Odesláním souhlasíte s</span>
             <a href="podminky.html" data-t="pred.odkaz_podminky">obchodními podmínkami</a>
             <span data-t="pred.berete_na_vedomi">a berete na vědomí</span>
             <a href="zasady.html" data-t="pred.odkaz_zasady">zásady zpracování údajů</a><span data-t="pred.cesky_dovetek"></span>.
-            <span data-t="pred.platba_prevodem">Platí se převodem na fakturu, aplikace peníze nepřijímá.</span></p>
+            <span data-t="pred.platba_prevodem">Platíte převodem na fakturu.</span></p>
             <div id="pred-zprava" class="zprava" aria-live="polite"></div>
             </div>
           </div>
@@ -1077,21 +1019,23 @@
       </section>
     </main>
 
+    <!-- Patička jen na úvodu a v Účtu (pravidlo podle body[data-obrazovka]
+         nahoře): nápověda a právní odkazy na jednom malém řádku. Dokumenty
+         jsou jen česky (závazné jsou české právní texty) — v angličtině to
+         předem řekne „In Czech:“ a lang="cs" je ohlásí čtečce i kontrole.
+         Nahlásit chybu je v menu (tablet, notebook) a v hlavičce (telefon). -->
     <footer class="paticka">
-      <!-- Dokumenty jsou jen česky (závazné jsou české právní texty a
-           nápovědu generuje vykresli_napovedu.py). V angličtině to předem
-           řekne „In Czech:“ a lang="cs" je ohlásí čtečce i kontrole. -->
-      <span id="pat-cesky" data-t="pat.cesky" hidden></span>
-      <span lang="cs"><a href="napoveda.html">Nápověda</a></span>
-      <a href="zasady.html" lang="cs">Zásady zpracování údajů</a>
-      <!-- Podmínky a formulář odstoupení popisují placení fakturou — v aplikaci
-           z Google Play by vedly k placení mimo Google Play, proto
-           data-objednavka (na webu jsou vidět dál). -->
-      <a href="podminky.html" data-objednavka lang="cs">Obchodní podmínky</a>
-      <a href="zpracovatelska-smlouva.html" lang="cs">Zpracovatelská smlouva</a>
-      <a href="odstoupeni-formular.html" data-objednavka lang="cs">Odstoupení od smlouvy</a>
-      <div data-prepinac-jazyka></div>
-      <button class="nahlasit-chybu" type="button" data-t="nahlasit">Nahlásit chybu</button>
+      <div class="popisek">
+        <span id="pat-cesky" data-t="pat.cesky" hidden></span>
+        <span lang="cs"><a href="napoveda.html">Nápověda</a></span>
+        <span aria-hidden="true">·</span> <a href="zasady.html" lang="cs">Zásady</a>
+        <!-- Podmínky a formulář odstoupení popisují placení fakturou — v aplikaci
+             z Google Play by vedly k placení mimo Google Play, proto
+             data-objednavka i s oddělovačem (na webu jsou vidět dál). -->
+        <span data-objednavka><span aria-hidden="true">·</span> <a href="podminky.html" lang="cs">Podmínky</a></span>
+        <span aria-hidden="true">·</span> <a href="zpracovatelska-smlouva.html" lang="cs">Smlouva o zpracování</a>
+        <span data-objednavka><span aria-hidden="true">·</span> <a href="odstoupeni-formular.html" lang="cs">Odstoupení</a></span>
+      </div>
     </footer>
   </div>
 
@@ -1401,8 +1345,8 @@
       $("hlavicka-titulek").textContent = popis.klic ? SimteGen.t(popis.klic) : popis.titulek;
       $("hlavicka-zpet").hidden = !popis.zpet;
       $("hlavicka-znacka").textContent = "";
-      // Jazyk v hlavičce jen na úvodu; přihlášený ho má v Nastavení.
-      $("hlavicka-jazyk").hidden = id !== "obrazovka-prihlaseni";
+      // Podle toho styl nahoře ukáže patičku jen na úvodu a v Účtu.
+      document.body.dataset.obrazovka = id;
       window.scrollTo(0, 0);
     }
     window.ukaz = ukaz;
@@ -2847,11 +2791,12 @@
           ${akce || ""}
         </div>`;
 
-      const sekce = (id, titulek, popis, sady, akce) =>
+      // Build 16: pod nadpisem sekce už není vysvětlující odstavec —
+      // nadpis s počtem a řádky stačí.
+      const sekce = (id, titulek, sady, akce) =>
         `<div class="sekce" id="${id}">
           <h2 class="sekce-titulek"><span>${t(titulek)}</span>
             <span>${SimteGen.cislo(sady.length)}</span></h2>
-          <p class="popisek">${t(popis)}</p>
           <div class="seznam">${sady.length
             ? sady.map((s) => radek(s, akce ? akce(s) : "")).join("")
             : prazdno(SimteGen.t("prehled.nic"))}</div>
@@ -2870,9 +2815,9 @@
           </div>
         </div>
         <div class="dva-sloupce">
-        ${sekce("prehled-obvolat", "prehled.obvolat", "prehled.obvolat_popis", data.vyzva)}
-        ${sekce("prehled-opotrebene", "prehled.opotrebene", "prehled.opotrebene_popis", data.opotrebene)}
-        ${sekce("prehled-nezaplacene", "prehled.nezaplacene", "prehled.nezaplacene_popis", data.nezaplacene,
+        ${sekce("prehled-obvolat", "prehled.obvolat", data.vyzva)}
+        ${sekce("prehled-opotrebene", "prehled.opotrebene", data.opotrebene)}
+        ${sekce("prehled-nezaplacene", "prehled.nezaplacene", data.nezaplacene,
           (s) => `<button class="tlacitko vedlejsi jen-role oznac-zaplaceno" data-id="${s.id}" type="button">${t("prehled.zaplaceno")}</button>`)}
         </div>`;
 
@@ -3084,20 +3029,6 @@
       return `${SimteGen.kc(v.cena)} / ${poJazyku(v, "jednotka")}`;
     }
 
-    // Ceník jako řádky „Standard — 129 Kč / firma / měsíc“ a pod ním, co
-    // varianta obsahuje. Stejně na úvodu i na obrazovce Předplatné.
-    // Varianty, které nejde koupit přes Google Play, nesou .jen-web: v aplikaci
-    // z Google Play je ceník neukáže (viz pravidlo .jen-web nahoře).
-    function vykresliRadkyCeniku(radky, obsah) {
-      const seznam = varianty();
-      radky.innerHTML = seznam.map((v) =>
-        `<div${v.v_aplikaci ? "" : ' class="jen-web"'}><span class="klic">${bezpecne(poJazyku(v, "nazev"))}</span>
-          <span class="hodnota">${bezpecne(cenaVarianty(v))}</span></div>`).join("");
-      obsah.textContent = seznam.filter((v) => poJazyku(v, "popis"))
-        .map((v) => SimteGen.t("cenik.obsahuje", { nazev: poJazyku(v, "nazev"), popis: poJazyku(v, "popis") }))
-        .join(" ");
-    }
-
     // Délky, které jde u varianty objednat: sezónní varianta jen jednu
     // sezónu (její cena je cena za sezónu), měsíční 1/3/6/12 měsíců.
     function delkyVarianty(v) {
@@ -3110,7 +3041,6 @@
     function vykresliCenik() {
       const seznam = varianty();
       if (!seznam.length) return;
-      vykresliRadkyCeniku($("pred-cenik"), $("pred-cenik-obsah"));
       const vybrana = stav.objednavka.varianta;
       $("pred-varianty").innerHTML = seznam.map((v) => `
         <button data-varianta="${bezpecne(v.klic)}" type="button"
@@ -3541,163 +3471,122 @@
       if (e.key === "Enter") posliOdkaz();
     });
 
-    // Ceník na úvodní obrazovce. Čísla jdou ze serveru (cenik.js → /api/ja),
-    // v HTML žádná částka neleží. Bez ceníku se karta nevykreslí vůbec —
-    // nikdy prázdný rám.
+    // Tarif na úvodní obrazovce: jeden, který jde koupit (položka
+    // „doporuceni“ = Standard ve schváleném web/cenik.json, koupíte ho i přes
+    // Google Play). Částku a jednotku v měně podle země doplní simtegen.js
+    // (data-cena); tady jen název, věta o zkušebním období a viditelnost
+    // karty. Dokud ceník nedorazí, stojí na místě kostra; bez ceníku karta
+    // zůstane skrytá — nikdy prázdný rám. Bez věty o způsobu platby:
+    // v aplikaci z Google Play se platí přes Google Play.
     function vykresliUvod() {
-      const seznam = varianty();
-      const karta = $("uvod-cena");
-      karta.hidden = !seznam.length;
-      $("uvod-cenik-sekce").hidden = !seznam.length;
-      if (seznam.length) {
-        // Obří číslo je nejlevnější MĚSÍČNÍ cena — sezóna je jiná jednotka
-        // a „od 790 Kč“ by o měsíčním placení lhalo.
-        const mesicni = seznam.filter((v) => v.obdobi === 1);
-        const nejlevnejsi = (mesicni.length ? mesicni : seznam)
-          .reduce((a, b) => (a.cena <= b.cena ? a : b));
-        $("uvod-cena-cislo").textContent = SimteGen.kc(nejlevnejsi.cena);
-        vykresliRadkyCeniku($("uvod-cenik"), $("uvod-cenik-obsah"));
-      }
-      // Bez věty o způsobu platby: v aplikaci z Google Play se platí přes
-      // Google Play, na webu fakturou — způsob ukazuje až obrazovka Předplatné.
-      $("uvod-zkusebni").textContent = stav.zkusebniDni
-        ? SimteGen.t("uvod.zkusebni", { dny: dnu(stav.zkusebniDni) })
-        : "";
+      SimteGen.cenik().then((c) => {
+        $("uvod-cena-kostra").hidden = true;
+        const tarif = c && Array.isArray(c.polozky) && c.polozky.find((p) => p.id === "doporuceni");
+        if (!tarif) return;
+        $("uvod-tarif").textContent = tarif.nazev || "";
+        const dny = Number(c.zkusebni_dni) || stav.zkusebniDni;
+        $("uvod-zkusebni").textContent = dny ? SimteGen.t("uvod.zkusebni", { dny: dnu(dny) }) : "";
+        $("uvod-cena").hidden = false;
+      }).catch(() => { $("uvod-cena-kostra").hidden = true; });
     }
+    vykresliUvod();
 
     // ------------------------------------------------------------- Jazyk
-    // Jazyk stránky vybírá simtegen.js (?jazyk= v adrese, ruční volba v tomto
-    // prohlížeči, jinak jazyk prohlížeče) a změna znamená nové načtení.
-    // Přihlášenému se volba navíc pamatuje na účtu (/api/jazyk, tabulka
-    // predvolby), aby mechanik měl angličtinu na dílenském tabletu i na
-    // telefonu. Volba osoby, ne servisu: majitel může zůstat u češtiny.
-    const NAZVY_JAZYKU = { cs: "Čeština", en: "English" };
+    // Build 16: jazyk se volí sám. Stránku vybírá simtegen.js (?jazyk=
+    // v adrese, ruční volba v tomto prohlížeči, jinak jazyk telefonu;
+    // slovenština = čeština). Ručně se mění jen řádkem „Jazyk“ v Účtu
+    // (data-prepinac-jazyka). Přihlášenému se ruční volba uloží i k účtu
+    // (/api/jazyk, tabulka predvolby), aby platila na všech jeho zařízeních.
+    // Kdo nikdy nevolil (null), tomu zůstává automatika — nic se nevnucuje.
+    //
     // Značky v adrese pro jedno nové načtení: srovnání s účtem (hodnota =
-    // jazyk stránky před ním) a přepnutí v Nastavení (hodnota = jazyk, do
-    // kterého vede Vrátit). Hned po načtení zmizí.
+    // jazyk stránky před ním) a přepnutí v Účtu (hodnota = jazyk, do kterého
+    // vede Vrátit). Hned po načtení zmizí.
     const ZNACKA_Z_UCTU = "jazyk-z-uctu";
     const ZNACKA_PREPNUTO = "jazyk-zmenen";
-    let jazykUctu;  // "cs" | "en" | null (nevolil) — známo až po přihlášení
-    let predPrihlasenimAnglicky = false;
 
-    function jinyJazyk() {
-      return SimteGen.jazyk() === "cs" ? "en" : "cs";
-    }
-
-    // Názvy jazyků v jejich vlastní řeči a s lang: kdo neumí česky,
-    // „English“ najde i na české obrazovce.
     function vykresliJazyk() {
-      const jiny = jinyJazyk();
-      $("hlavicka-jazyk").textContent = NAZVY_JAZYKU[jiny];
-      $("hlavicka-jazyk").lang = jiny;
-      $("nast-jazyk-hodnota").textContent = NAZVY_JAZYKU[SimteGen.jazyk()];
-      $("nast-jazyk-hodnota").lang = SimteGen.jazyk();
-      $("nast-jazyk-akce").textContent = jiny === "en" ? "Switch to English" : "Přepnout do češtiny";
-      $("nast-jazyk-akce").lang = jiny;
       $("pat-cesky").hidden = SimteGen.jazyk() === "cs";
     }
     vykresliJazyk();
 
     async function ulozJazykNaUcet(jazyk) {
       const { ok } = await api("/api/jazyk", "POST", { jazyk }).catch(() => ({ ok: false }));
-      if (ok) jazykUctu = jazyk;
       return ok;
     }
 
     // Přihlášenému se volba nejdřív uloží na účet; když to nejde, jazyk se
     // nepřepne — jinak by ho příští otevření vrátilo podle účtu zpátky.
-    async function zvolJazyk(jazyk, zpravaId, zNastaveni) {
+    // Vrací true, když se stránka přepíná (načte se znovu).
+    async function zvolJazyk(jazyk, zpravaId, zUctu) {
       if (document.body.classList.contains("prihlasen") && !await ulozJazykNaUcet(jazyk)) {
         if (zpravaId) zprava(zpravaId, SimteGen.t("jazyk.chyba"), true);
-        return;
+        return false;
       }
-      if (zNastaveni) {
-        // Stránka se načte znovu (simtegen.js); značka ji vrátí do Nastavení
+      if (zUctu) {
+        // Stránka se načte znovu (simtegen.js); značka ji vrátí do Účtu
         // a nabídne Vrátit do jazyka, který byl předtím.
         const adresa = new URL(location.href);
         adresa.searchParams.set(ZNACKA_PREPNUTO, SimteGen.jazyk());
         history.replaceState(history.state, "", adresa.toString());
       }
       SimteGen.nastavJazyk(jazyk);
+      return true;
     }
 
-    $("hlavicka-jazyk").addEventListener("click", () => zvolJazyk(jinyJazyk()));
-    $("nast-jazyk").addEventListener("click", () => zvolJazyk(jinyJazyk(), "nast-jazyk-zprava", true));
+    // Řádek „Jazyk“ v Účtu kreslí simtegen.js jako výběr a sám by stránku
+    // hned načetl znovu. Volbu proto zachytíme dřív (fáze zachycení) a
+    // pošleme ji cestou zvolJazyk: uložit k účtu, pak přepnout. Když se
+    // uložit nepodaří, výběr se vrátí a pod řádkem je chyba.
+    document.addEventListener("change", (e) => {
+      const volba = e.target && e.target.closest && e.target.closest("[data-prepinac-jazyka] select");
+      if (!volba) return;
+      e.stopImmediatePropagation();
+      const jazyk = volba.value;
+      if (jazyk === SimteGen.jazyk()) return;
+      zprava("ucet-jazyk-zprava", "");
+      zvolJazyk(jazyk, "ucet-jazyk-zprava", true).then((prepnuto) => {
+        if (!prepnuto) volba.value = SimteGen.jazyk();
+      });
+    }, true);
 
-    // Po přepnutí v Nastavení: zpět do Nastavení a Vrátit. Vrací true, když
-    // se obrazovka otevřela tady.
+    // Po přepnutí v Účtu: zpět do Účtu a Vrátit. Vrací true, když se
+    // obrazovka otevřela tady.
     function poPrepnutiJazyka() {
       const adresa = new URL(location.href);
       const predtim = adresa.searchParams.get(ZNACKA_PREPNUTO);
       if (!predtim) return false;
       adresa.searchParams.delete(ZNACKA_PREPNUTO);
-      history.replaceState({ obrazovka: "obrazovka-nastaveni", uroven: 0 }, "", adresa.toString());
+      history.replaceState({ obrazovka: "obrazovka-ucet", uroven: 0 }, "", adresa.toString());
       stav.predObrazovkou = "obrazovka-nastaveni";
-      ukaz("obrazovka-nastaveni");
+      ukaz("obrazovka-ucet");
       if (predtim !== SimteGen.jazyk() && (predtim === "cs" || predtim === "en")) {
-        SimteGen.vratitelne(SimteGen.t("jazyk.ulozeno"), () => zvolJazyk(predtim));
+        SimteGen.vratitelne(SimteGen.t("jazyk.ulozeno"), () => zvolJazyk(predtim, null, true));
       }
       return true;
     }
 
-    // Přepínač šablony v patičce přepíná sám (a stránku hned načte znovu);
-    // přihlášenému k tomu volbu uložíme na účet — keepalive doběhne i přes
-    // nové načtení.
-    document.addEventListener("click", (e) => {
-      const b = e.target.closest && e.target.closest("[data-prepinac-jazyka] button[lang]");
-      if (!b || b.lang === SimteGen.jazyk() || !document.body.classList.contains("prihlasen")) return;
-      fetch("/api/jazyk", {
-        method: "POST",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jazyk: b.lang }),
-      }).catch(() => {});
-    }, true);
-
-    // Po přihlášení rozhoduje účet. Kdo jazyk nikdy nezvolil (null), má
-    // češtinu jako před buildem 15 — i s telefonem nastaveným anglicky:
-    // nikdo se nepřepne sám, angličtinu si zapne nabídkou na Dnes. Vrací
-    // true, když se stránka právě načítá znovu (pak už se nic nevykresluje).
+    // Po přihlášení rozhoduje volba uložená k účtu, je-li nějaká. Bez volby
+    // (null) zůstává jazyk, který stránka vybrala sama. Vrací true, když se
+    // stránka právě načítá znovu (pak už se nic nevykresluje).
     function srovnejJazyk(volba) {
-      jazykUctu = volba;
       const adresa = new URL(location.href);
       if (adresa.searchParams.has(ZNACKA_Z_UCTU)) {
         // Druhé načtení po srovnání: značka z adresy pryč a dál nic. Kdyby
         // prohlížeč volbu neuložil, stránka by se jinak načítala dokola.
-        predPrihlasenimAnglicky = adresa.searchParams.get(ZNACKA_Z_UCTU) === "en";
         adresa.searchParams.delete(ZNACKA_Z_UCTU);
         history.replaceState(history.state, "", adresa.toString());
         return false;
       }
       // Odkaz s ?jazyk= (i kontrola v CI) platí, jak je napsaný.
       if (adresa.searchParams.has("jazyk")) return false;
-      const cil = volba || "cs";
-      if (cil === SimteGen.jazyk()) return false;
+      if (volba !== "cs" && volba !== "en") return false;
+      if (volba === SimteGen.jazyk()) return false;
       adresa.searchParams.set(ZNACKA_Z_UCTU, SimteGen.jazyk());
       history.replaceState(history.state, "", adresa.toString());
-      SimteGen.nastavJazyk(cil);
+      SimteGen.nastavJazyk(volba);
       return true;
     }
-
-    // Jednou za účet bez volby: jen tomu, kdo nejspíš čte anglicky —
-    // prohlížeč mimo češtinu a slovenštinu, nebo angličtina přepnutá na
-    // úvodu před přihlášením.
-    function nabidniJazyk() {
-      const prohlizec = String(navigator.language || "").toLowerCase();
-      const cizi = !/^(cs|sk)\b/.test(prohlizec) || predPrihlasenimAnglicky;
-      $("jazyk-nabidka").hidden = !(jazykUctu === null && cizi);
-    }
-
-    async function zNabidky(jazyk) {
-      if (jazyk !== SimteGen.jazyk()) return zvolJazyk(jazyk, "jazyk-zprava");
-      if (await ulozJazykNaUcet(jazyk)) {
-        $("jazyk-nabidka").hidden = true;
-      } else {
-        zprava("jazyk-zprava", SimteGen.t("jazyk.chyba"), true);
-      }
-    }
-    $("jazyk-anglicky").addEventListener("click", () => zNabidky("en"));
-    $("jazyk-cesky").addEventListener("click", () => zNabidky("cs"));
 
     // ------------------------------------------------------------- Bootstrap
     async function nactiUcet() {
@@ -3719,7 +3608,6 @@
       if (vychozi) stav.objednavka.varianta = vychozi.klic;
       const vychoziObdobi = stav.obdobi.find((o) => o.vychozi);
       if (vychoziObdobi) stav.objednavka.mesice = vychoziObdobi.mesice;
-      vykresliUvod();
     }
 
     // Úvod pro nepřihlášené se počítá jednou za načtení stránky — anonymní
@@ -3777,7 +3665,6 @@
       ukaz("obrazovka-dnes");
       nactiDnes();
       nactiPozvanky();
-      nabidniJazyk();
       // First arrival on this account: show the walkthrough over the home
       // screen, so the tour describes something the shop can already see.
       if (stav.nastaveni && !stav.nastaveni.navod_viden) ukazNavod();

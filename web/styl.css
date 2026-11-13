@@ -538,9 +538,12 @@ html:not(.sg-ukazkova-nabidka) [data-ukazkova-data] { display: none !important; 
 /* Do data-prepinac-jazyka / data-prepinac-meny, typicky v patičce nebo
    u ceníku. Tichá tlačítka vedle sebe, zvolené podtržené barvou produktu —
    ne další černá akce na obrazovce. Dotykový cíl drží .tlacitko. */
-.sg-prepinac { display: inline-flex; flex-wrap: wrap; gap: var(--mezera-1); }
-.sg-prepinac .tlacitko[aria-pressed="true"] { color: var(--barva-inkoust); box-shadow: inset 0 -2px 0 var(--barva-produktu); }
-.sg-prepinac .tlacitko[aria-pressed="false"] { color: var(--barva-tuzka); }
+/* Language: one settings row like any other (.radek), the device's language
+   preselected; the phone's own picker opens on tap. */
+.sg-jazyk { display: flex; align-items: center; gap: var(--mezera-3); min-height: 56px; padding: var(--mezera-3) 0; border-bottom: 1px solid var(--barva-linka); color: var(--barva-inkoust); }
+.sg-jazyk-popisek { flex: 1; }
+.sg-jazyk-volba { font: inherit; color: var(--barva-tuzka); background: transparent; border: 0; padding: var(--mezera-2) 0; min-height: 44px; text-align: right; cursor: pointer; }
+.sg-jazyk-volba:focus-visible { outline: 2px solid var(--barva-produktu); outline-offset: 2px; }
 
 /* ── Pomocné ──────────────────────────────────────────────────────── */
 [hidden] { display: none !important; }

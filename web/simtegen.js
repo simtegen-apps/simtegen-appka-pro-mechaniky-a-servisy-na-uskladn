@@ -439,22 +439,29 @@
   /* Language names in their own language: someone who cannot read the
    * current one must still find theirs. */
   var NAZVY_JAZYKU = { cs: "Čeština", en: "English" };
+  // The language is the device's; changing it by hand is one settings row
+  // ("Jazyk · Čeština ▾"), the way phone apps do it. Until 12. 11. 2026 it
+  // was a pair of big buttons in every footer and in the account, and the
+  // owner said no app looks like that. A slot left in a footer by an older
+  // product draws nothing — the account keeps the row.
   function prepinacJazyka(slot) {
     var mozne = produktJazyky.filter(function (j) { return TEXTY_SABLONY[j]; });
     if (mozne.indexOf("cs") < 0) mozne.unshift("cs");
-    if (mozne.length < 2 || slot.querySelector(".sg-prepinac")) return;
-    var skupina = prvek("div", "sg-prepinac");
-    skupina.setAttribute("role", "group");
-    skupina.setAttribute("aria-label", tr("sg.jazyk"));
+    if (mozne.length < 2 || slot.querySelector(".sg-jazyk")) return;
+    if (slot.closest && slot.closest("footer, .paticka")) return;
+    var radek = prvek("label", "sg-jazyk");
+    radek.appendChild(prvek("span", "sg-jazyk-popisek", tr("sg.jazyk")));
+    var volba = prvek("select", "sg-jazyk-volba");
     mozne.forEach(function (j) {
-      var b = prvek("button", "tlacitko tiche", NAZVY_JAZYKU[j] || j);
-      b.type = "button";
-      b.setAttribute("lang", j);
-      b.setAttribute("aria-pressed", j === jazyk ? "true" : "false");
-      b.addEventListener("click", function () { if (j !== jazyk) nastavJazyk(j); });
-      skupina.appendChild(b);
+      var o = prvek("option", "", NAZVY_JAZYKU[j] || j);
+      o.value = j;
+      o.setAttribute("lang", j);
+      if (j === jazyk) o.selected = true;
+      volba.appendChild(o);
     });
-    slot.appendChild(skupina);
+    volba.addEventListener("change", function () { if (volba.value !== jazyk) nastavJazyk(volba.value); });
+    radek.appendChild(volba);
+    slot.appendChild(radek);
   }
 
   /* Price list and currency. One request each, both kept for the page:
@@ -508,26 +515,9 @@
       var p = podle[el.getAttribute("data-cena-jednotka")];
       if (p) el.textContent = jednotka(p);
     });
-    Array.prototype.forEach.call(doc.querySelectorAll("[data-prepinac-meny]"), function (slot) {
-      if (c.meny.length < 2) return;
-      var skupina = slot.querySelector(".sg-prepinac");
-      if (!skupina) {
-        skupina = prvek("div", "sg-prepinac");
-        skupina.setAttribute("role", "group");
-        skupina.setAttribute("aria-label", tr("sg.mena"));
-        c.meny.forEach(function (m) {
-          var b = prvek("button", "tlacitko tiche", m);
-          b.type = "button";
-          b.setAttribute("data-mena", m);
-          b.addEventListener("click", function () { nastavMenu(m); });
-          skupina.appendChild(b);
-        });
-        slot.appendChild(skupina);
-      }
-      Array.prototype.forEach.call(skupina.querySelectorAll("button"), function (b) {
-        b.setAttribute("aria-pressed", b.getAttribute("data-mena") === menaTed ? "true" : "false");
-      });
-    });
+    // No currency buttons any more (12. 11. 2026): the currency follows the
+    // country, and in the app from Google Play Google shows its own price.
+    // A [data-prepinac-meny] slot an older page still has stays empty.
   }
 
   function nastavMenu(m) {

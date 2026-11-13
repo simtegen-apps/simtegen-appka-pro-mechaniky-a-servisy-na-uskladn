@@ -97,3 +97,26 @@ TEXTY: slovní limity podle nové části Text v DESIGN.md. Cíle stavby: H1 ≤
 - Nepřihlášený návštěvník zavolá GET /api/ja a musí vidět ceník se Standardem za 129 a "zkusebni_dni":30, bez jakéhokoli e-mailu.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
+
+## Co se při stavbě oproti specifikaci změnilo
+
+1. **Nápověda zůstala v patičce, ne jako řádek v Účtu.** Generátor `vykresli_napovedu.py` vyžaduje v `index.html` přesně odkaz `<a href="napoveda.html">Nápověda</a>`. Patička je v Účtu vidět, takže je Nápověda na stejném místě, jen v řádku s právními odkazy.
+2. **Řádek Jazyk kreslí obnovená šablona jako výběr** (`<select>` s popiskem „Jazyk“), ne jako dvě tlačítka. V patičce šablona nic nekreslí. Produkt změnu výběru zachytí dřív než šablona, aby se volba nejdřív uložila k účtu. Když se uložení nepodaří, výběr se vrátí a pod řádkem se ukáže chyba. Jinak by jazyk při příštím otevření vrátila volba uložená k účtu.
+3. **V Účtu zmizel nadpis „Vaše data“.** Bez odstavce by pod ním nic nebylo. Stažení dat je hlavní akce dole.
+4. **Limity slov stavba převzala z `vizualni_kontrola.py`**: nejvýš 20 slov v jednom textu (`p`, `.napoveda`) a 50 na obrazovce. Nová část Text v DESIGN.md v repu zatím není.
+   - Kvůli limitu jsou zkrácené i věty na Předplatném (stav, kdo kupuje, souhlas s podmínkami), nápověda formátu štítku v Nastavení a pozvánka do týmu.
+   - Právně závazný souhlas spotřebitele (§ 1837) zůstal doslova.
+5. **Značka v menu** je „SimteGen“ místo „simtegen“, stejně jako ji za běhu opravuje šablona.
+6. **Modul SCHRÁNKA** (`hlaseni.js`, migrace hlášení, entita `hlaseni`, služba GitHub) do tohoto buildu nepatří. Majitel zakázal měnit funkce a data a hlášení dnes obsluhuje `nahlasit.js`. Patří do samostatné stavby.
+7. **Soubory mimo rozsah:** stavba nezměnila nic z tohoto:
+   - `functions/**`, `web/play.js`, `web/simtegen.js`, `web/styl.css`, `DESIGN.md`;
+   - `deploy.yml`, `_middleware.js`, `overeni.js`;
+   - `data-manifest.json` a migrace.
+
+   Nevzniká žádná nová tabulka, služba, cookie ani úložiště v prohlížeči. `sg-volba` už zásady uvádějí.
+8. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
+   - `python vykresli_napovedu.py`
+   - `python vykresli_zasady.py`
+   - `python vykresli_seo.py`
+   - `python vykresli_aplikaci.py`
+   - pak `python kontrola_manifestu.py`, `python kontrola_jazyku.py`, `python uat_kontrola.py` a `vizualni_kontrola.py`

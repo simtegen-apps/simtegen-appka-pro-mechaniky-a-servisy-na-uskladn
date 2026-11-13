@@ -31,11 +31,11 @@
     },
     {
       "nadpis": "Aplikace v angličtině",
-      "text": "Aplikaci můžete používat česky i anglicky. Jazyk si každý přihlášený zvolí sám v Nastavení, v sekci Účet, na řádku Jazyk aplikace. Volba se uloží k jeho účtu, takže platí na všech jeho zařízeních a ostatním v týmu jazyk nemění. Před přihlášením jazyk přepnete tlačítkem nahoře na úvodní obrazovce nebo v patičce.\n\nV angličtině jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Česky zůstávají přihlašovací e-mail, tato nápověda, obchodní podmínky a zásady zpracování údajů. Údaje, které zapíšete, se nepřekládají."
+      "text": "Aplikace mluví česky nebo anglicky a jazyk si vybere sama podle jazyka vašeho telefonu nebo prohlížeče. Slovenština dostane češtinu.\n\nJinak jazyk změníte v Nastavení na obrazovce Účet a data, na řádku Jazyk. Volba se uloží k vašemu účtu, takže platí na všech vašich zařízeních a ostatním v týmu jazyk nemění.\n\nV angličtině jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Česky zůstávají přihlašovací e-mail, tato nápověda, obchodní podmínky a zásady zpracování údajů. Údaje, které zapíšete, se nepřekládají."
     },
     {
       "nadpis": "Stažení dat a smazání účtu",
-      "text": "V Nastavení otevřete Účet a data. Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Tamtéž můžete účet se všemi daty smazat. Tento krok je nevratný, proto se vás aplikace ještě zeptá."
+      "text": "V Nastavení otevřete Účet a data. Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Data jsou uložena v databázi v Evropské unii. Tamtéž můžete účet se všemi daty smazat. Tento krok je nevratný, proto se vás aplikace ještě zeptá.\n\nNa stejné obrazovce dole najdete i zásady zpracování údajů a zpracovatelskou smlouvu."
     }
   ],
   "otazky": []

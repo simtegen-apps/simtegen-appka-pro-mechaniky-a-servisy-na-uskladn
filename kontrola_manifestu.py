@@ -333,6 +333,56 @@ def _barvy_v_html(text: str) -> list[str]:
     return nalezy
 
 
+# Inline scripts that are code, not data (JSON-LD, import maps are data).
+_SKRIPT_KOD = re.compile(
+    r'<script(?![^>]*\bsrc=)(?![^>]*(?:ld\+json|importmap|application/json))([^>]*)>(.*?)</script>',
+    re.S | re.I)
+
+
+def _zkontroluj_syntaxi() -> list[str]:
+    """Every script the browser or the Pages runtime will parse, through
+    `node --check`. Pneusklad's Build 15 (10. 11. 2026) passed CI, the
+    reviewer and deploy verification with an object key written as
+    "a" + "b": the whole main script died on a SyntaxError and the app
+    rendered nothing for anyone. Syntax is not taste — a machine says it.
+    Without node (never on CI, where wrangler needs it) the check is
+    skipped, not failed: it must not block a builder's machine."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    node = shutil.which("node")
+    if not node:
+        print("Kontrola syntaxe skriptů přeskočena: chybí node.")
+        return []
+    kusy: list[tuple[str, str, str]] = []  # (where, code, suffix)
+    for path in sorted(WEB.glob("*.html")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for i, m in enumerate(_SKRIPT_KOD.finditer(text), 1):
+            modul = "module" in m.group(1).lower()
+            kusy.append((f"{path} (skript {i})", m.group(2), ".mjs" if modul else ".js"))
+    for path in sorted(WEB.glob("*.js")):
+        kusy.append((str(path), path.read_text(encoding="utf-8", errors="replace"), ".js"))
+    funkce = Path("functions")
+    if funkce.is_dir():
+        for path in sorted(funkce.rglob("*.js")):
+            kusy.append((str(path), path.read_text(encoding="utf-8", errors="replace"), ".mjs"))
+    chyby: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="simtegen-syntaxe-") as tmp:
+        for n, (kde, kod, pripona) in enumerate(kusy):
+            soubor = Path(tmp) / f"k{n}{pripona}"
+            soubor.write_text(kod, encoding="utf-8")
+            r = subprocess.run([node, "--check", str(soubor)], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=60)
+            if r.returncode != 0:
+                radky = [x for x in (r.stderr or "").splitlines() if x.strip()]
+                chyba = next((x for x in radky if "Error" in x), radky[-1] if radky else "?")
+                misto = radky[0].rsplit(":", 1)[-1] if radky else "?"
+                chyby.append(f"{kde}: syntaktická chyba na řádku {misto} — {chyba.strip()} "
+                             "(skript by v prohlížeči nespustil nic)")
+    return chyby
+
+
 def _zkontroluj_design() -> list[str]:
     """The deterministic part of the design bar (v3). The taste part — the
     four states, detail that carries information, a tool screen that is
@@ -349,6 +399,7 @@ def _zkontroluj_design() -> list[str]:
     chyby += _zkontroluj_produkt_css()
     chyby += _nativni_dialogy()
     chyby += _nezname_ikony()
+    chyby += _zkontroluj_syntaxi()
     for path in sorted(WEB.glob("*.html")):
         if path.name in PRAVNI_STRANKY or path.name == "offline.html":
             continue

@@ -305,7 +305,7 @@
       ]
     },
     {
-      "nazev": "Úvodní stránka pro vyhledávače: titulek, popis, nadpis, tři body a přihlášení",
+      "nazev": "Úvodní stránka: hlavní věta, podvěta, tři přednosti, jeden tarif a přihlášení, bez volby jazyka a měny",
       "kroky": [
         {
           "jako": "nikdo",
@@ -314,12 +314,21 @@
           "obsahuje": [">Evidence uskladněných pneu pro malé pneuservisy | Pneusklad</title>",
                        "<meta name=\"description\" content=\"Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu.\">",
                        "<h1 class=\"titulek-velky\"", ">Víte, kde má který zákazník uložené pneu?</h1>",
-                       ">Evidence pneu</strong>", ">Tisk štítků</strong>",
-                       ">Objednávky s připomínkou</strong>",
-                       "id=\"uvod-cena-cislo\"", "id=\"uvod-zkusebni\"",
-                       "<label for=\"email\"", "id=\"poslat-odkaz\"",
+                       ">Pro malé a mobilní pneuservisy. Bez instalace.</p>",
+                       ">Evidence pneu přes všechny sezóny</strong>", ">Štítky z vaší tiskárny</strong>",
+                       ">Připomínka den před přezutím</strong>",
+                       "data-cena=\"doporuceni\"", "data-cena-jednotka=\"doporuceni\"", "id=\"uvod-zkusebni\"",
+                       "<label for=\"email\"", "id=\"poslat-odkaz\"", "data-ukazka",
+                       "<div data-prepinac-jazyka></div>",
                        "<meta name=\"simtegen-jazyky\" content=\"cs en\">", "<script src=\"texty.js\"></script>"],
-          "neobsahuje": ["Kde leží čí kola."]
+          "neobsahuje": ["Kde leží čí kola.", "hlavicka-jazyk", "jazyk-nabidka", "data-prepinac-meny",
+                         "uvod-cenik-sekce", "Cena od"]
+        },
+        {
+          "jako": "nikdo",
+          "pozadavek": "GET /cenik.json",
+          "ocekavam": 200,
+          "obsahuje": ["\"doporuceni\"", "\"Standard\"", "\"129\"", "\"zkusebni_dni\": 30"]
         },
         {
           "jako": "nikdo",
@@ -770,6 +779,53 @@
           "pozadavek": "GET /api/ucet/export",
           "ocekavam": 200,
           "obsahuje": ["\"predvolby\"", "\"jazyk\":\"en\""]
+        }
+      ]
+    },
+    {
+      "nazev": "Zjednodušení (build 16): evidence funguje beze změny a účet B nevidí sadu ani jazyk účtu A",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/sady",
+          "telo": {
+            "jmeno": "UAT-motorista-Sigma",
+            "telefon": "601000616",
+            "spz": "UAT6161",
+            "typ": "zimni",
+            "rozmer": "225/45 R17",
+            "pocet_kusu": 4,
+            "na_discich": true,
+            "pozice": "UATREGAL-61",
+            "cena_skladovani": 800
+          },
+          "ocekavam": 200,
+          "uloz": { "sigma_id": "sada.id", "sigma_kod": "sada.kod" }
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/sady/{sigma_id}",
+          "ocekavam": 200,
+          "obsahuje": ["{sigma_kod}", "UATREGAL-61", "UAT-motorista-Sigma"]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/jazyk",
+          "telo": { "jazyk": "en" },
+          "ocekavam": 200
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/sady?stav=vse",
+          "ocekavam": 200,
+          "neobsahuje": ["UAT-motorista-Sigma", "UATREGAL-61", "{sigma_kod}"]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/jazyk",
+          "ocekavam": 200,
+          "obsahuje": ["\"jazyk\":null"],
+          "neobsahuje": ["\"en\""]
         }
       ]
     }
