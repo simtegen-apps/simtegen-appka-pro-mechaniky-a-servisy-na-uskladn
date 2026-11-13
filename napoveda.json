@@ -34,6 +34,10 @@
       "text": "- Aplikace mluví česky nebo anglicky podle jazyka telefonu nebo prohlížeče. Slovenština dostane češtinu.\n- Jinak jazyk změníte v Nastavení na obrazovce Účet a data, na řádku Jazyk.\n- Volba platí na všech vašich zařízeních a ostatním v týmu jazyk nemění.\n- Anglicky jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol.\n- Česky zůstává přihlašovací e-mail, tato nápověda, podmínky a zásady. Zapsané údaje se nepřekládají."
     },
     {
+      "nadpis": "Jak nám napsat",
+      "text": "- V Nastavení otevřete Účet a data a vyplňte kartu Napište nám.\n- Pod ní vidíte své zprávy, jejich stav a naši odpověď.\n- Psát nám můžete i po skončení předplatného.\n- Tlačítko Nahlásit chybu pošle zprávu stejnou cestou."
+    },
+    {
       "nadpis": "Stažení dat a smazání účtu",
       "text": "- V Nastavení otevřete Účet a data.\n- Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Data jsou v databázi v Evropské unii.\n- Tamtéž účet se všemi daty smažete. Krok je nevratný, proto se aplikace ještě zeptá.\n- Dole na téže obrazovce najdete zásady zpracování údajů a zpracovatelskou smlouvu."
     }

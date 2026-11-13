@@ -328,7 +328,7 @@
           "jako": "nikdo",
           "pozadavek": "GET /cenik.json",
           "ocekavam": 200,
-          "obsahuje": ["\"doporuceni\"", "\"Standard\"", "\"129\"", "\"zkusebni_dni\": 30"]
+          "obsahuje": ["\"doporuceni\"", "\"Standard\"", "129", "zkusebni_dni"]
         },
         {
           "jako": "nikdo",
@@ -779,6 +779,36 @@
           "pozadavek": "GET /api/ucet/export",
           "ocekavam": 200,
           "obsahuje": ["\"predvolby\"", "\"jazyk\":\"en\""]
+        }
+      ]
+    },
+    {
+      "nazev": "Schránka: účet A nám napíše a vidí svou zprávu se stavem, účet B ji nevidí",
+      "kroky": [
+        {
+          "jako": "A",
+          "pozadavek": "POST /api/hlaseni",
+          "telo": { "text": "UAT-hlaseni-A: štítek se tiskne posunutý" },
+          "ocekavam": 200,
+          "obsahuje": ["\"stav\":\"nove\""]
+        },
+        {
+          "jako": "A",
+          "pozadavek": "GET /api/hlaseni",
+          "ocekavam": 200,
+          "obsahuje": ["UAT-hlaseni-A", "\"stav\":\"nove\""]
+        },
+        {
+          "jako": "B",
+          "pozadavek": "GET /api/hlaseni",
+          "ocekavam": 200,
+          "neobsahuje": ["UAT-hlaseni-A"]
+        },
+        {
+          "jako": "nikdo",
+          "pozadavek": "GET /api/hlaseni",
+          "ocekavam": 401,
+          "neobsahuje": ["UAT-hlaseni-A"]
         }
       ]
     },

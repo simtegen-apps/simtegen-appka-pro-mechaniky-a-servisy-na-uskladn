@@ -1,4 +1,4 @@
-# Specifikace — build 17
+# Specifikace — build 16
 
 Build 16 zjednoduší hotový Pneusklad jen v textech a rozložení, funkce ani data se nemění. Úvod bude mít hlavní větu, podvětu, tři krátké přednosti, jednu kartu ceny s jedním tarifem a větou o zkušebním období a jedno tlačítko. Z hlavičky, z Dnes i z Nastavení zmizí volba jazyka. Jazyk se zvolí sám a ručně se mění jen jedním řádkem v Účtu. Přepínač měny v produktu nebude. Patička s právními odkazy na jednom malém řádku bude jen na úvodu a v Účtu, spodní menu se ukáže až po přihlášení. Zmizí vysvětlující odstavce pod nadpisy sekcí a prázdné stavy budou mít jeden řádek, česky i anglicky.
 
@@ -107,19 +107,30 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
    - Kvůli limitu jsou zkrácené i věty na Předplatném (stav, kdo kupuje, souhlas s podmínkami), nápověda formátu štítku v Nastavení a pozvánka do týmu.
    - Právně závazný souhlas spotřebitele (§ 1837) zůstal doslova.
 5. **Značka v menu** je „SimteGen“ místo „simtegen“, stejně jako ji za běhu opravuje šablona.
-6. **Modul SCHRÁNKA** (`hlaseni.js`, migrace hlášení, entita `hlaseni`, služba GitHub) do tohoto buildu nepatří. Majitel zakázal měnit funkce a data a hlášení dnes obsluhuje `nahlasit.js`. Patří do samostatné stavby.
-7. **Soubory mimo rozsah:** stavba nezměnila nic z tohoto:
-   - `functions/**`, `web/play.js`, `web/simtegen.js`, `web/styl.css`, `DESIGN.md`;
-   - `deploy.yml`, `_middleware.js`, `overeni.js`;
-   - `data-manifest.json` a migrace.
+6. **Modul SCHRÁNKA je zapojený** (po recenzi; je to pokyn majitele). Obrazovka Účet a data má:
+   - kartu „Napište nám“: pole zprávy a vedlejší tlačítko „Odeslat zprávu“ → `POST /api/hlaseni`;
+   - pod ní seznam vlastních zpráv se stavem (Přijato, Řešíme, Vyřízeno, Odloženo), datem a odpovědí → `GET /api/hlaseni`;
+   - stavy: kostra při načítání, jednořádkový prázdný stav, chyba s radou;
+   - nic z toho nehlídá předplatné, takže psát nám jde i po jeho vypršení;
+   - tlačítko Nahlásit chybu ze šablony posílá přihlášenému na stejný endpoint, takže se jeho zpráva objeví ve stejném seznamu.
 
-   Nevzniká žádná nová tabulka, služba, cookie ani úložiště v prohlížeči. `sg-volba` už zásady uvádějí.
+   Tabulka i endpoint přišly s obnovou šablony, nová funkce ani data tím nevznikají.
+7. **Soubory mimo rozsah stavby:**
+   - *obnova šablony, ne stavitel:*
+     - `web/simtegen.js`, `web/styl.css`, `DESIGN.md`, kontrolní skripty a generátory (`*_kontrola.py`, `vykresli_*.py`);
+     - `functions/api/hlaseni.js`, `schranka_sifra.js`, `db/migrace/0003_hlaseni.sql`;
+     - případně další soubory, které obnova přinesla (`functions/api/_middleware.js`, `web/play.js`, `.github/workflows/deploy.yml`) — je potřeba je ověřit v diffu PR;
+   - *stavitel:*
+     - `data-manifest.json`: entita `hlaseni` a přesný popis služby GitHub (bod 8);
+     - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen).
+
+   Nevzniká žádné nové úložiště v prohlížeči ani cookie. `sg-volba` už zásady uvádějí.
 8. **Oprava po kontrole manifestu:**
    - Obnova šablony přinesla `db/migrace/0003_hlaseni.sql` a `functions/api/hlaseni.js` (schránka). Manifest proto deklaruje entitu `hlaseni` (hlášení a dotazy zákazníka a naše odpovědi, do smazání účtu).
    - Popis služby GitHub už netvrdí, že se hlášení v aplikaci neukládá.
-   - Kartu „Napište nám“ v UI tato stavba nepřidává (viz bod 6).
    - Karta tarifu na úvodu na tabletu nepřetéká: číslo se řídí šířkou okna a jednotka se zalomí pod něj.
-   - Nápověda má kratší úvod a témata jako krátké kroky (limit 20 slov na odstavec).
+   - Nápověda má kratší úvod a témata jako krátké kroky (limit 20 slov na odstavec) a nové téma „Jak nám napsat“.
+   - Řádek patičky se na telefonu do 400 px zalomí do dvou řádků. Celý má asi 64 znaků a na 360 px se vejde asi 43, takže by nestačilo ani zkrácení popisků. Na tabletu a notebooku je na jednom řádku, v aplikaci z Google Play (bez Podmínek a Odstoupení) i na telefonu.
 9. **Oprava po kontrole migrace na datech staré verze:** změněn `functions/api/overeni.js`. Jde o soubor mimo rozsah stavby; je to změna stavitele, ne obnova šablony, a vyžádala si ji kontrola.
    - **Co kontrola hlásila:** u účtů ze staré verze zopakovala i stránku „Přihlásit se jako …?“ z už použitého jednorázového odkazu. Dostala 403 a ohlásila to jako odhlášení zákazníků.
    - **Migrace `0003_hlaseni.sql`** jen zakládá novou tabulku a nikoho neodhlašuje.

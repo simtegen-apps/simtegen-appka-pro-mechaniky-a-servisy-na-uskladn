@@ -191,6 +191,10 @@
        vyčnívalo ze stránky. Od tabletu se proto řídí šířkou okna a jednotka
        se smí zalomit pod číslo. */
     #uvod-cena .cislo-radek { flex-wrap: wrap; }
+
+    /* Schránka: odpověď a datum se zalamují i uprostřed dlouhého slova
+       (adresa, kód), aby nic nevyčnívalo ze stránky. */
+    #schranka-seznam .hlavni span { overflow-wrap: anywhere; }
     @media (min-width: 768px) {
       #uvod-cena .cislo-obri { font-size: min(var(--velikost-obri), 5vw); }
     }
@@ -824,7 +828,7 @@
             </button>
             <button class="radek" id="nast-ucet" type="button">
               <span class="hlavni"><strong data-t="nast.ucet_data">Účet a data</strong>
-                <span data-t="nast.ucet_popis">Stažení dat, odhlášení, smazání účtu</span></span>
+                <span data-t="nast.ucet_popis">Jazyk, napište nám, stažení dat</span></span>
               <span class="vpravo" aria-hidden="true">›</span>
             </button>
           </div>
@@ -880,6 +884,23 @@
           <div data-prepinac-jazyka></div>
           <div id="ucet-jazyk-zprava" class="zprava" aria-live="polite"></div>
           <div id="ucet-zprava" class="zprava" aria-live="polite"></div>
+        </div>
+
+        <!-- Schránka: zpráva pro nás a vlastní hlášení se stavem a odpovědí
+             (/api/hlaseni, ze šablony). Záměrně bez .jen-zapis — napsat nám
+             a přečíst odpověď jde i po vypršení předplatného. -->
+        <div class="sekce" id="schranka">
+          <h2 class="sekce-titulek"><span data-t="schranka.nadpis">Napište nám</span></h2>
+          <div class="pole">
+            <label for="schranka-text" data-t="schranka.popisek">Vaše zpráva</label>
+            <textarea id="schranka-text" rows="3" maxlength="2000"
+                      placeholder="Co nefunguje nebo co by vám pomohlo?"
+                      data-t-placeholder="schranka.vzor"></textarea>
+          </div>
+          <button type="button" class="tlacitko vedlejsi" id="schranka-odeslat"
+                  data-t="schranka.odeslat">Odeslat zprávu</button>
+          <div id="schranka-zprava" class="zprava" aria-live="polite"></div>
+          <div id="schranka-seznam" class="seznam" aria-live="polite"></div>
         </div>
 
         <div class="karta">
@@ -1198,6 +1219,8 @@
       "Vyberte zákazníka nebo napište jméno.": "chyba.vyber_zakaznika",
       "Máte přístup jen pro čtení. Požádejte správce účtu o vyšší oprávnění.": "chyba.jen_cteni",
       "Tuto část smí měnit jen správce účtu.": "chyba.jen_spravce",
+      "Napište nám prosím, o co jde.": "schranka.kratka",
+      "Za poslední hodinu jste poslali hodně zpráv — zkuste to prosím později.": "schranka.limit",
       "Předplatné skončilo. Evidenci máte dál k nahlédnutí, zapisovat půjde po obnovení předplatného.": "chyba.predplatne",
     };
     // Hlášky s číslem nebo časem uvnitř: vzor, klíč a jména proměnných.
@@ -1211,6 +1234,7 @@
       [/^Fakturační údaje jsou moc dlouhé \(max (\d+)/, "chyba.fakturace_dlouhe", ["n"]],
       [/^Za posledních 24 hodin jste objednávali už třikrát/, "chyba.objednavky_limit", []],
       [/^Tuhle objednávku už zrušit nejde/, "chyba.fakturovana", []],
+      [/^Zpráva je moc dlouhá \(max (\d+)/, "schranka.dlouha", ["n"]],
     ];
 
     function hlaska(data, zalozni) {
@@ -1391,6 +1415,7 @@
       if (cil === "obrazovka-zakaznici") nactiZakazniky();
       if (cil === "obrazovka-nastaveni") vykresliNastaveni();
       if (cil === "obrazovka-tym") nactiTym();
+      if (cil === "obrazovka-ucet") nactiSchranku();
     }
 
     // Po Vrátit (a po každé změně, která se dá vzít zpět) se překreslí
@@ -3204,6 +3229,7 @@
     $("nast-ucet").addEventListener("click", () => {
       zprava("ucet-zprava", "");
       jdi("obrazovka-ucet");
+      nactiSchranku();
     });
     $("pruh-predplatne").addEventListener("click", otevriPredplatne);
 
@@ -3355,6 +3381,76 @@
     $("stahnout-data").addEventListener("click", () => {
       location.href = "/api/ucet/export";
       zprava("ucet-zprava", SimteGen.t("ucet.stahujeme"));
+    });
+
+    // ------------------------------------------------------------ Schránka
+    // Zpráva pro nás a vlastní hlášení se stavem a odpovědí. Endpoint
+    // /api/hlaseni je ze šablony a předplatné nehlídá: napsat nám a přečíst
+    // odpověď jde vždy. Text zákazníka i odpověď jdou do stránky jen přes
+    // textContent.
+    const STAVY_HLASENI = ["nove", "vyrizuje_se", "vyrizeno", "odlozeno"];
+
+    function radekHlaseni(h) {
+      const radek = document.createElement("div");
+      radek.className = "radek";
+      const hlavni = document.createElement("span");
+      hlavni.className = "hlavni";
+      const text = document.createElement("strong");
+      text.textContent = h.text;
+      const kdy = document.createElement("span");
+      kdy.textContent = SimteGen.datum(h.vytvoreno, { dny: true });
+      hlavni.append(text, kdy);
+      if (h.odpoved) {
+        const odpoved = document.createElement("span");
+        odpoved.className = "schranka-odpoved";
+        odpoved.textContent = SimteGen.t("schranka.odpoved", { odpoved: h.odpoved });
+        hlavni.append(odpoved);
+      }
+      const stavHlaseni = document.createElement("span");
+      stavHlaseni.className = "vpravo";
+      stavHlaseni.textContent = SimteGen.t(`schranka.stav.${STAVY_HLASENI.includes(h.stav) ? h.stav : "nove"}`);
+      radek.append(hlavni, stavHlaseni);
+      return radek;
+    }
+
+    async function nactiSchranku() {
+      const seznam = $("schranka-seznam");
+      if (!seznam.children.length) seznam.innerHTML = KOSTRA_SEZNAMU;
+      const { ok, data } = await api("/api/hlaseni", "GET").catch(() => ({ ok: false, data: {} }));
+      if (!ok) {
+        seznam.innerHTML = chybaHtml(SimteGen.t("schranka.chyba"));
+        return;
+      }
+      const hlaseni = Array.isArray(data.hlaseni) ? data.hlaseni : [];
+      if (!hlaseni.length) {
+        seznam.innerHTML = prazdno(SimteGen.t("schranka.prazdno"));
+        return;
+      }
+      seznam.replaceChildren(...hlaseni.map(radekHlaseni));
+    }
+
+    $("schranka-odeslat").addEventListener("click", async () => {
+      const pole = $("schranka-text");
+      const text = pole.value.trim();
+      if (text.length < 3) {
+        zprava("schranka-zprava", SimteGen.t("schranka.kratka"), true);
+        pole.focus();
+        return;
+      }
+      const tlacitko = $("schranka-odeslat");
+      tlacitko.disabled = true;
+      zprava("schranka-zprava", SimteGen.t("obecne.odesilam"));
+      const { ok, data } = await api("/api/hlaseni", "POST", { text })
+        .catch(() => ({ ok: false, data: {} }));
+      tlacitko.disabled = false;
+      if (!ok) {
+        zprava("schranka-zprava", hlaska(data,
+          `${SimteGen.t("schranka.chyba_odeslat")} ${SimteGen.t("chyba.pripojeni")}`), true);
+        return;
+      }
+      pole.value = "";
+      zprava("schranka-zprava", SimteGen.t("schranka.odeslano"));
+      nactiSchranku();
     });
 
     $("odhlasit").addEventListener("click", async () => {
@@ -3569,6 +3665,7 @@
       history.replaceState({ obrazovka: "obrazovka-ucet", uroven: 0 }, "", adresa.toString());
       stav.predObrazovkou = "obrazovka-nastaveni";
       ukaz("obrazovka-ucet");
+      nactiSchranku();
       if (predtim !== SimteGen.jazyk() && (predtim === "cs" || predtim === "en")) {
         SimteGen.vratitelne(SimteGen.t("jazyk.ulozeno"), () => zvolJazyk(predtim, null, true));
       }
