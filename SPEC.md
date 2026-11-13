@@ -120,7 +120,12 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
    - Kartu „Napište nám“ v UI tato stavba nepřidává (viz bod 6).
    - Karta tarifu na úvodu na tabletu nepřetéká: číslo se řídí šířkou okna a jednotka se zalomí pod něj.
    - Nápověda má kratší úvod a témata jako krátké kroky (limit 20 slov na odstavec).
-9. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
+9. **Oprava po kontrole migrace na datech staré verze:** změněn `functions/api/overeni.js`. Jde o soubor mimo rozsah stavby; je to změna stavitele, ne obnova šablony, a vyžádala si ji kontrola.
+   - **Co kontrola hlásila:** u účtů ze staré verze zopakovala i stránku „Přihlásit se jako …?“ z už použitého jednorázového odkazu. Dostala 403 a ohlásila to jako odhlášení zákazníků.
+   - **Migrace `0003_hlaseni.sql`** jen zakládá novou tabulku a nikoho neodhlašuje.
+   - **Teď:** použitý nebo vypršelý odkaz otevřený z e-mailu dostane stránku „Odkaz už neplatí“ s cestou zpět na úvod a kódem 410 Gone místo holého textu s 403.
+   - **Beze změny:** přihlášení dál umí jen tlačítko (POST) a ten neplatný odkaz odmítá s 403, hranice přihlášení se nemění.
+10. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
    - `python vykresli_napovedu.py`
    - `python vykresli_zasady.py`
    - `python vykresli_seo.py`

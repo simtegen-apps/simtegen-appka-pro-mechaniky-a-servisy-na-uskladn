@@ -47,6 +47,49 @@ async function platnyOdkaz(env, token) {
   ).bind(await otisk(token), ted()).first();
 }
 
+const HLAVICKY_STRANKY = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "no-store",
+  // same-origin, not no-referrer: with no-referrer the browser sends
+  // "Origin: null" on the form's POST and the origin check refuses our
+  // own button.
+  "Referrer-Policy": "same-origin",
+  "Content-Security-Policy":
+    "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; "
+    + "form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  "X-Frame-Options": "DENY",
+};
+
+// The link from the e-mail opened again after it was used (or after it
+// expired): a page with the way back, 410 Gone — the single-use link is
+// spent, nobody is refused anything. Not 403 plain text: the customer
+// tapping an old e-mail deserves a page, and the check after a migration
+// (uat_kontrola) re-opens every page an old account could read, this
+// confirmation page included, and reads 401/403 as "the migration signed
+// customers out". The button's POST still refuses a bad token with 403.
+function neplatnyOdkazStranka() {
+  const telo = `<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="application-name" content="Pneusklad">
+  <meta name="robots" content="noindex">
+  <title>Odkaz už neplatí — Pneusklad</title>
+  <link rel="stylesheet" href="/styl.css">
+  <link rel="stylesheet" href="/produkt.css">
+</head>
+<body>
+  <main class="obsah">
+    <h1>Odkaz už neplatí</h1>
+    <p>Přihlašovací odkaz je použitý nebo vypršel. Nechte si poslat nový.</p>
+    <p><a class="tlacitko" href="/">Zpět na úvod</a></p>
+  </main>
+</body>
+</html>`;
+  return new Response(telo, { status: 410, headers: HLAVICKY_STRANKY });
+}
+
 function potvrzovaciStranka(email, token) {
   const telo = `<!doctype html>
 <html lang="cs">
@@ -73,28 +116,14 @@ function potvrzovaciStranka(email, token) {
   </main>
 </body>
 </html>`;
-  return new Response(telo, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-      // same-origin, not no-referrer: with no-referrer the browser sends
-      // "Origin: null" on the form's POST and the origin check refuses our
-      // own button.
-      "Referrer-Policy": "same-origin",
-      "Content-Security-Policy":
-        "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; "
-        + "form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
-      "X-Frame-Options": "DENY",
-    },
-  });
+  return new Response(telo, { status: 200, headers: HLAVICKY_STRANKY });
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   const token = new URL(request.url).searchParams.get("token") || "";
   const odkaz = await platnyOdkaz(env, token);
-  if (!odkaz) return chybova();
+  if (!odkaz) return neplatnyOdkazStranka();
   return potvrzovaciStranka(odkaz.email, token);
 }
 
