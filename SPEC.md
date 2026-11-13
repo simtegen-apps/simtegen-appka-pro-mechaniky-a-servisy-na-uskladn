@@ -122,7 +122,11 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
      - případně další soubory, které obnova přinesla (`functions/api/_middleware.js`, `web/play.js`, `.github/workflows/deploy.yml`) — je potřeba je ověřit v diffu PR;
    - *stavitel:*
      - `data-manifest.json`: entita `hlaseni` a přesný popis služby GitHub (bod 8);
-     - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen).
+     - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen);
+     - `functions/api/hlaseni.js`, vyžádala bezpečnostní recenze. Soubor přišel s obnovou šablony a stejnou opravu by měla dostat i šablona, jinak ji příští obnova přepíše.
+       - Limit hlášení se počítá atomicky před zápisem přes `ochrana.vLimitu`: 5 za hodinu na účet, 30 za hodinu a 200 za den na celý produkt.
+       - Dřív to byl `SELECT COUNT` a pak `INSERT`, takže paralelní požadavky limit obešly a každý založil řádek i issue ve veřejném repozitáři.
+       - Ukázkové a kontrolní účty firmy (`@ukazka.invalid`) se do GitHubu nezrcadlí, jejich řádek v aplikaci zůstává.
 
    Nevzniká žádné nové úložiště v prohlížeči ani cookie. `sg-volba` už zásady uvádějí.
 8. **Oprava po kontrole manifestu:**
