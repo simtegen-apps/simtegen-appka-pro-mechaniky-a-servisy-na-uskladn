@@ -121,6 +121,7 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
      - `functions/api/hlaseni.js`, `schranka_sifra.js`, `db/migrace/0003_hlaseni.sql`;
      - případně další soubory, které obnova přinesla (`functions/api/_middleware.js`, `web/play.js`, `.github/workflows/deploy.yml`) — je potřeba je ověřit v diffu PR;
    - *stavitel:*
+     - `kontrola_manifestu.py` (pokyn majitele, nález GitHub code scanning „Bad HTML filtering regexp“). Hledání inline skriptů teď pozná i koncovou značku s mezerou (`</script >`). Soubor je ze šablony, takže stejnou opravu by měla dostat i šablona, jinak ji příští obnova přepíše;
      - `data-manifest.json`: entita `hlaseni` a přesný popis služby GitHub (bod 8);
      - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen);
      - `functions/api/hlaseni.js`, vyžádala bezpečnostní recenze. Soubor přišel s obnovou šablony a stejnou opravu by měla dostat i šablona, jinak ji příští obnova přepíše.
