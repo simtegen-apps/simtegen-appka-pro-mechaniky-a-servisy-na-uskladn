@@ -1,41 +1,41 @@
 {
-  "uvod": "Pneusklad je evidence uskladněných pneumatik pro malé a mobilní pneuservisy. Ke každé sadě zapíšete zákazníka, vozidlo, rozměr, hloubku dezénu a místo v regálu, vytisknete štítek a v objednávkách uvidíte, která kola máte zítra připravit.",
+  "uvod": "Pneusklad je evidence uskladněných pneu pro malé a mobilní pneuservisy: štítky, objednávky a příprava kol na zítřek.",
   "temata": [
     {
       "nadpis": "Jak uskladnit sadu a vytisknout štítek",
-      "text": "Na obrazovce Dnes nebo Sklad klepněte na Nová sada. Průvodce má čtyři kroky: čí jsou kola, vozidlo a pneu, hloubka dezénu a místo ve skladu s cenou.\n\nPo uložení sada dostane kód. Stejným tlačítkem dole pak vytisknete štítek. Formát štítku (role 100 × 50 mm nebo archy A4) a údaje, které se na něj tisknou, nastavíte v Nastavení."
+      "text": "- Na obrazovce Dnes nebo Sklad klepněte na Nová sada.\n- Projděte čtyři kroky: zákazník, vozidlo a pneu, hloubka dezénu, místo a cena.\n- Po uložení dostane sada kód a tlačítkem dole vytisknete štítek.\n- Formát štítku (role 100 × 50 mm nebo archy A4) a údaje na něm nastavíte v Nastavení."
     },
     {
       "nadpis": "Jak najít sadu",
-      "text": "Do hledání na obrazovce Dnes nebo Sklad napište kód sady, registrační značku, jméno, telefon nebo místo v regálu. Stačí část. Čtečka čárových kódů napíše kód ze štítku sama.\n\nVe Skladu můžete zaškrtnout víc sad a vytisknout štítky najednou."
+      "text": "- Do hledání na obrazovce Dnes nebo Sklad napište kód, registrační značku, jméno, telefon nebo místo.\n- Stačí část. Čtečka čárových kódů napíše kód ze štítku sama.\n- Ve Skladu zaškrtněte víc sad a vytiskněte štítky najednou."
     },
     {
       "nadpis": "Objednávky a příprava kol na zítřek",
-      "text": "V Objednávkách zapíšete, kdo kdy přijede a co se bude dělat. U objednávky vyberete uskladněnou sadu, takže aplikace ví, která kola k ní patří.\n\nNa obrazovce Dnes klepněte na Připravit kola: uvidíte seznam kol na zítřek i s místem v regálu. Seznam si můžete poslat e-mailem nebo uložit jako připomínku do kalendáře v telefonu."
+      "text": "- V Objednávkách zapíšete, kdo kdy přijede a co se bude dělat.\n- U objednávky vyberete uskladněnou sadu, takže aplikace ví, která kola k ní patří.\n- Na obrazovce Dnes klepněte na Připravit kola: uvidíte kola na zítřek i s místem v regálu.\n- Seznam si pošlete e-mailem nebo uložte jako připomínku do kalendáře v telefonu."
     },
     {
       "nadpis": "Vydání sady zákazníkovi",
-      "text": "Otevřete sadu a klepněte na Vydat. Když se kola za sezónu vrátí, klepněte u téže sady na Vrátit na sklad a zadejte místo v regálu. Kód sady i její historie zůstávají."
+      "text": "- Otevřete sadu a klepněte na Vydat.\n- Když se kola vrátí, klepněte u téže sady na Vrátit na sklad a zadejte místo v regálu.\n- Kód sady i její historie zůstávají."
     },
     {
       "nadpis": "Co dělat, když něco smažete nebo zrušíte omylem",
-      "text": "Po zrušení objednávky, vydání nebo přesunu sady, smazání zákazníka, odebrání kolegy a podobných krocích se dole na několik sekund objeví tlačítko Vrátit. Klepnutím vše vrátíte, jak to bylo.\n\nNa otázku se aplikace ptá jen u kroků, které vrátit nejde, například u smazání celého účtu."
+      "text": "- Po zrušení objednávky, vydání nebo přesunu sady, smazání zákazníka či odebrání kolegy se dole objeví Vrátit.\n- Klepnutím vše vrátíte, jak to bylo.\n- Aplikace se ptá jen u kroků, které vrátit nejde, například u smazání účtu."
     },
     {
       "nadpis": "Sezónní přehled",
-      "text": "Z obrazovky Dnes vede odkaz Sezóna. Najdete tam zákazníky, kteří u vás mají kola a ještě se neobjednali, sady s dezénem pod 4 mm a nezaplacené uskladnění. Seznam k obvolání si můžete vytisknout."
+      "text": "- Z obrazovky Dnes vede odkaz Sezóna.\n- Najdete tam, koho obvolat na přezutí, sady s dezénem pod 4 mm a nezaplacené uskladnění.\n- Seznam k obvolání si můžete vytisknout."
     },
     {
       "nadpis": "Kolegové v týmu",
-      "text": "Správce v Nastavení otevře Tým a pozve kolegu jeho e-mailem. Kolega se přihlásí stejně jako vy, odkazem z e-mailu, a na obrazovce Dnes pozvánku přijme. Dokud ji nepřijme, do vašeho servisu nevidí. Oprávnění jsou tři: správce může všechno, mechanik dělá běžnou práci bez nastavení a jen čtení se ničeho nedotkne.\n\nKolega může ze servisu kdykoli sám odejít v Nastavení na obrazovce Účet a data."
+      "text": "- Správce v Nastavení otevře Tým a pozve kolegu jeho e-mailem.\n- Kolega se přihlásí odkazem z e-mailu a na obrazovce Dnes pozvánku přijme. Do té doby do servisu nevidí.\n- Správce může všechno, mechanik dělá běžnou práci bez nastavení a jen čtení se ničeho nedotkne.\n- Kolega může ze servisu sám odejít v Nastavení na obrazovce Účet a data."
     },
     {
       "nadpis": "Aplikace v angličtině",
-      "text": "Aplikace mluví česky nebo anglicky a jazyk si vybere sama podle jazyka vašeho telefonu nebo prohlížeče. Slovenština dostane češtinu.\n\nJinak jazyk změníte v Nastavení na obrazovce Účet a data, na řádku Jazyk. Volba se uloží k vašemu účtu, takže platí na všech vašich zařízeních a ostatním v týmu jazyk nemění.\n\nV angličtině jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol na zítřek. Česky zůstávají přihlašovací e-mail, tato nápověda, obchodní podmínky a zásady zpracování údajů. Údaje, které zapíšete, se nepřekládají."
+      "text": "- Aplikace mluví česky nebo anglicky podle jazyka telefonu nebo prohlížeče. Slovenština dostane češtinu.\n- Jinak jazyk změníte v Nastavení na obrazovce Účet a data, na řádku Jazyk.\n- Volba platí na všech vašich zařízeních a ostatním v týmu jazyk nemění.\n- Anglicky jsou obrazovky, štítky, připomínka do kalendáře i e-mail se seznamem kol.\n- Česky zůstává přihlašovací e-mail, tato nápověda, podmínky a zásady. Zapsané údaje se nepřekládají."
     },
     {
       "nadpis": "Stažení dat a smazání účtu",
-      "text": "V Nastavení otevřete Účet a data. Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Data jsou uložena v databázi v Evropské unii. Tamtéž můžete účet se všemi daty smazat. Tento krok je nevratný, proto se vás aplikace ještě zeptá.\n\nNa stejné obrazovce dole najdete i zásady zpracování údajů a zpracovatelskou smlouvu."
+      "text": "- V Nastavení otevřete Účet a data.\n- Tlačítkem Stáhnout moje data získáte soubor s celou evidencí. Data jsou v databázi v Evropské unii.\n- Tamtéž účet se všemi daty smažete. Krok je nevratný, proto se aplikace ještě zeptá.\n- Dole na téže obrazovce najdete zásady zpracování údajů a zpracovatelskou smlouvu."
     }
   ],
   "otazky": []

@@ -185,6 +185,15 @@
        12 sloupců od 768 px) — ne na samotné .obrazovka, jejíž display řídí
        přepínání obrazovek. Na telefonu je to jeden sloupec jako dosud. */
     .mrizka > .pod-sebou { gap: var(--mezera-5); }
+
+    /* Karta tarifu na úvodu leží na tabletu v úzkém sloupci (.s5, na 820 px
+       asi 200 px): obří číslo v plné velikosti („129 Kč“, „5,90 US$“) by
+       vyčnívalo ze stránky. Od tabletu se proto řídí šířkou okna a jednotka
+       se smí zalomit pod číslo. */
+    #uvod-cena .cislo-radek { flex-wrap: wrap; }
+    @media (min-width: 768px) {
+      #uvod-cena .cislo-obri { font-size: min(var(--velikost-obri), 5vw); }
+    }
   </style>
   <style id="tisk-stranka"></style>
   <!-- aplikace: vykresli_aplikaci.py -->

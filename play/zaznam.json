@@ -194,6 +194,7 @@
         ],
         "volitelne": true,
         "zdroje": [
+          "hlaseni",
           "hlášení chyb (tlačítko Nahlásit chybu)"
         ]
       },
