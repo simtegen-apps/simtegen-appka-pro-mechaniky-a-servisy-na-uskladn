@@ -31,6 +31,94 @@
   var BILLING = "https://play.google.com/billing";
   var PRODUKTY = ["predplatne_mesic", "predplatne_rok"];
 
+  // The module's own words, in every language the template speaks. They
+  // live here, not in the template dictionary: play.js reaches a product
+  // only with a build, and a template update must not carry words for a
+  // module the product does not have. Whole sentences per period, never
+  // glued from pieces — word order differs between languages (DESIGN.md).
+  // An app from Google Play is sold worldwide (#232): an English customer
+  // must read the price, the auto-renewal and how to cancel in English —
+  // that is what the Subscriptions policy means by "clear terms".
+  var TEXTY = {
+    cs: {
+      "play.ukazka.pripravuji": "Připravuji ukázku…",
+      "play.ukazka.nejde": "Ukázku teď nejde založit.",
+      "play.ukazka.pruh": "Prohlížíte ukázku s vymyšlenými daty. Za 24 hodin zmizí.",
+      "play.ukazka.odejit": "Odejít z ukázky",
+      "play.ukazka.nekupuje": "V ukázce se nic nekupuje — předplatné si koupíte ve vlastním účtu.",
+      "play.sprava": "Spravovat nebo zrušit předplatné v Google Play",
+      "play.chrome": "Nákup tu teď nejde spustit — aktualizujte prosím aplikaci Google Chrome.",
+      "play.celkem": "Celkem",
+      "play.overuji": "Ověřuji nákup…",
+      "play.neovereno": "Nákup se nepodařilo ověřit.",
+      "play.hotovo": "Hotovo, předplatné je aktivní.",
+      "play.nepodarilo": "Nákup se nepodařil.",
+      "play.aktivni": "Předplatné máte aktivní.",
+      "play.nelze": "Předplatné teď v aplikaci koupit nejde.",
+      "play.cena.mesic": "{cena} měsíčně",
+      "play.cena.rok": "{cena} ročně",
+      "play.podminky.mesic": "Platí se přes Google Play a obnovuje se automaticky každý měsíc za {cena}, "
+        + "dokud předplatné nezrušíte. Zrušit ho můžete kdykoli v Google Play; zaplacené období doběhne.",
+      "play.podminky.rok": "Platí se přes Google Play a obnovuje se automaticky každý rok za {cena}, "
+        + "dokud předplatné nezrušíte. Zrušit ho můžete kdykoli v Google Play; zaplacené období doběhne.",
+      "play.koupit.mesic": "Předplatit za {cena} měsíčně",
+      "play.koupit.rok": "Předplatit za {cena} ročně",
+      "play.recenze.nazev": "Hodnocení v Google Play",
+      "play.recenze.text": "Pomůže nám, když aplikaci ohodnotíte v Google Play. Hodnocení je veřejné "
+        + "a co do něj napíšete, je jen na vás.",
+      "play.recenze.ohodnotit": "Ohodnotit v Google Play",
+      "play.recenze.ted_ne": "Teď ne",
+    },
+    en: {
+      "play.ukazka.pripravuji": "Preparing the demo…",
+      "play.ukazka.nejde": "The demo can't be started right now.",
+      "play.ukazka.pruh": "You're looking at a demo with made-up data. It disappears in 24 hours.",
+      "play.ukazka.odejit": "Leave the demo",
+      "play.ukazka.nekupuje": "Nothing is bought in the demo — you subscribe in your own account.",
+      "play.sprava": "Manage or cancel the subscription in Google Play",
+      "play.chrome": "The purchase can't start here — please update the Google Chrome app.",
+      "play.celkem": "Total",
+      "play.overuji": "Verifying the purchase…",
+      "play.neovereno": "The purchase couldn't be verified.",
+      "play.hotovo": "Done, your subscription is active.",
+      "play.nepodarilo": "The purchase didn't go through.",
+      "play.aktivni": "Your subscription is active.",
+      "play.nelze": "The subscription can't be bought in the app right now.",
+      "play.cena.mesic": "{cena} a month",
+      "play.cena.rok": "{cena} a year",
+      "play.podminky.mesic": "Paid through Google Play and renewed automatically every month for {cena} "
+        + "until you cancel. You can cancel any time in Google Play; the paid period runs to its end.",
+      "play.podminky.rok": "Paid through Google Play and renewed automatically every year for {cena} "
+        + "until you cancel. You can cancel any time in Google Play; the paid period runs to its end.",
+      "play.koupit.mesic": "Subscribe for {cena} a month",
+      "play.koupit.rok": "Subscribe for {cena} a year",
+      "play.recenze.nazev": "Rating in Google Play",
+      "play.recenze.text": "It helps us if you rate the app in Google Play. Ratings are public "
+        + "and what you write is entirely up to you.",
+      "play.recenze.ohodnotit": "Rate in Google Play",
+      "play.recenze.ted_ne": "Not now",
+    },
+  };
+  var SG = window.SimteGen;
+  if (SG && SG.slovnik) SG.slovnik(TEXTY);
+
+  // Through the template's translator (the visitor's language, Czech for a
+  // missing word); without simtegen.js — never in a product, but a broken
+  // page must still sell honestly — Czech straight from the table above.
+  function t(klic, promenne) {
+    if (SG && SG.t) return SG.t(klic, promenne);
+    return String(TEXTY.cs[klic] || klic).replace(/\{(\w+)\}/g, function (cele, jmeno) {
+      return promenne && jmeno in promenne ? String(promenne[jmeno]) : cele;
+    });
+  }
+
+  // The server still answers in Czech (its errors are not translated yet):
+  // a Czech visitor reads its exact reason, anyone else our own sentence.
+  function duvod(r, klic) {
+    var jaz = SG && SG.jazyk ? SG.jazyk() : "cs";
+    return jaz === "cs" && r && r.data && r.data.chyba ? r.data.chyba : t(klic);
+  }
+
   function prvek(tag, trida, text) {
     var e = doc.createElement(tag);
     if (trida) e.className = trida;
@@ -106,18 +194,18 @@
     fetch("/ukazka.json", { credentials: "same-origin" }).then(function (r) {
       if (!r.ok) return;
       koren.classList.add("sg-ukazka");
-      Array.prototype.forEach.call(tlacitka, function (t) {
-        t.addEventListener("click", function () {
-          t.disabled = true;
-          t.textContent = "Připravuji ukázku…";
+      Array.prototype.forEach.call(tlacitka, function (b) {
+        b.addEventListener("click", function () {
+          b.disabled = true;
+          b.textContent = t("play.ukazka.pripravuji");
           api("/api/ukazka", "POST").then(function (r) {
-            if (!r.ok) throw new Error(r.data.chyba || "Ukázku teď nejde založit.");
+            if (!r.ok) throw new Error(duvod(r, "play.ukazka.nejde"));
             return prehrajUkazku(r.data.kroky || []);
           }).then(function () {
             location.replace("/");
           }).catch(function (e) {
-            t.disabled = false;
-            t.textContent = e.message || "Ukázku teď nejde založit.";
+            b.disabled = false;
+            b.textContent = e.message || t("play.ukazka.nejde");
           });
         });
       });
@@ -127,8 +215,8 @@
   function pruhUkazky() {
     var pruh = prvek("div", "sg-ukazka-pruh");
     pruh.setAttribute("role", "status");
-    pruh.appendChild(prvek("span", "", "Prohlížíte ukázku s vymyšlenými daty. Za 24 hodin zmizí."));
-    var odejit = prvek("button", "tlacitko", "Odejít z ukázky");
+    pruh.appendChild(prvek("span", "", t("play.ukazka.pruh")));
+    var odejit = prvek("button", "tlacitko", t("play.ukazka.odejit"));
     odejit.type = "button";
     odejit.addEventListener("click", function () {
       api("/api/odhlaseni", "POST").then(function () { location.replace("/"); });
@@ -139,22 +227,19 @@
 
   // ── Nákup v Google Play ──────────────────────────────────────────────
 
+  // Google's price in the currency Google charges, written the way the
+  // template writes money in the visitor's language (SimteGen.cena).
   function cena(polozka) {
-    try {
-      return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: polozka.price.currency })
-        .format(Number(polozka.price.value));
-    } catch (e) {
-      return polozka.price.value + " " + polozka.price.currency;
-    }
+    if (SG && SG.cena) return SG.cena(polozka.price.value, polozka.price.currency);
+    return polozka.price.value + " " + polozka.price.currency;
   }
 
   function obdobi(polozka) {
-    var rok = /Y/.test(polozka.subscriptionPeriod || "") || /_rok$/.test(polozka.itemId);
-    return rok ? { slovo: "ročně", kazdy: "každý rok" } : { slovo: "měsíčně", kazdy: "každý měsíc" };
+    return /Y/.test(polozka.subscriptionPeriod || "") || /_rok$/.test(polozka.itemId) ? "rok" : "mesic";
   }
 
   function sprava(balicek) {
-    var odkaz = prvek("a", "", "Spravovat nebo zrušit předplatné v Google Play");
+    var odkaz = prvek("a", "", t("play.sprava"));
     odkaz.href = "https://play.google.com/store/account/subscriptions" +
       (balicek ? "?package=" + encodeURIComponent(balicek) : "");
     odkaz.rel = "noopener";
@@ -163,24 +248,24 @@
 
   function kup(sluzba, polozka, zprava) {
     if (!window.PaymentRequest) {
-      zprava.textContent = "Nákup tu teď nejde spustit — aktualizujte prosím aplikaci Google Chrome.";
+      zprava.textContent = t("play.chrome");
       return Promise.resolve();
     }
     var pozadavek = new PaymentRequest(
       [{ supportedMethods: BILLING, data: { sku: polozka.itemId } }],
-      { total: { label: "Celkem", amount: { currency: polozka.price.currency, value: "0" } } });
+      { total: { label: t("play.celkem"), amount: { currency: polozka.price.currency, value: "0" } } });
     return pozadavek.show().then(function (odpoved) {
-      zprava.textContent = "Ověřuji nákup…";
+      zprava.textContent = t("play.overuji");
       return api("/api/play", "POST", { token: odpoved.details.purchaseToken }).then(function (r) {
         return odpoved.complete(r.ok ? "success" : "fail").then(function () {
-          if (!r.ok) throw new Error(r.data.chyba || "Nákup se nepodařilo ověřit.");
-          zprava.textContent = "Hotovo, předplatné je aktivní.";
+          if (!r.ok) throw new Error(duvod(r, "play.neovereno"));
+          zprava.textContent = t("play.hotovo");
           setTimeout(function () { location.reload(); }, 1200);
         });
       });
     }).catch(function (e) {
       // AbortError = the customer closed Google's sheet; nothing happened.
-      zprava.textContent = e && e.name === "AbortError" ? "" : (e.message || "Nákup se nepodařil.");
+      zprava.textContent = e && e.name === "AbortError" ? "" : (e.message || t("play.nepodarilo"));
     });
   }
 
@@ -191,32 +276,30 @@
     // The demo's paid features are a loan, not a purchase: it shows the
     // offer and its terms (what Google's reviewer looks for) instead.
     if (stav && stav.stav === "aktivni" && !info.ukazka) {
-      obal.appendChild(prvek("p", "", "Předplatné máte aktivní."));
+      obal.appendChild(prvek("p", "", t("play.aktivni")));
       obal.appendChild(sprava(info.balicek));
       misto.replaceChildren(obal);
       return;
     }
     if (!polozky.length) {
-      obal.appendChild(prvek("p", "", "Předplatné teď v aplikaci koupit nejde."));
+      obal.appendChild(prvek("p", "", t("play.nelze")));
       misto.replaceChildren(obal);
       return;
     }
     polozky.forEach(function (p) {
       var o = obdobi(p);
       var radek = prvek("div", "sg-play-nabidka");
-      radek.appendChild(prvek("p", "sg-play-cena", cena(p) + " " + o.slovo));
+      var c = { cena: cena(p) };
+      radek.appendChild(prvek("p", "sg-play-cena", t("play.cena." + o, c)));
       // Subscriptions policy: price, period, auto-renewal and how to cancel,
       // in plain sight before the button.
-      radek.appendChild(prvek("p", "popisek",
-        "Platí se přes Google Play a obnovuje se automaticky " + o.kazdy + " za " + cena(p) +
-        ", dokud předplatné nezrušíte. Zrušit ho můžete kdykoli v Google Play; " +
-        "zaplacené období doběhne."));
-      var tlacitko = prvek("button", "tlacitko plne", "Předplatit za " + cena(p) + " " + o.slovo);
+      radek.appendChild(prvek("p", "popisek", t("play.podminky." + o, c)));
+      var tlacitko = prvek("button", "tlacitko plne", t("play.koupit." + o, c));
       tlacitko.type = "button";
       if (info.ukazka) {
         tlacitko.disabled = true;
         radek.appendChild(tlacitko);
-        radek.appendChild(prvek("p", "popisek", "V ukázce se nic nekupuje — předplatné si koupíte ve vlastním účtu."));
+        radek.appendChild(prvek("p", "popisek", t("play.ukazka.nekupuje")));
       } else {
         tlacitko.addEventListener("click", function () {
           tlacitko.disabled = true;
@@ -255,18 +338,16 @@
   function zadostORecenzi(balicek) {
     if (doc.querySelector(".sg-recenze")) return;
     var karta = prvek("section", "sg-recenze");
-    karta.setAttribute("aria-label", "Hodnocení v Google Play");
-    karta.appendChild(prvek("p", "",
-      "Pomůže nám, když aplikaci ohodnotíte v Google Play. Hodnocení je veřejné " +
-      "a co do něj napíšete, je jen na vás."));
+    karta.setAttribute("aria-label", t("play.recenze.nazev"));
+    karta.appendChild(prvek("p", "", t("play.recenze.text")));
     var akce = prvek("div", "sg-recenze-akce");
-    var odkaz = prvek("a", "tlacitko vedlejsi", "Ohodnotit v Google Play");
+    var odkaz = prvek("a", "tlacitko vedlejsi", t("play.recenze.ohodnotit"));
     // Android hands this address to the Play Store app (its detail page
     // carries the rating stars).
     odkaz.href = "https://play.google.com/store/apps/details?id=" + encodeURIComponent(balicek);
     odkaz.target = "_blank";
     odkaz.rel = "noopener";
-    var pozdeji = prvek("button", "tlacitko vedlejsi", "Teď ne");
+    var pozdeji = prvek("button", "tlacitko vedlejsi", t("play.recenze.ted_ne"));
     pozdeji.type = "button";
     function odpovez(odpoved) {
       // keepalive: the tap on the link leaves for the Play Store at once.

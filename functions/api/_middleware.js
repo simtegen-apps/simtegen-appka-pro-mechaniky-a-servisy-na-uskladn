@@ -61,12 +61,26 @@
 //   sessions           → renewed at most 90 days from the login; a session
 //                        under the old cookie name moves to the product's
 //                        new one (__Host-relace) and the old one is cleared
+//
+// And the customer's language (migration 0950, batch B 14. 11. 2026) — the
+// product's prihlaseni.js gets context.data.jazyk (the page's, else the
+// browser's, only among the languages the product declares) for the login
+// mail; the language rides on the link and onto the new account like the
+// source label; /api/ja answers it in X-SimteGen-Jazyk-Uctu for a product
+// that speaks more than one, and the page corrects it via /api/jazyk.
+//
+// And why customers leave (migration 0960, batch D2 14. 11. 2026): /api/ja
+// answers X-SimteGen-Odchod: otazka once the trial or the paid period ran
+// out and the account has not answered for it; web/simtegen.js then shows
+// the one-tap question (functions/api/odchod.js counts the answer).
 
 import { RELACE_COOKIE, cookieHlavicka } from "../../spolecne.js";
 import {
-  adresaKlienta, adresaProPocitani, potvrzeniPrihlaseni, tokenZPotvrzeni, vLimitu, vyvoj,
+  adresaKlienta, adresaProPocitani, jazykZadosti, jazykyZeStranky, potvrzeniPrihlaseni, tokenZPotvrzeni,
+  vLimitu, vyvoj,
 } from "../../ochrana.js";
 import * as overeniProduktu from "./overeni.js";
+import { znackaOdchodu } from "./odchod.js";
 
 const ZNAK = /[^a-z0-9._-]/g;
 
@@ -79,7 +93,12 @@ function zdrojZ(referer) {
   try {
     const parametry = new URL(referer).searchParams;
     const zdroj = stitek(parametry.get("utm_source"));
-    return zdroj ? { zdroj, kampan: stitek(parametry.get("utm_campaign")) } : null;
+    if (zdroj) return { zdroj, kampan: stitek(parametry.get("utm_campaign")) };
+    // The Android app opens the site with ?aplikace=play (vydani.py,
+    // start_aplikace): an account made inside it came from Google Play.
+    // Without this every Play customer read as "no label" and the store
+    // looked like it brought nobody. A labelled link still wins.
+    return parametry.get("aplikace") === "play" ? { zdroj: "google-play", kampan: "" } : null;
   } catch {
     return null;
   }
@@ -139,15 +158,52 @@ const UKAZKOVY_UCET = "@ukazka.invalid";
 // the handler as context.data.produkt — the product's prihlaseni.js uses
 // it when present (template; older products get their subject line
 // rewritten by the build, stavitel._NAZEV_V_EMAILU).
+// The same read gives the languages the product speaks (simtegen-jazyky):
+// the login mail goes in the customer's, and /api/ja tells the page which
+// language the account has (batch B, 14. 11. 2026).
 let nazevProduktu = null;
+let jazykyProduktu = null;
 
-async function nactiNazev(context) {
-  if (nazevProduktu !== null) return nazevProduktu;
+async function nactiStranku(context) {
+  if (nazevProduktu !== null) return;
   const stranka = await context.env.ASSETS.fetch(new URL("/", context.request.url));
   const html = stranka.ok ? await stranka.text() : "";
   const m = html.match(/<meta\s+name=["']application-name["']\s+content=["']([^"'<>]{1,60})["']/i);
   nazevProduktu = m ? m[1].trim() : "";
+  jazykyProduktu = jazykyZeStranky(html);
+}
+
+async function nactiNazev(context) {
+  await nactiStranku(context);
   return nazevProduktu;
+}
+
+async function nactiJazyky(context) {
+  await nactiStranku(context);
+  return jazykyProduktu;
+}
+
+// The language onto the login link, and from the link onto the account it
+// creates — the same path as the source label above, and like it never the
+// customer's problem when it fails (before migration 0950 it always does).
+async function jazykOdkazu(context, token) {
+  if (!/^[0-9a-f]{64}$/.test(token)) return null;
+  return context.env.DB.prepare(
+    "SELECT email, jazyk FROM prihlasovaci_odkazy WHERE otisk_tokenu = ? AND pouzito = 0"
+  ).bind(await otisk(token)).first();
+}
+
+async function zapisJazyk(context, email, odkaz, odpoved) {
+  const { env, data } = context;
+  if (email && data.jazyk && odpoved.ok) {
+    await env.DB.prepare(
+      "UPDATE prihlasovaci_odkazy SET jazyk = ? WHERE id = (SELECT MAX(id) FROM prihlasovaci_odkazy WHERE email = ?)"
+    ).bind(data.jazyk, email).run();
+  } else if (odkaz && odkaz.jazyk && odpoved.status === 303) {
+    await env.DB.prepare(
+      "UPDATE uzivatele SET jazyk = ? WHERE email = ? AND jazyk IS NULL"
+    ).bind(odkaz.jazyk, odkaz.email).run();
+  }
 }
 
 async function zapisZkusebni(context) {
@@ -193,9 +249,37 @@ async function sJa(context, odpoved) {
   } catch {
     // Same: no table yet means no sample data, not a broken /api/ja.
   }
-  if (!ukazka) return odpoved;
+  // The account's language, for a product that speaks more than one: the
+  // page corrects it through /api/jazyk when it differs ("" = not set yet).
+  let jazyk = null;
+  try {
+    if ((await nactiJazyky(context)).length > 1) {
+      const radek = await context.env.DB.prepare("SELECT jazyk FROM uzivatele WHERE id = ?")
+        .bind(data.uzivatel.id).first();
+      jazyk = radek ? String(radek.jazyk || "") : null;
+    }
+  } catch {
+    // Before migration 0950: the page simply does not ask.
+  }
+  // Why did you not go on (migration 0960, odchod.js): asked once the trial
+  // or the paid period ran out, until this account answered for it.
+  let odchod = null;
+  try {
+    const znacka = znackaOdchodu(data.predplatne);
+    if (znacka) {
+      const odpovezeno = await context.env.DB.prepare(
+        "SELECT 1 AS x FROM upominky WHERE uzivatel_id = ? AND druh = ?"
+      ).bind(data.uzivatel.id, znacka).first();
+      if (!odpovezeno) odchod = "otazka";
+    }
+  } catch {
+    // Before the migrations: the page simply does not ask.
+  }
+  if (!ukazka && jazyk === null && !odchod) return odpoved;
   const nova = new Response(odpoved.body, odpoved);
-  nova.headers.set("X-SimteGen-Ukazkova-Data", ukazka);
+  if (ukazka) nova.headers.set("X-SimteGen-Ukazkova-Data", ukazka);
+  if (odchod) nova.headers.set("X-SimteGen-Odchod", odchod);
+  if (jazyk !== null) nova.headers.set("X-SimteGen-Jazyk-Uctu", jazyk);
   return nova;
 }
 
@@ -283,6 +367,9 @@ const FORMULAROVE = new Set(["text/plain", "application/x-www-form-urlencoded"])
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
 const HODINA_S = 3600;
 const NEJDE_EMAIL = "Přihlašování e-mailem teď nefunguje. Zkuste to prosím později, nebo nám chybu nahlaste.";
+// Every refusal here carries a `kod` besides the Czech sentence: a page in
+// another language shows SimteGen.chyba(data) — its own words for the code
+// (web/simtegen.js, sg.chyba.*) — never the Czech text.
 
 function odpovedJson(telo, status, hlavicky = {}) {
   return new Response(JSON.stringify(telo), {
@@ -312,7 +399,8 @@ async function brzdaPrihlaseni(context) {
   // one (LIMIT_PRIHLASENI_HODINA) keeps a script with many addresses from
   // spending the firm's mail quota — and its name — for every product.
   const { request, env } = context;
-  const moc = (zprava) => odpovedJson({ chyba: zprava }, 429, { "Retry-After": String(HODINA_S) });
+  const moc = (zprava, kod = "moc_pokusu") => odpovedJson({ chyba: zprava, kod }, 429,
+    { "Retry-After": String(HODINA_S) });
   if (!(await vLimitu(env, "prihlaseni_ip", adresaKlienta(request, env),
     cislo(env.LIMIT_PRIHLASENI_IP, 10), HODINA_S))) {
     return moc("Příliš mnoho pokusů. Zkuste to prosím za hodinu.");
@@ -328,7 +416,7 @@ async function brzdaPrihlaseni(context) {
     return moc("Příliš mnoho pokusů. Zkuste to prosím za hodinu.");
   }
   if (!(await vLimitu(env, "prihlaseni_produkt", "vse", cislo(env.LIMIT_PRIHLASENI_HODINA, 200), HODINA_S))) {
-    return moc("Přihlašovacích e-mailů je teď příliš mnoho. Zkuste to prosím za chvíli.");
+    return moc("Přihlašovacích e-mailů je teď příliš mnoho. Zkuste to prosím za chvíli.", "moc_emailu");
   }
   try {
     // Expired links go when new ones are asked for (the policy promises 24
@@ -345,7 +433,7 @@ async function brzdaPrihlaseni(context) {
     // after a deploy (overeni.py, kontrola@ukazka.invalid) sees what a
     // customer would get — including the 503 of a product whose mail
     // settings went missing — and never a link.
-    if (!env.RESEND_API_KEY || !env.EMAIL_ODESILATEL) return odpovedJson({ chyba: NEJDE_EMAIL }, 503);
+    if (!env.RESEND_API_KEY || !env.EMAIL_ODESILATEL) return odpovedJson({ chyba: NEJDE_EMAIL, kod: "email_nejde" }, 503);
     return odpovedJson({ stav: "odeslano" }, 200);
   }
   return null;
@@ -363,7 +451,7 @@ async function bezOdkazu(odpoved, env) {
     return odpoved;
   }
   if (telo && typeof telo === "object" && ("odkaz" in telo || telo.stav === "vyvojovy_rezim")) {
-    return odpovedJson({ chyba: NEJDE_EMAIL }, 503);
+    return odpovedJson({ chyba: NEJDE_EMAIL, kod: "email_nejde" }, 503);
   }
   return odpoved;
 }
@@ -385,6 +473,29 @@ function zabezpec(odpoved, env) {
   return vysledek;
 }
 
+// ── Invoice orders: customers in Czechia only, for now ───────────────
+// (batch B, 14. 11. 2026). The web order is an invoice from a Czech firm in
+// Kč, paid by bank transfer with a variable symbol. A customer abroad needs
+// another VAT regime (reverse charge with a VAT ID in the EU, the customer's
+// country's VAT through OSS for a consumer, none at all outside the EU), a
+// payment the bank can match without the symbol and an invoice in their
+// language — none of that exists yet. So a foreign order is refused here,
+// in every product (each one's objednavka.js is its own and old), and the
+// page says so before the customer fills anything in (web/simtegen.js);
+// customers abroad subscribe in the Android app, where Google Play sells
+// and handles the tax. Cloudflare's country of the connection; none (a
+// local run, Tor, unknown) is let through — the order still needs a login
+// and the firm issues the invoice, never the customer.
+function objednavkaMimoCesko(request) {
+  const zeme = request.cf && request.cf.country;
+  if (typeof zeme !== "string" || !/^[A-Z]{2}$/.test(zeme) || zeme === "XX" || zeme === "T1" || zeme === "CZ") {
+    return null;
+  }
+  return odpovedJson({
+    chyba: "Objednávka na fakturu je zatím jen pro zákazníky v Česku.", kod: "objednavka_jen_cesko",
+  }, 422);
+}
+
 export async function onRequest(context) {
   return zabezpec(await obsluz(context), context.env);
 }
@@ -395,12 +506,12 @@ async function obsluz(context) {
   const cesta = url.pathname;
   if (!BEZ_TELA.has(request.method)) {
     if (zCiziStranky(request, url)) {
-      return odpovedJson({ chyba: "Požadavek z cizí stránky jsme odmítli." }, 403);
+      return odpovedJson({ chyba: "Požadavek z cizí stránky jsme odmítli.", kod: "cizi_stranka" }, 403);
     }
     const typ = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
     // The login confirmation is the one real form (ochrana.js).
     if (FORMULAROVE.has(typ) && cesta !== "/api/overeni") {
-      return odpovedJson({ chyba: "Požadavek musí být ve formátu JSON." }, 415);
+      return odpovedJson({ chyba: "Požadavek musí být ve formátu JSON.", kod: "format" }, 415);
     }
   }
 
@@ -427,16 +538,27 @@ async function obsluz(context) {
     const zastaveno = await brzdaPrihlaseni(context);
     if (zastaveno) return zastaveno;
   }
+  if (request.method === "POST" && cesta === "/api/objednavka") {
+    const mimo = objednavkaMimoCesko(request);
+    if (mimo) return mimo;
+  }
 
   // The body is the handler's to read; a copy is taken before it does.
   const kopie = request.method === "POST" && (cesta === "/api/prihlaseni" || cesta === "/api/navsteva")
     ? request.clone() : null;
   let odkaz = null;
+  let odkazJazyk = null;
+  let emailJazyk = "";
   if (tokenOvereni) {
     try {
       odkaz = await odkazPredOverenim(context, tokenOvereni);
     } catch {
       // Before the migration, or a bad token: the handler decides, not us.
+    }
+    try {
+      odkazJazyk = await jazykOdkazu(context, tokenOvereni);
+    } catch {
+      // Before migration 0950: the account stays Czech, as before.
     }
   }
   if (request.method === "POST" && cesta === "/api/prihlaseni") {
@@ -444,6 +566,21 @@ async function obsluz(context) {
       context.data.produkt = (await nactiNazev(context)) || undefined;
     } catch {
       // Without a name the mail says "Váš přihlašovací odkaz", as before.
+    }
+    try {
+      // The page may say which language it shows (the template's login form
+      // does); otherwise the browser's, like the page's own choice.
+      let zadany = "";
+      try {
+        const telo = await request.clone().json();
+        zadany = String(telo.jazyk || "");
+        emailJazyk = String(telo.email || "").trim().toLowerCase();
+      } catch {
+        // the handler answers a body that is not JSON
+      }
+      context.data.jazyk = jazykZadosti(await nactiJazyky(context), zadany, request.headers.get("Accept-Language"));
+    } catch {
+      // Czech, as before.
     }
   }
   let odpoved = predat ? await context.next(predat) : await context.next();
@@ -454,6 +591,11 @@ async function obsluz(context) {
     await zapis(context, kopie, odkaz, odpoved);
   } catch {
     // See the header: never the customer's problem.
+  }
+  try {
+    await zapisJazyk(context, emailJazyk, odkazJazyk, odpoved);
+  } catch {
+    // Same rule: a language not remembered is Czech mail, not a failed login.
   }
   let vysledek = odpoved;
   if (request.method === "GET" && cesta === "/api/ja" && odpoved.ok) {

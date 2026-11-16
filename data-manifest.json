@@ -9,12 +9,12 @@
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
   "zkusebni_dni": 30,
-  "cena_dph": "",
+  "cena_dph": "včetně DPH",
   "ukladame": [
     {
       "entita": "uzivatele",
       "ucel": "účet zákazníka a přihlášení",
-      "pole": "e-mailová adresa, čas založení účtu",
+      "pole": "e-mailová adresa, čas založení účtu, jazyk aplikace",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
         "email"
@@ -27,7 +27,7 @@
     {
       "entita": "prihlasovaci_odkazy",
       "ucel": "jednorázové přihlášení e-mailovým odkazem",
-      "pole": "otisk tokenu, e-mailová adresa, expirace",
+      "pole": "otisk tokenu, e-mailová adresa, expirace, jazyk aplikace",
       "retence": "24 hodin",
       "play_typy": [
         "email"
@@ -199,7 +199,7 @@
     },
     {
       "entita": "upominky",
-      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem) — proto se ukládá i vaše odpověď na žádost o hodnocení v Google Play (ohodnotit, nebo později)",
+      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem) — proto se ukládá i vaše odpověď na žádost o hodnocení v Google Play (ohodnotit, nebo později); a aby otázka, proč nepokračujete, šla za každé skončené období zodpovědět jen jednou (pamatujeme si, že jste odpověděli, ne co)",
       "pole": "odkaz na účet, druh upozornění nebo odpověď na žádost o hodnocení, čas odeslání",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
@@ -236,6 +236,20 @@
         "funkce"
       ],
       "play_volitelne": true
+    },
+    {
+      "entita": "hlaseni",
+      "ucel": "hlášení a dotazy zákazníka a naše odpovědi; o odpovědi vás upozorníme e-mailem (s textem odpovědi, nejvýš jednou za odpověď)",
+      "pole": "odkaz na účet, text hlášení, stav, odpověď, číslo záznamu v systému podpory, čas vytvoření a poslední změny",
+      "retence": "do smazání účtu zákazníkem",
+      "play_typy": [
+        "zpravy"
+      ],
+      "play_ucely": [
+        "funkce",
+        "komunikace"
+      ],
+      "play_volitelne": true
     }
   ],
   "agregaty": [
@@ -257,7 +271,7 @@
     },
     {
       "nazev": "GitHub",
-      "ucel": "předání hlášení chyby, které uživatel sám odešle tlačítkem „Nahlásit chybu“, provozovateli jako záznam (issue) v repozitáři produktu; text hlášení a k němu připojené technické údaje (verze aplikace, obrazovka, velikost okna, identifikace prohlížeče a posledních pět chyb stránky) odcházejí zašifrované veřejným klíčem provozovatele, takže je GitHub ani nikdo jiný nepřečte; v aplikaci se hlášení neukládá",
+      "ucel": "evidence hlášení zákazníků pro podporu (text hlášení, technické údaje o stránce a anonymní otisk účtu s údajem, zda je předplatné zaplacené, a stářím účtu — šifrovaně, GitHub vidí jen nečitelný blok; bez e-mailu a jména)",
       "domena": "api.github.com",
       "dpa": "https://github.com/customer-terms/github-data-protection-agreement"
     },
@@ -340,7 +354,39 @@
         ],
         "tablet": true
       }
-    ]
+    ],
+    "en": {
+      "nazev": "Pneusklad: tyre storage",
+      "popis": "Stored tyre records, labels and bookings for small tyre shops.",
+      "hlavni_veta": "Whose wheels are where and what to fetch tomorrow",
+      "dlouhy_popis": "Pneusklad keeps records of stored tyres for small and mobile tyre shops. For each set you record the customer, licence plate, size, tread, the tread depth of all four wheels and the position on the rack. The app gives the set a code and prints a label on your label printer (100 × 50 mm roll) or on A4 sheets.\n\nThe mechanic fills in the booking calendar: who comes when and what will be done. A day ahead the app shows the list of wheels to prepare, with their rack positions. You can send the list to your e-mail or save it as a calendar reminder on your phone.\n\nBefore the season you see whom to call for a tyre change, which sets have less than 4 mm of tread and who has not paid for storage.\n\nColleagues can sign in to the workshop as admin, mechanic or read only. You sign in with a link from your e-mail, without a password. The app speaks English and Czech and picks the language of your phone; you can change it in the app. The data is stored in the European Union and you can download or delete it in the app at any time.\n\nThe first 30 days are free. After that the Standard subscription covers the whole workshop and is paid monthly through Google Play, which shows the price before you buy. It renews automatically and you can cancel it any time in Google Play. You can try a demo with made-up data without signing up.",
+      "snimky": [
+        {
+          "stitek": "Today",
+          "titulek": "In the morning you know what to fetch"
+        },
+        {
+          "stitek": "Storage",
+          "titulek": "Every set has a code and a rack spot"
+        },
+        {
+          "stitek": "Set detail",
+          "titulek": "Tread depth of all four wheels"
+        },
+        {
+          "stitek": "Bookings",
+          "titulek": "The whole workshop week in one place"
+        },
+        {
+          "stitek": "Prepare wheels",
+          "titulek": "Tomorrow's wheels with rack positions"
+        },
+        {
+          "stitek": "Season",
+          "titulek": "Whom to call before the season"
+        }
+      ]
+    }
   },
   "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady i zaznam o zpracovani se GENERUJI z tohoto souboru (python3 vykresli_zasady.py) a kontrola_manifestu.py shazuje build, kdyz se kod nebo vygenerovane soubory s manifestem rozejdou. Kazda nova tabulka = zaznam v ukladame + migrace v db/migrace/ se sloupcem uzivatel_id.",
   "adresa": "https://pneusklad.simtegen.com",
