@@ -15,6 +15,7 @@ import {
   hrubyLimit, json, nactiKontext, nactiUzivatele, zeStejneStranky,
 } from "../spolecne.js";
 import { stavPredplatneho } from "../predplatne.js";
+import { vyvoj } from "../ochrana.js";
 
 // Public endpoints that write without a login: each request is a D1 write
 // (and for the login link an e-mail from the firm's domain). Fenced HERE,
@@ -100,6 +101,25 @@ async function navstevaSeZdrojem(context) {
   }
 }
 
+// The template's functions/api/_middleware.js refuses an invoice order
+// (POST /api/objednavka) from outside Czechia by the connection's country,
+// and lets a request WITHOUT a country through ("a local run"). But
+// `wrangler pages dev` fills request.cf from the machine's real connection,
+// and the CI runner is not in Czechia: the approved acceptance scenario of
+// the invoice order got 422 (build 16, 16. 11. 2026). A fix in the
+// template's file does not survive — the template is refreshed before every
+// check — so here, in the product's own middleware that runs first: in
+// development mode only (VYVOJ=ano: local runs and previews with their own
+// database, never production) the order goes on without the country, as
+// the template's comment meant. Production keeps the rule unchanged.
+function objednavkaVeVyvoji(context) {
+  const { request, env } = context;
+  if (!vyvoj(env) || request.method !== "POST" || new URL(request.url).pathname !== "/api/objednavka") {
+    return null;
+  }
+  return new Request(request, { cf: {} });
+}
+
 export async function onRequest(context) {
   const jinak = nekanonickaCesta(context.request);
   if (jinak) return jinak;
@@ -108,6 +128,6 @@ export async function onRequest(context) {
   context.data.uzivatel = await nactiUzivatele(context.request, context.env);
   context.data.servis = await nactiKontext(context.env, context.data.uzivatel);
   context.data.predplatne = await stavPredplatneho(context.env, context.data.servis);
-  const jinyZdroj = await navstevaSeZdrojem(context);
-  return jinyZdroj ? context.next(jinyZdroj) : context.next();
+  const upraveny = (await navstevaSeZdrojem(context)) || objednavkaVeVyvoji(context);
+  return upraveny ? context.next(upraveny) : context.next();
 }

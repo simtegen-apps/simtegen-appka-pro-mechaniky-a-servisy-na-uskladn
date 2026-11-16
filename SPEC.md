@@ -154,10 +154,12 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
     - **Stránka** volá tuto cestu. Ve scénářích UAT se změnil jen technický zápis cesty, očekávání ne.
     - **Data:** tabulka, manifest ani zásady se nemění.
 11. **Anglický záznam v obchodě** (`aplikace.en` v manifestu): název, krátký a dlouhý popis, hlavní věta a slova ke stejným šesti snímkům. Produkt mluví anglicky, takže ho generátor vyžaduje.
-12. **Objednávka předplatného v akceptačních testech** (oprava po kontrole CI). Změnil jsem `functions/api/_middleware.js`, soubor šablony a mimo rozsah stavby. Stejnou opravu by měla dostat i šablona, jinak ji příští obnova vrátí.
-    - **Co se stalo:** obnovený middleware odmítá fakturační objednávku mimo Česko podle země připojení. Jeho komentář počítá s tím, že lokální běh zemi nemá. `wrangler pages dev` ji ale dosadí podle skutečného připojení a runner GitHubu není v Česku. Schválený scénář „Objednávka předplatného…“ proto dostal 422.
-    - **Oprava:** ve vývojovém režimu (`VYVOJ=ano`, tedy lokální běhy a náhledy) se omezení přeskočí.
-    - **Produkce** `VYVOJ` nemá, tam zahraniční objednávku dál odmítá.
+12. **Objednávka předplatného v akceptačních testech** (oprava po kontrole CI).
+    - **Co se stalo:** obnovený šablonový `functions/api/_middleware.js` odmítá fakturační objednávku mimo Česko podle země připojení. Jeho komentář počítá s tím, že lokální běh zemi nemá. `wrangler pages dev` ji ale dosadí podle skutečného připojení a runner GitHubu není v Česku. Schválený scénář „Objednávka předplatného…“ proto dostal 422.
+    - **Proč ne v šablonovém souboru:** oprava přímo v `functions/api/_middleware.js` nepřežila, šablona se obnovuje před každou kontrolou.
+    - **Oprava:** je v produktovém `functions/_middleware.js`, který běží dřív. Jen ve vývojovém režimu (`VYVOJ=ano`, tedy lokální běhy a náhledy s vlastní databází) předá požadavek na `/api/objednavka` dál bez údaje o zemi a šablonové pravidlo ho nechá projít.
+    - **Produkce** `VYVOJ` nemá, zahraniční fakturační objednávku dál odmítá.
+    - **Do šablony:** trvalá oprava patří tam (vývojový režim přeskočit přímo v `objednavkaMimoCesko`). Pak tento kus produktu půjde smazat.
 13. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
    - `python vykresli_napovedu.py`
    - `python vykresli_zasady.py`
