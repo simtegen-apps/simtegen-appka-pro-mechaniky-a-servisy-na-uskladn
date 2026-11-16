@@ -103,11 +103,22 @@
       "sg.za_datum": "za {pocet} ({datum})",
       "sg.ukazka.pripravuji": "Připravuji ukázková data…",
       "sg.ukazka.nejde": "Ukázková data teď nejde nahrát.",
+      "sg.objednavka.mimo": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
+      "sg.objednavka.mimo_play": "Objednávka na fakturu je zatím jen pro zákazníky v Česku. Předplatné si koupíte v aplikaci pro Android (Google Play).",
+      "sg.chyba.objednavka_jen_cesko": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
       "sg.ukazka.pruh": "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
         "v provozu. Až si zapíšete vlastní, ukázku odstraňte.",
       "sg.ukazka.odstranit": "Odstranit ukázková data",
       "sg.ukazka.odstranuji": "Odstraňuji…",
       "sg.znovu_nepovedlo": "Nepovedlo se — zkusit znovu",
+      "sg.odchod.otazka": "Nepokračujete? Řekněte nám jedním klepnutím proč — pomůže nám to zlepšit.",
+      "sg.odchod.diky": "Děkujeme, pomůže nám to.",
+      "sg.odchod.cena": "Je to drahé",
+      "sg.odchod.malo_pouziti": "Málo jsem to používal(a)",
+      "sg.odchod.chyba": "Něco nefungovalo",
+      "sg.odchod.chybi_funkce": "Něco mi chybělo",
+      "sg.odchod.jiny_nastroj": "Mám jiný nástroj",
+      "sg.odchod.jine": "Jiný důvod",
       "sg.offline.text": "Nejde se spojit se serverem — nejspíš slabý signál nebo výpadek internetu. " +
         "Data zůstávají uložená; až se spojení vrátí, načteme je znovu.",
       "sg.offline.znovu": "Zkusit znovu",
@@ -145,6 +156,15 @@
       "sg.pruvodce.hotovo": "Hotovo: ",
       "sg.jazyk": "Jazyk",
       "sg.mena": "Měna",
+      "sg.chyba.obecna": "Něco se nepovedlo. Zkuste to prosím znovu.",
+      "sg.chyba.cizi_stranka": "Požadavek z cizí stránky jsme odmítli.",
+      "sg.chyba.format": "Požadavek se nepodařilo přečíst. Obnovte prosím stránku.",
+      "sg.chyba.moc_pokusu": "Příliš mnoho pokusů. Zkuste to prosím za hodinu.",
+      "sg.chyba.moc_emailu": "Přihlašovacích e-mailů je teď příliš mnoho. Zkuste to prosím za chvíli.",
+      "sg.chyba.email_nejde": "Přihlašování e-mailem teď nefunguje. Zkuste to prosím později, nebo nám chybu nahlaste.",
+      "sg.chyba.email_neplatny": "Zadejte prosím platnou e-mailovou adresu.",
+      "sg.chyba.email_neodeslan": "Odeslání e-mailu se nepodařilo. Zkuste to prosím znovu.",
+      "sg.chyba.neprihlasen": "Nejste přihlášeni.",
     },
     en: {
       "sg.nacitam": "Loading",
@@ -177,11 +197,22 @@
       "sg.za_datum": "in {pocet} ({datum})",
       "sg.ukazka.pripravuji": "Preparing sample data…",
       "sg.ukazka.nejde": "Sample data cannot be loaded right now.",
+      "sg.objednavka.mimo": "Invoice orders are only available to customers in Czechia for now.",
+      "sg.objednavka.mimo_play": "Invoice orders are only available to customers in Czechia for now. You can subscribe in the Android app (Google Play).",
+      "sg.chyba.objednavka_jen_cesko": "Invoice orders are only available to customers in Czechia for now.",
       "sg.ukazka.pruh": "Your account holds sample data — made-up records that show the app at work. " +
         "Once you enter your own, remove the sample.",
       "sg.ukazka.odstranit": "Remove sample data",
       "sg.ukazka.odstranuji": "Removing…",
       "sg.znovu_nepovedlo": "That did not work — try again",
+      "sg.odchod.otazka": "Not carrying on? Tell us why with one tap — it helps us improve.",
+      "sg.odchod.diky": "Thank you, that helps.",
+      "sg.odchod.cena": "Too expensive",
+      "sg.odchod.malo_pouziti": "I hardly used it",
+      "sg.odchod.chyba": "Something did not work",
+      "sg.odchod.chybi_funkce": "Something was missing",
+      "sg.odchod.jiny_nastroj": "I use another tool",
+      "sg.odchod.jine": "Another reason",
       "sg.offline.text": "Cannot reach the server — probably a weak signal or an internet outage. " +
         "Your data stays stored; we will load it again once the connection is back.",
       "sg.offline.znovu": "Try again",
@@ -219,6 +250,15 @@
       "sg.pruvodce.hotovo": "Done: ",
       "sg.jazyk": "Language",
       "sg.mena": "Currency",
+      "sg.chyba.obecna": "Something went wrong. Please try again.",
+      "sg.chyba.cizi_stranka": "We refused a request from another site.",
+      "sg.chyba.format": "The request could not be read. Please reload the page.",
+      "sg.chyba.moc_pokusu": "Too many attempts. Please try again in an hour.",
+      "sg.chyba.moc_emailu": "Too many sign-in e-mails right now. Please try again shortly.",
+      "sg.chyba.email_nejde": "Signing in by e-mail is not working right now. Please try later, or report the problem.",
+      "sg.chyba.email_neplatny": "Please enter a valid e-mail address.",
+      "sg.chyba.email_neodeslan": "The e-mail could not be sent. Please try again.",
+      "sg.chyba.neprihlasen": "You are not signed in.",
     },
   };
   // Formats per language. English follows British order (25 Oct 2026) —
@@ -273,6 +313,20 @@
     var z = slovnikProduktu[jaz] && slovnikProduktu[jaz][klic];
     if (z == null) z = TEXTY_SABLONY[jaz] && TEXTY_SABLONY[jaz][klic];
     return z;
+  }
+
+  /* An error from the server for the customer: the page's words for its
+   * `kod` — the product's "chyba.<kod>", else the template's "sg.chyba.<kod>"
+   * — and the server's Czech sentence only on a Czech page (batch B,
+   * 14. 11. 2026: an English page showed "Příliš mnoho pokusů"). `zaloha`
+   * is the page's own fallback, in the page's language (SimteGen.t on a
+   * bilingual page); without it the generic sentence. */
+  function chyba(data, zaloha) {
+    var kod = data && typeof data.kod === "string" && /^[a-z0-9_]{1,40}$/.test(data.kod) ? data.kod : "";
+    if (kod && hledej(jazyk, "chyba." + kod) != null) return tr("chyba." + kod);
+    if (kod && hledej(jazyk, "sg.chyba." + kod) != null) return tr("sg.chyba." + kod);
+    if (jazyk === "cs" && data && data.chyba) return String(data.chyba);
+    return String(zaloha || tr("sg.chyba.obecna"));
   }
 
   function tr(klic, promenne) {
@@ -474,13 +528,47 @@
    * A product drawing prices itself listens for the sg-mena event. */
   var cenikSlib = null;
   var menaTed = "CZK";
+  // The visitor's country (Cloudflare, /api/prostredi), asked once a page:
+  // the currency and the invoice order both need it.
+  var zemeSlib = null;
+  function nactiZemi() {
+    if (!zemeSlib) {
+      zemeSlib = fetch("/api/prostredi", { cache: "no-store", credentials: "omit" })
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; });
+    }
+    return zemeSlib;
+  }
+
+  /* The invoice order is for customers in Czechia only, for now (the
+   * middleware refuses the rest — see objednavkaMimoCesko there for why).
+   * Abroad the form goes away before anyone fills it in, and a line says
+   * where to subscribe instead: the Android app, when the product has one. */
+  function objednavkaJenCesko() {
+    var formulare = doc.querySelectorAll("[data-objednavka]");
+    if (!formulare.length) return;
+    nactiZemi().then(function (p) {
+      var zeme = p && p.zeme;
+      if (!zeme || zeme === "CZ") return;
+      var html = doc.documentElement;
+      html.classList.add("sg-mimo-cesko");
+      var klic = html.hasAttribute("data-aplikace") ? "sg.objednavka.mimo_play" : "sg.objednavka.mimo";
+      Array.prototype.forEach.call(formulare, function (f) {
+        if (f.nextElementSibling && f.nextElementSibling.classList.contains("sg-objednavka-mimo")) return;
+        var veta = prvek("p", "popisek sg-objednavka-mimo", tr(klic));
+        if (f.parentNode) f.parentNode.insertBefore(veta, f.nextSibling);
+      });
+    });
+  }
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", objednavkaJenCesko);
+  else objednavkaJenCesko();
+
   function cenik() {
     if (cenikSlib) return cenikSlib;
     var bezCache = { cache: "no-store", credentials: "omit" };
     var seznam = fetch("cenik.json", bezCache).then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
-    var zeme = fetch("/api/prostredi", bezCache).then(function (r) { return r.ok ? r.json() : {}; })
-      .catch(function () { return {}; });
+    var zeme = nactiZemi();
     cenikSlib = Promise.all([seznam, zeme]).then(function (v) {
       var c = v[0];
       if (!c || !Array.isArray(c.polozky)) return null;
@@ -1113,7 +1201,7 @@
     tlacitko.disabled = true;
     tlacitko.textContent = tr("sg.ukazka.pripravuji");
     apiJson("/api/ukazka-uctu", "POST", { akce: "nahrat" }).then(function (r) {
-      if (!r.ok) throw new Error(r.data.chyba || tr("sg.ukazka.nejde"));
+      if (!r.ok) throw new Error(chyba(r.data, tr("sg.ukazka.nejde")));
       // The range is closed whatever the steps did: removal must work even
       // after a step that failed.
       return prehrajKroky(r.data.kroky || []).catch(function () { return null; }).then(function () {
@@ -1142,6 +1230,39 @@
         t.textContent = tr("sg.znovu_nepovedlo");
       });
     });
+  }
+
+  // Why did you not go on (batch D2): one tap after the trial or the paid
+  // period ran out, shown while /api/ja says the account has not answered
+  // (X-SimteGen-Odchod). The answer is a tally (functions/api/odchod.js) —
+  // never text, never kept with the account. The reasons are the server's
+  // list (odchod.js DUVODY); a reason it does not know is refused there.
+  var DUVODY_ODCHODU = ["cena", "malo_pouziti", "chyba", "chybi_funkce", "jiny_nastroj", "jine"];
+  function pruhOdchodu() {
+    var p = prvek("div", "sg-pruh sg-pruh--odchod");
+    p.setAttribute("role", "group");
+    var text = prvek("p", "sg-pruh-text", tr("sg.odchod.otazka"));
+    p.appendChild(text);
+    var volby = prvek("div", "sg-odchod-duvody");
+    var tlacitka = DUVODY_ODCHODU.map(function (duvod) {
+      var t = prvek("button", "tlacitko vedlejsi", tr("sg.odchod." + duvod));
+      t.type = "button";
+      t.addEventListener("click", function () {
+        tlacitka.forEach(function (x) { x.disabled = true; });
+        apiJson("/api/odchod", "POST", { duvod: duvod }).then(function (r) {
+          if (!r.ok) throw new Error(r.data.chyba);
+          volby.remove();
+          text.textContent = tr("sg.odchod.diky");
+        }).catch(function () {
+          tlacitka.forEach(function (x) { x.disabled = false; });
+          text.textContent = tr("sg.znovu_nepovedlo");
+        });
+      });
+      volby.appendChild(t);
+      return t;
+    });
+    p.appendChild(volby);
+    return p;
   }
 
   // Wait until the product has drawn its first real screen (and, in an app
@@ -1196,11 +1317,19 @@
     apiJson("/api/ja", "GET").then(function (r) {
       var ja = r.data || {};
       if (!r.ok || !ja.prihlasen || UKAZKOVY_UCET.test(ja.email || "")) return;
+      // The account remembers the language the customer reads the app in,
+      // for the mails sent later (trial end, renewal, answers); corrected
+      // only when it differs — the header is absent before migration 0950.
+      var jazykUctu = r.hlavicky.get("X-SimteGen-Jazyk-Uctu");
+      if (jazykUctu !== null && produktJazyky.length > 1 && jazykUctu !== jazyk) {
+        apiJson("/api/jazyk", "POST", { jazyk: jazyk }).catch(function () { /* next visit */ });
+      }
       var ukazka = r.hlavicky.get("X-SimteGen-Ukazkova-Data");
       if (ukazka === "nabidka") koren.classList.add("sg-ukazkova-nabidka");
       if (ukazka === "nahrana") vlozPruh(pruhUkazkovychDat());
       var obsah = doc.getElementById("pruh-predplatne") ? null : obsahPruhu(ja.predplatne, Date.now());
       if (obsah) vlozPruh(pruh(obsah.trida, obsah.text, obsah.akce, otevriPlatbu));
+      if (r.hlavicky.get("X-SimteGen-Odchod") === "otazka") vlozPruh(pruhOdchodu());
       if (chciPlatbu && ja.predplatne && ja.predplatne.platce !== false) {
         bezParametru("platba");
         azBudeAplikace(otevriPlatbu);
@@ -1949,7 +2078,7 @@
 
   window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno, tisk: tisk,
     cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet, cena: cena,
-    t: tr, jazyk: function () { return jazyk; }, jazyky: function () { return produktJazyky.slice(); },
+    t: tr, chyba: chyba, jazyk: function () { return jazyk; }, jazyky: function () { return produktJazyky.slice(); },
     slovnik: slovnik, preloz: preloz, nastavJazyk: nastavJazyk,
     cenik: cenik, mena: function () { return menaTed; }, nastavMenu: nastavMenu,
     potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular,

@@ -9,12 +9,12 @@
   "zpracovani": "worker_a_databaze_eu",
   "externi_pozadavky": "jen_deklarovane",
   "zkusebni_dni": 30,
-  "cena_dph": "",
+  "cena_dph": "včetně DPH",
   "ukladame": [
     {
       "entita": "uzivatele",
       "ucel": "účet zákazníka a přihlášení",
-      "pole": "e-mailová adresa, čas založení účtu",
+      "pole": "e-mailová adresa, čas založení účtu, jazyk aplikace",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [
         "email"
@@ -27,7 +27,7 @@
     {
       "entita": "prihlasovaci_odkazy",
       "ucel": "jednorázové přihlášení e-mailovým odkazem",
-      "pole": "otisk tokenu, e-mailová adresa, expirace",
+      "pole": "otisk tokenu, e-mailová adresa, expirace, jazyk aplikace",
       "retence": "24 hodin",
       "play_typy": [
         "email"
@@ -199,7 +199,7 @@
     },
     {
       "entita": "upominky",
-      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem) — proto se ukládá i vaše odpověď na žádost o hodnocení v Google Play (ohodnotit, nebo později)",
+      "ucel": "aby každé upozornění na konec zkušebního nebo předplaceného období a každý e-mail s odpovědí na hlášení odešel nejvýš jednou; aby se prosba o hodnocení v Google Play ukázala v aplikaci nejvýš dvakrát (jen po opakované platbě, nikdy e-mailem) — proto se ukládá i vaše odpověď na žádost o hodnocení v Google Play (ohodnotit, nebo později); a aby otázka, proč nepokračujete, šla za každé skončené období zodpovědět jen jednou (pamatujeme si, že jste odpověděli, ne co)",
       "pole": "odkaz na účet, druh upozornění nebo odpověď na žádost o hodnocení, čas odeslání",
       "retence": "do smazání účtu zákazníkem",
       "play_typy": [

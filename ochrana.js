@@ -11,6 +11,51 @@
 
 const KODOVAC = new TextEncoder();
 
+// ── The customer's language (batch B, 14. 11. 2026) ──────────────────
+// The languages the template speaks; a product says which of them it does
+// in <meta name="simtegen-jazyky"> (no meta = Czech only). The choice is
+// the page's (web/simtegen.js vyberJazyk): the language asked for, then the
+// browser's in order (Slovak reads Czech), then English if the product has
+// it — so the login mail matches the screen the customer is looking at.
+export const JAZYKY_SABLONY = ["cs", "en"];
+
+export function jazykyZeStranky(html) {
+  const m = String(html || "").match(/<meta\s+name=["']simtegen-jazyky["']\s+content=["']([^"'<>]*)["']/i);
+  const jazyky = m ? m[1].split(/[\s,]+/).filter((j) => JAZYKY_SABLONY.includes(j)) : [];
+  return jazyky.includes("cs") ? jazyky : ["cs", ...jazyky];
+}
+
+export function jazykZadosti(jazyky, zadany, acceptLanguage) {
+  if (jazyky.length < 2) return "cs";
+  if (jazyky.includes(zadany)) return zadany;
+  for (const kus of String(acceptLanguage || "").split(",")) {
+    let j = kus.split(";")[0].trim().toLowerCase().split("-")[0];
+    if (j === "sk") j = "cs";
+    if (jazyky.includes(j)) return j;
+  }
+  return jazyky.includes("en") ? "en" : "cs";
+}
+
+// The login mail. Czech word for word as the template always wrote it (the
+// build swaps an older product's own copy of that text for this call —
+// stavitel._EMAIL_JAZYK); English for a customer reading the app in English.
+export function prihlasovaciEmail(produkt, odkaz, jazyk) {
+  if (jazyk === "en") {
+    return {
+      subject: produkt ? `${produkt}: your sign-in link` : "Your sign-in link",
+      text: "Hello,\n\nto sign in" + (produkt ? ` to ${produkt}` : "")
+        + ", open this link (valid for 1 hour):\n"
+        + `${odkaz}\n\nIf you did not ask to sign in, ignore this e-mail.\n`,
+    };
+  }
+  return {
+    subject: produkt ? `${produkt}: přihlašovací odkaz` : "Váš přihlašovací odkaz",
+    text: "Dobrý den,\n\npro přihlášení" + (produkt ? ` do služby ${produkt}` : "")
+      + " otevřete tento odkaz (platí 1 hodinu):\n"
+      + `${odkaz}\n\nPokud jste o přihlášení nežádali, e-mail ignorujte.\n`,
+  };
+}
+
 export function vyvoj(env) {
   // Development mode is an explicit opt-in (preview deployments and local
   // runs set VYVOJ=ano), never the absence of production settings: a

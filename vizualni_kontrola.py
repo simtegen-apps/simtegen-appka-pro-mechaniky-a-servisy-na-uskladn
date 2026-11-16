@@ -791,8 +791,13 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
     soubor = profil / "DevToolsActivePort"
     konec = time.monotonic() + 60
     while True:
-        radky = (soubor.read_text(encoding="utf-8", errors="replace").split()
-                 if soubor.exists() else [])
+        try:
+            radky = soubor.read_text(encoding="utf-8", errors="replace").split()
+        except OSError:
+            # Not there yet — or, on Windows, there and still held open by
+            # the browser writing it (PermissionError): seen on the CI runner,
+            # where it failed the whole check. Either way: not ready, ask again.
+            radky = []
         if len(radky) >= 2:
             break
         if proces.poll() is not None or time.monotonic() > konec:
@@ -1355,6 +1360,28 @@ def _sloz(dt: _DevTools, zaklad: str, sablona: tuple, stitek: str, titulek: str,
     return base64.b64decode(data)
 
 
+# What the store pictures are made of: everything that can change a screen
+# (pages, styles, scripts, API, schema, demo data, the manifest) plus the
+# composition itself (this file). Not the pictures' bytes: demo data with
+# relative dates ("Dnes") changes the pixels every day while the app looks
+# the same — and every listing change of a live app goes to Google review.
+_MIMO_OTISK = {".git", ".github", "node_modules", ".wrangler", "uat", "docs"}
+
+
+def otisk_zdroju(root: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n"))
+    for cesta in sorted(root.rglob("*")):
+        cast = cesta.relative_to(root)
+        if (not cesta.is_file() or set(cast.parts) & _MIMO_OTISK or cesta.suffix == ".md"
+                or cast.as_posix() == "play/co_je_noveho.txt"):
+            continue
+        h.update(b"\0" + cast.as_posix().encode("utf-8") + b"\0")
+        h.update(cesta.read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()
+
+
 def obchod(root: Path, vystup: Path) -> list[str]:
     """The store listing's pictures into `vystup`; returns the file names.
 
@@ -1377,6 +1404,12 @@ def obchod(root: Path, vystup: Path) -> list[str]:
     snimky = [s for s in aplikace.get("snimky") or [] if isinstance(s, dict)][:MAX_SNIMKU_OBCHODU]
     nazev = str(aplikace.get("nazev") or manifest.get("produkt") or "")
     vystup.mkdir(parents=True, exist_ok=True)
+    # Before any of the product's code runs here: the release compares it
+    # with the last upload and refreshes the pictures only when it moved.
+    (vystup / "otisk.txt").write_text(otisk_zdroju(root) + "\n", encoding="utf-8")
+    soubory_otisk = ["otisk.txt"]
+    en = aplikace.get("en") if isinstance(aplikace.get("en"), dict) else None
+    en_snimky = [s for s in (en or {}).get("snimky") or [] if isinstance(s, dict)]
     exe = najdi_prohlizec()
     if exe is None:
         raise RuntimeError("na stroji není Chrome, Chromium ani Edge")
@@ -1443,10 +1476,37 @@ def obchod(root: Path, vystup: Path) -> list[str]:
             veta = str(aplikace.get("hlavni_veta") or aplikace.get("popis") or nazev)
             (vystup / "grafika.jpg").write_bytes(_sloz(dt, zaklad, _GRAFIKA, nazev, veta, prvni))
             soubory.append("grafika.jpg")
+            # The English listing: the same screens and clicks, the app
+            # switched to English (?jazyk=en, as the visual check does), the
+            # words from aplikace.en. Only with a word for every shot — a
+            # half-English set would be worse than none.
+            if en and snimky and len(en_snimky) == len(snimky):
+                vystup_en = vystup / "en-US"
+                vystup_en.mkdir(exist_ok=True)
+                url_en = url + "?jazyk=en"
+                telefony_en = [_vyfot_obrazovku(dt, url_en, s, _TELEFON_SNIMEK) for s in snimky]
+                for poradi, (s, slova, data) in enumerate(zip(snimky, en_snimky, telefony_en), 1):
+                    obraz = _sloz(dt, zaklad, _TELEFON, f"{poradi:02d} — {slova.get('stitek', '')}",
+                                  str(slova.get("titulek") or ""), data)
+                    (vystup_en / f"telefon-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"en-US/telefon-{poradi}.jpg")
+                tablety_en = [(slova, _vyfot_obrazovku(dt, url_en, s, _TABLET_SNIMEK))
+                              for s, slova in zip(snimky, en_snimky) if s.get("tablet")][:MAX_TABLETU]
+                for poradi, (slova, data) in enumerate(tablety_en, 1):
+                    obraz = _sloz(dt, zaklad, _TABLET, str(slova.get("stitek") or ""),
+                                  str(slova.get("titulek") or ""), data)
+                    (vystup_en / f"tablet-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"en-US/tablet-{poradi}.jpg")
+                nazev_en = str(en.get("nazev") or nazev)
+                veta_en = str(en.get("hlavni_veta") or en.get("popis") or nazev_en)
+                (vystup_en / "grafika.jpg").write_bytes(
+                    _sloz(dt, zaklad, _GRAFIKA, nazev_en, veta_en, telefony_en[0]))
+                soubory.append("en-US/grafika.jpg")
             ikona = root / "web" / "ikona-512.png"
             if ikona.exists():
                 shutil.copy(ikona, vystup / "ikona.png")
                 soubory.append("ikona.png")
+            soubory += soubory_otisk
         finally:
             if dt is not None:
                 try:

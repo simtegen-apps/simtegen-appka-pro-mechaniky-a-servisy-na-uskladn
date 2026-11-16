@@ -1,44 +1,26 @@
-// GET  /api/jazyk — the language this person chose for the app ("cs", "en"
-//                   or null when they never chose).
-// POST /api/jazyk {jazyk} — remember the choice on the account.
+// simtegen-jazyk — ze šablony, NEUPRAVOVAT V PRODUKTU (stavba ho obnoví).
 //
-// The person, not the shop: data.uzivatel.id, never data.servis.id — an
-// invited mechanic switching to English must not switch the owner. No role
-// and no subscription check either: reading the app in one's own language is
-// not a write into the warehouse, and a shop whose subscription ran out still
-// has to be able to read why.
+// POST /api/jazyk {jazyk} — the language the customer uses the app in,
+// remembered on the account (migration 0950), so the mails the firm sends
+// later (trial end, renewal, an answer to a report — upominky.py) come in
+// it. web/simtegen.js calls it only when the page's language differs from
+// the account's (X-SimteGen-Jazyk-Uctu on /api/ja): the customer switched
+// in Účet, or the account was made before the language was remembered.
 
-import { json, ocisti } from "../../spolecne.js";
-
-const JAZYKY = ["cs", "en"];
-
-export async function onRequestGet(context) {
-  const { env, data } = context;
-  if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
-
-  const radek = await env.DB.prepare(
-    "SELECT jazyk FROM predvolby WHERE uzivatel_id = ?"
-  ).bind(data.uzivatel.id).first();
-  return json({ jazyk: radek ? radek.jazyk : null });
-}
+import { json } from "../../spolecne.js";
+import { JAZYKY_SABLONY } from "../../ochrana.js";
 
 export async function onRequestPost(context) {
   const { request, env, data } = context;
-  if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni." }, 401);
-
+  if (!data.uzivatel) return json({ chyba: "Nejste přihlášeni.", kod: "neprihlasen" }, 401);
   let telo;
   try {
     telo = await request.json();
   } catch {
-    return json({ chyba: "Tělo požadavku musí být JSON." }, 400);
+    return json({ chyba: "Tělo požadavku musí být JSON.", kod: "format" }, 400);
   }
-  const jazyk = ocisti(telo.jazyk, 5);
-  if (!JAZYKY.includes(jazyk)) return json({ chyba: "Neznámý jazyk." }, 422);
-
-  await env.DB.prepare(
-    "INSERT INTO predvolby (uzivatel_id, jazyk, zmeneno) VALUES (?, ?, unixepoch()) " +
-    "ON CONFLICT(uzivatel_id) DO UPDATE SET jazyk = excluded.jazyk, zmeneno = excluded.zmeneno"
-  ).bind(data.uzivatel.id, jazyk).run();
-
-  return json({ stav: "ulozeno", jazyk });
+  const jazyk = String((telo && telo.jazyk) || "");
+  if (!JAZYKY_SABLONY.includes(jazyk)) return json({ chyba: "Tenhle jazyk aplikace neumí.", kod: "jazyk" }, 422);
+  await env.DB.prepare("UPDATE uzivatele SET jazyk = ? WHERE id = ?").bind(jazyk, data.uzivatel.id).run();
+  return json({ jazyk });
 }

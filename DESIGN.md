@@ -357,13 +357,20 @@ SimteGen.slovnik({
   `one/other` anglicky). Věty neskládej z kousků — slovosled se v jazycích liší;
   celá věta s `{proměnnou}` je jeden klíč.
 - **Hláška ze serveru** se zákazníkovi neukazuje doslova, když produkt mluví víc
-  jazyky: API vrací i `kod` a stránka ukáže `SimteGen.t("chyba." + kod)`.
+  jazyky: API vrací i `kod` a stránka ukáže `SimteGen.chyba(data, zaloha)` — slovo
+  produktu `chyba.<kod>` z `texty.js`, jinak slovo šablony (`sg.chyba.*`: přihlášení,
+  limity, cizí stránka), na české stránce českou větu serveru; `zaloha` je věta
+  stránky v jejím jazyce (`SimteGen.t(…)`). Endpointy šablony `kod` posílají.
 - **Jazyk je automaticky jazyk zařízení** (slovenský dostane češtinu, jiný
   než čeština angličtinu). Ručně se mění jen v **Účtu jedním řádkem**
   „Jazyk · Čeština ▾“: `<div data-prepinac-jazyka></div>` v obrazovce Účet
   (nastavení) — kreslí ho `simtegen.js` jako řádek s výběrem. **Nikdy
   v patičce, hlavičce úvodu ani jako nabídka „Switch to English?“** —
   takhle žádná aplikace nevypadá. Přepínač v patičce se nevykreslí.
+- **Jazyk účtu:** přihlašovací formulář pošle `jazyk: SimteGen.jazyk()` spolu
+  s e-mailem — přihlašovací e-mail přijde v jazyce stránky a účet si jazyk
+  pamatuje pro pozdější e-maily (konec zkušební doby, obnova, odpověď na hlášení).
+  Když ho zákazník v Účtu změní, šablona ho u účtu opraví sama (`/api/jazyk`).
 - **Výběr:** ruční volba zákazníka, jinak jazyk prohlížeče, jinak angličtina.
   `?jazyk=en` v adrese otevře stránku anglicky (tak ji kontroluje CI). Produkt
   bez `simtegen-jazyky` je celý česky — i pruhy šablony.
@@ -578,6 +585,18 @@ věta, pod ní telefon s obrazovkou aplikace, který jde přes spodní okraj.
   obrazovky.
 - **Co je nového**: `play/co_je_noveho.txt`, přepsaný každou stavbou —
   změna z pohledu zákazníka, nejvýš 500 znaků.
+- **Angličtina**: mluví-li produkt anglicky (`simtegen-jazyky`), má
+  i `aplikace.en` = `{nazev, popis, dlouhy_popis, hlavni_veta, snimky}` —
+  anglický záznam, který je v obchodě výchozí (Češi vidí český). `snimky`
+  jsou jen slova `{stitek, titulek}` ve stejném pořadí jako
+  `aplikace.snimky`: obrazovky a kliky jsou tytéž, vydání je vyfotí
+  v anglické verzi aplikace. Název do 30 znaků (limit Google Play), značka
+  zůstává („Pneusklad: Tire Storage“), krátký popis do 80, dlouhý do 4000.
+  Piš jako rodilý mluvčí pro zákazníka v oboru, ne překlad slovo od slova.
+- **Kdy se záznam mění**: texty se do Play nahrají, jen když se liší od
+  toho, co tam je; snímky, jen když se změnil produkt (stránky, styly,
+  API, ukázková data, manifest) — každá změna záznamu živé aplikace jde
+  Googlu ke kontrole.
 
 ## Co CI odmítne (deterministicky)
 

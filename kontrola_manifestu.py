@@ -42,7 +42,7 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # Aggregates the template ships itself (migration 0910, visits per source):
 # the privacy policy describes them on its own (vykresli_zasady), so the
 # product's manifest need not — but they are still held to "numbers only".
-SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek"}
+SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek", "odchody"}
 # Abuse limits and single-use check signatures (migration 0940): security
 # plumbing like ZAKLADNI_TABULKY — digests that change every window, swept
 # within hours, never linked to an account, so neither export nor
@@ -334,8 +334,12 @@ def _barvy_v_html(text: str) -> list[str]:
 
 
 # Inline scripts that are code, not data (JSON-LD, import maps are data).
+# The end tag as browsers read it: `</script >` or `</script x>` closes a
+# script too. CodeQL (py/bad-tag-filter) flags a bare `</script>` — rightly
+# for a sanitizer; here it would only miss a script's end, but the alert
+# failed every product PR carrying this file (Pneusklad #29, 13. 11. 2026).
 _SKRIPT_KOD = re.compile(
-    r'<script(?![^>]*\bsrc=)(?![^>]*(?:ld\+json|importmap|application/json))([^>]*)>(.*?)</script>',
+    r'<script(?![^>]*\bsrc=)(?![^>]*(?:ld\+json|importmap|application/json))([^>]*)>(.*?)</script\b[^>]*>',
     re.S | re.I)
 
 

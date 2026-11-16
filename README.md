@@ -161,7 +161,8 @@ mechanik / jen čtení = admin / mechanic / read only.
   ukázku“ je jen v aplikaci z Google Play (`.jen-v-aplikaci`).
 - **Patička** (nápověda a právní odkazy na jednom řádku) je vidět jen na
   úvodu a v Účtu — řídí to `body[data-obrazovka]`, který nastavuje
-  `ukaz()`. Nahlásit chybu je v menu a v hlavičce telefonu.
+  `ukaz()`. Nahlásit chybu je na konci řádku patičky (DESIGN.md, Text)
+  a navíc v menu a v hlavičce telefonu.
 - **Spodní menu** na telefonu je až po přihlášení.
 - **Texty:** pod nadpisem sekce žádný vysvětlující odstavec, prázdný stav
   jedna krátká věta. Vizuální kontrola počítá slova (`p`, `.napoveda`):

@@ -40,6 +40,15 @@ const S_PRISTUPEM = new Set([
 // and not more often than every OBNOVA_ZA seconds.
 const OBNOVA_PRED = 2 * 86400;
 const OBNOVA_ZA = 6 * 3600;
+// And about every live purchase at least this often (batch C, 14. 11. 2026):
+// a refund or a revocation mid-period was only seen near the period's end,
+// so a refunded customer kept the access — and the payment stayed counted —
+// for up to a year. A week bounds it at one Google call per customer.
+const KONTROLA_ZA = 7 * 86400;
+// The grace period is access while Google retries a FAILED renewal
+// (Subscriptions policy wants the access kept) — not money received, so it
+// never writes a payment: the renewal that succeeds afterwards does.
+const S_ZAPLACENO = new Set(["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_CANCELED"]);
 
 export const PRODUKTY = { predplatne_mesic: 1, predplatne_rok: 12 };
 
@@ -94,6 +103,27 @@ export async function pristupovyToken(env, fetchFn = fetch) {
   return pristup.token;
 }
 
+// Why a subscription was cancelled, as Google recorded it (batch D2,
+// 14. 11. 2026): the customer's answer to Play's own cancel survey, or a
+// payment Google could not collect. Mapped onto the template's reasons
+// (functions/api/odchod.js DUVODY); the free-text answer Google may carry is
+// never read. null = not cancelled, or cancelled without a reason.
+const PLAY_DUVODY = {
+  CANCEL_SURVEY_REASON_COST_RELATED: "cena",
+  CANCEL_SURVEY_REASON_NOT_ENOUGH_USAGE: "malo_pouziti",
+  CANCEL_SURVEY_REASON_TECHNICAL_ISSUES: "chyba",
+  CANCEL_SURVEY_REASON_FOUND_BETTER_APP: "jiny_nastroj",
+  CANCEL_SURVEY_REASON_OTHERS: "jine",
+};
+
+export function duvodZruseni(kontext) {
+  if (!kontext) return null;
+  if (kontext.systemInitiatedCancellation) return { kanal: "play_platba", duvod: "platba" };
+  const pruzkum = kontext.userInitiatedCancellation && kontext.userInitiatedCancellation.cancelSurveyResult;
+  const duvod = pruzkum && PLAY_DUVODY[pruzkum.reason];
+  return kontext.userInitiatedCancellation ? { kanal: "play", duvod: duvod || "neuvedeno" } : null;
+}
+
 // Google's word on one token: { platiDo, produkt, potvrdit, stav } or null
 // when the token is not a live subscription of THIS app.
 export async function overNakup(env, token, fetchFn = fetch) {
@@ -110,6 +140,7 @@ export async function overNakup(env, token, fetchFn = fetch) {
   return {
     produkt: polozka.productId,
     stav: data.subscriptionState || "",
+    zruseni: duvodZruseni(data.canceledStateContext),
     platiDo: S_PRISTUPEM.has(data.subscriptionState) ? platiDo : 0,
     potvrdit: data.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING",
   };
@@ -133,17 +164,12 @@ export async function zapisNakup(env, uzivatelId, token, fetchFn = fetch) {
   // mimo-uzivatele: a purchase token belongs to whoever claimed it first; the
   // lookup by token is exactly what stops a second account from using it.
   const drivejsi = await env.DB.prepare(
-    "SELECT uzivatel_id, plati_do FROM play_nakupy WHERE token = ?").bind(token).first();
+    "SELECT uzivatel_id, plati_do, stav FROM play_nakupy WHERE token = ?").bind(token).first();
   if (drivejsi && drivejsi.uzivatel_id !== uzivatelId) return { stav: "cizi", plati_do: null };
 
   const nakup = await overNakup(env, token, fetchFn);
-  if (!nakup) {
-    if (drivejsi) {
-      // Google forgot the token (long expired, refunded): stop asking.
-      await env.DB.prepare(
-        "UPDATE play_nakupy SET stav = 'SUBSCRIPTION_STATE_EXPIRED', overeno = ? " +
-        "WHERE token = ? AND uzivatel_id = ?").bind(ted(), token, uzivatelId).run();
-    }
+  if (!nakup || (drivejsi && nakup.platiDo <= ted() && (drivejsi.plati_do || 0) > ted())) {
+    if (drivejsi) await odeber(env, uzivatelId, token, drivejsi, nakup);
     return { stav: "neplatny", plati_do: null };
   }
   // Acknowledge before granting: an unacknowledged purchase is refunded
@@ -165,7 +191,7 @@ export async function zapisNakup(env, uzivatelId, token, fetchFn = fetch) {
       "ON CONFLICT(uzivatel_id) DO UPDATE SET plati_do = MAX(predplatne.plati_do, excluded.plati_do), " +
       "zmeneno = excluded.zmeneno WHERE predplatne.uzivatel_id = ?"
     ).bind(uzivatelId, nakup.platiDo, nyni, uzivatelId));
-    if (!drivejsi || nakup.platiDo > (drivejsi.plati_do || 0)) {
+    if (S_ZAPLACENO.has(nakup.stav) && (!drivejsi || nakup.platiDo > (drivejsi.plati_do || 0))) {
       // A new paid period is a payment: the monthly review counts second
       // purchases from this ledger, whichever way the money came.
       prikazy.push(env.DB.prepare(
@@ -174,7 +200,47 @@ export async function zapisNakup(env, uzivatelId, token, fetchFn = fetch) {
     }
   }
   await env.DB.batch(prikazy);
+  // A cancellation counts once — when this purchase first reads CANCELED
+  // (the weekly recheck sees it again and again). A tally in odchody
+  // (migration 0960), no account; before the migration it is just skipped.
+  if (nakup.stav === "SUBSCRIPTION_STATE_CANCELED" && nakup.zruseni &&
+      (!drivejsi || drivejsi.stav !== "SUBSCRIPTION_STATE_CANCELED")) {
+    try {
+      await env.DB.prepare(
+        "INSERT INTO odchody (den, kanal, duvod, pocet) VALUES (?, ?, ?, 1) " +
+        "ON CONFLICT(den, kanal, duvod) DO UPDATE SET pocet = pocet + 1"
+      ).bind(new Date().toISOString().slice(0, 10), nakup.zruseni.kanal, nakup.zruseni.duvod).run();
+    } catch {
+      // No 0960 yet: the access above is what matters.
+    }
+  }
   return { stav: nakup.platiDo > nyni ? "aktivni" : "neplatny", plati_do: nakup.platiDo || null };
+}
+
+// Google took a purchase back before its period ended (a refund, a
+// revocation, a chargeback): the access it gave ends now, and the payment it
+// wrote is not money the firm keeps. Only the date THIS purchase put into
+// predplatne is cut — a later date from a web invoice (or another purchase)
+// stays; the remainder of an earlier, shorter web period is lost in that
+// rare case (the table keeps one merged date) — the owner sees the refund in
+// Play. A purchase that simply ran out (date already past) changes nothing.
+async function odeber(env, uzivatelId, token, drivejsi, nakup) {
+  const nyni = ted();
+  const prikazy = [env.DB.prepare(
+    "UPDATE play_nakupy SET stav = ?, plati_do = 0, overeno = ? WHERE token = ? AND uzivatel_id = ?"
+  ).bind(nakup ? nakup.stav || "SUBSCRIPTION_STATE_EXPIRED" : "SUBSCRIPTION_STATE_EXPIRED", nyni, token,
+    uzivatelId)];
+  if ((drivejsi.plati_do || 0) > nyni) {
+    prikazy.push(env.DB.prepare(
+      "UPDATE predplatne SET plati_do = MAX(?, COALESCE((SELECT MAX(plati_do) FROM play_nakupy " +
+      "WHERE uzivatel_id = ? AND token != ? AND plati_do > ?), 0)), zmeneno = ? " +
+      "WHERE uzivatel_id = ? AND plati_do = ?"
+    ).bind(nyni, uzivatelId, token, nyni, nyni, uzivatelId, drivejsi.plati_do));
+    prikazy.push(env.DB.prepare(
+      "DELETE FROM platby WHERE id = (SELECT MAX(id) FROM platby WHERE uzivatel_id = ? AND poznamka = 'Google Play')"
+    ).bind(uzivatelId));
+  }
+  await env.DB.batch(prikazy);
 }
 
 // Renewals: Google renews on its own, the product learns it by asking.
@@ -183,9 +249,9 @@ export async function zapisNakup(env, uzivatelId, token, fetchFn = fetch) {
 export async function obnovNakupy(env, uzivatelId, fetchFn = fetch) {
   const nyni = ted();
   const radky = await env.DB.prepare(
-    "SELECT token FROM play_nakupy WHERE uzivatel_id = ? AND plati_do < ? AND overeno < ? " +
-    "AND stav != 'SUBSCRIPTION_STATE_EXPIRED'"
-  ).bind(uzivatelId, nyni + OBNOVA_PRED, nyni - OBNOVA_ZA).all();
+    "SELECT token FROM play_nakupy WHERE uzivatel_id = ? AND stav != 'SUBSCRIPTION_STATE_EXPIRED' AND " +
+    "((plati_do < ? AND overeno < ?) OR (plati_do > ? AND overeno < ?))"
+  ).bind(uzivatelId, nyni + OBNOVA_PRED, nyni - OBNOVA_ZA, nyni, nyni - KONTROLA_ZA).all();
   let obnoveno = 0;
   for (const { token } of radky.results || []) {
     const vysledek = await zapisNakup(env, uzivatelId, token, fetchFn);

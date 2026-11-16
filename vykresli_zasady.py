@@ -45,6 +45,8 @@ ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
 ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
 # Script errors counted anonymously (P9, functions/api/chyba-stranky.js).
 CHYBY_MIGRACE = Path("db") / "migrace" / "0930_chyby_stranek.sql"
+# Why customers leave, counted (batch D2, functions/api/odchod.js).
+ODCHODY_MIGRACE = Path("db") / "migrace" / "0960_odchody.sql"
 POSTUP = Path("POSTUP_PRI_INCIDENTU.md")
 
 _HLAVICKA = "GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: data-manifest.json, generátor: vykresli_zasady.py."
@@ -209,6 +211,20 @@ def _ukladame(manifest: dict) -> list[dict]:
             "zaklad": "oprávněný zájem — funkční a bezpečná služba",
             "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
             "subjekty": "zákazníci a návštěvníci",
+            "retence": "souhrnné počty bez osobních údajů",
+        })
+    if ODCHODY_MIGRACE.exists():
+        rows.append({
+            "entita": "proč zákazníci nepokračují",
+            "ucel": "zjistit, proč zákazníci po zkušební době nebo předplatném nepokračují, a podle toho "
+                    "produkt zlepšit",
+            "pole": "souhrnné počty důvodů podle dne a cesty — vaše odpověď na nepovinnou otázku po konci "
+                    "zkušebního nebo předplaceného období a důvod zrušení předplatného, který zaznamená "
+                    "Google Play — bez vazby na osobu. U účtu si pamatujeme jen to, že jste na otázku za dané "
+                    "období odpověděli (aby se neopakovala), ne co jste odpověděli.",
+            "zaklad": "oprávněný zájem — zlepšování služby",
+            "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
+            "subjekty": "zákazníci",
             "retence": "souhrnné počty bez osobních údajů",
         })
     rows.append({
