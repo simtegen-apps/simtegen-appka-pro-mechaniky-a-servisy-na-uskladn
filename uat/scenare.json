@@ -665,20 +665,20 @@
       "kroky": [
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 200,
           "obsahuje": ["\"stav\":\"ulozeno\"", "\"jazyk\":\"en\""]
         },
         {
           "jako": "A",
-          "pozadavek": "GET /api/jazyk",
+          "pozadavek": "GET /api/predvolby",
           "ocekavam": 200,
           "obsahuje": ["\"jazyk\":\"en\""]
         },
         {
           "jako": "B",
-          "pozadavek": "GET /api/jazyk",
+          "pozadavek": "GET /api/predvolby",
           "ocekavam": 200,
           "obsahuje": ["\"jazyk\":null"],
           "neobsahuje": ["\"en\""]
@@ -690,32 +690,32 @@
       "kroky": [
         {
           "jako": "nikdo",
-          "pozadavek": "GET /api/jazyk",
+          "pozadavek": "GET /api/predvolby",
           "ocekavam": 401,
           "neobsahuje": ["\"jazyk\""]
         },
         {
           "jako": "nikdo",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 401,
           "neobsahuje": ["\"jazyk\""]
         },
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 200
         },
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "de" },
           "ocekavam": 422
         },
         {
           "jako": "A",
-          "pozadavek": "GET /api/jazyk",
+          "pozadavek": "GET /api/predvolby",
           "ocekavam": 200,
           "obsahuje": ["\"jazyk\":\"en\""]
         }
@@ -726,7 +726,7 @@
       "kroky": [
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 200
         },
@@ -770,7 +770,7 @@
       "kroky": [
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 200
         },
@@ -840,7 +840,7 @@
         },
         {
           "jako": "A",
-          "pozadavek": "POST /api/jazyk",
+          "pozadavek": "POST /api/predvolby",
           "telo": { "jazyk": "en" },
           "ocekavam": 200
         },
@@ -852,7 +852,7 @@
         },
         {
           "jako": "B",
-          "pozadavek": "GET /api/jazyk",
+          "pozadavek": "GET /api/predvolby",
           "ocekavam": 200,
           "obsahuje": ["\"jazyk\":null"],
           "neobsahuje": ["\"en\""]

@@ -144,7 +144,17 @@ _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
    - **Migrace `0003_hlaseni.sql`** jen zakládá novou tabulku a nikoho neodhlašuje.
    - **Teď:** použitý nebo vypršelý odkaz otevřený z e-mailu dostane stránku „Odkaz už neplatí“ s cestou zpět na úvod a kódem 410 Gone místo holého textu s 403.
    - **Beze změny:** přihlášení dál umí jen tlačítko (POST) a ten neplatný odkaz odmítá s 403, hranice přihlášení se nemění.
-10. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
+10. **Volba jazyka účtu má vlastní cestu `/api/predvolby`** (oprava po kontrole). Obnova šablony přepsala produktový `functions/api/jazyk.js` šablonovým.
+    - **Šablonový `/api/jazyk`** umí jen POST, ukládá jazyk pro pozdější e-maily firmy do `uzivatele.jazyk` (migrace 0950) a `simtegen.js` ho volá sám. Je ze šablony a stavitel na něj nesahá.
+    - **Proč scénáře padaly:** produktové GET a POST nad tabulkou `predvolby` (build 15) zmizely. GET proto vracel HTML stránku a volba nebyla v exportu.
+    - **Oprava:** totéž chování teď nese nový `functions/api/predvolby.js`:
+      - GET vrací `{jazyk}`;
+      - POST vrací `{stav:"ulozeno", jazyk}`;
+      - neznámý jazyk 422, nepřihlášený 401.
+    - **Stránka** volá tuto cestu. Ve scénářích UAT se změnil jen technický zápis cesty, očekávání ne.
+    - **Data:** tabulka, manifest ani zásady se nemění.
+11. **Anglický záznam v obchodě** (`aplikace.en` v manifestu): název, krátký a dlouhý popis, hlavní věta a slova ke stejným šesti snímkům. Produkt mluví anglicky, takže ho generátor vyžaduje.
+12. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
    - `python vykresli_napovedu.py`
    - `python vykresli_zasady.py`
    - `python vykresli_seo.py`

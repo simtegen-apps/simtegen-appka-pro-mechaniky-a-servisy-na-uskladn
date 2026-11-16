@@ -136,7 +136,8 @@ a slova jsou ve `web/texty.js` v obou jazycích. Ve skriptu se píše
   prohlížeči → jazyk prohlížeče (slovenština = čeština). Ručně se mění jen
   řádkem „Jazyk“ na obrazovce Účet a data (`<div data-prepinac-jazyka>`,
   kreslí ho `simtegen.js`; jinde ho nepřidávejte). Přihlášenému se ruční
-  volba uloží na účet (tabulka `predvolby`, `/api/jazyk`) jako volba
+  volba uloží na účet (tabulka `predvolby`, `/api/predvolby`; `/api/jazyk`
+  patří šabloně a jazyk pro e-maily si ukládá sama) jako volba
   osoby, ne servisu, a po přihlášení má přednost. Účet bez volby (`null`)
   nic nevnucuje. E-mail „Příprava na …“ (`/api/priprava`) jde v jazyce
   toho, kdo ho posílá.

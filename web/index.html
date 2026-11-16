@@ -879,7 +879,7 @@
         <div class="sekce">
           <!-- Jazyk se volí sám (jazyk telefonu, slovenština = čeština).
                Ručně jen tady: jeden řádek „Jazyk“, který kreslí simtegen.js.
-               Přihlášenému se volba uloží k účtu (/api/jazyk) — viz Jazyk
+               Přihlášenému se volba uloží k účtu (/api/predvolby) — viz Jazyk
                ve skriptu. -->
           <div data-prepinac-jazyka></div>
           <div id="ucet-jazyk-zprava" class="zprava" aria-live="polite"></div>
@@ -3604,7 +3604,9 @@
     // v adrese, ruční volba v tomto prohlížeči, jinak jazyk telefonu;
     // slovenština = čeština). Ručně se mění jen řádkem „Jazyk“ v Účtu
     // (data-prepinac-jazyka). Přihlášenému se ruční volba uloží i k účtu
-    // (/api/jazyk, tabulka predvolby), aby platila na všech jeho zařízeních.
+    // (/api/predvolby, tabulka predvolby), aby platila na všech jeho
+    // zařízeních. /api/jazyk patří šabloně: ta si podle jazyka stránky sama
+    // pamatuje jazyk pro pozdější e-maily (uzivatele.jazyk).
     // Kdo nikdy nevolil (null), tomu zůstává automatika — nic se nevnucuje.
     //
     // Značky v adrese pro jedno nové načtení: srovnání s účtem (hodnota =
@@ -3619,7 +3621,7 @@
     vykresliJazyk();
 
     async function ulozJazykNaUcet(jazyk) {
-      const { ok } = await api("/api/jazyk", "POST", { jazyk }).catch(() => ({ ok: false }));
+      const { ok } = await api("/api/predvolby", "POST", { jazyk }).catch(() => ({ ok: false }));
       return ok;
     }
 
@@ -3759,7 +3761,7 @@
       // načítání — anglický mechanik tak neuvidí probliknout češtinu.
       const [, volba] = await Promise.all([
         nactiUcet(),
-        api("/api/jazyk", "GET").catch(() => ({ ok: false, data: {} })),
+        api("/api/predvolby", "GET").catch(() => ({ ok: false, data: {} })),
       ]);
       if (volba.ok && srovnejJazyk(volba.data.jazyk)) return;
       vykresliNastaveni();
