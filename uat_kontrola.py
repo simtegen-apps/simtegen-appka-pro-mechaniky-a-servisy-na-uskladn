@@ -74,6 +74,17 @@ UKAZKA = Path("play") / "ukazka.json"
 UKAZKOVY_UCET = "ukazka@example.cz"
 _METODY = {"onRequestGet": "GET", "onRequestPost": "POST", "onRequestPut": "PUT",
            "onRequestPatch": "PATCH", "onRequestDelete": "DELETE", "onRequest": "GET"}
+# Where the local API thinks every request comes from (request.cf). Left to
+# itself, wrangler's miniflare fetches workers.cloudflare.com/cf.json — the
+# country of the machine it runs on — or falls back to Austin, US, offline.
+# On the mini PC that was CZ, on GitHub's runners US, so the template's
+# Czech-only invoice order (_middleware.js, objednavkaMimoCesko) answered an
+# approved scenario with 422 in CI only, and build 17 burned three rounds on
+# it (16. 11. 2026). One fixed Czech connection makes the check say the same
+# wherever it runs — Czechia, because the invoice order is Czech-only and
+# the price list then shows Kč, as for the first customers.
+CF_LOKALNE = {"country": "CZ", "continent": "EU", "colo": "PRG", "city": "Praha",
+              "timezone": "Europe/Prague", "httpProtocol": "HTTP/1.1", "tlsVersion": "TLSv1.3"}
 
 
 class Prostredi(Exception):
@@ -406,6 +417,11 @@ def api_produktu(root: Path, npx: str, stav: Path | None = None):
         sablona.read_text(encoding="utf-8").replace("__PROJEKT__", "uat")
         .replace("__DB_ID__", "00000000-0000-4000-8000-000000000001")
         .replace("__DB_NAHLED_ID__", "00000000-0000-4000-8000-000000000002"), encoding="utf-8")
+    # Miniflare reads its cached cf object from <cwd>/node_modules/.mf/cf.json
+    # while it is under 30 days old; written now, it is used and never fetched.
+    mf = kopie / "node_modules" / ".mf"
+    mf.mkdir(parents=True, exist_ok=True)
+    (mf / "cf.json").write_text(json.dumps(CF_LOKALNE), encoding="utf-8")
     env = _prostredi_wrangleru()
     server = None
     log = None

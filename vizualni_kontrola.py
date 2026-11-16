@@ -73,6 +73,29 @@ MAX_PROBLEMU_NA_DRUH = 6  # per screen and kind — the first few say enough
 # DESIGN.md, Text: one explaining sentence, and all of them on one screen.
 MAX_SLOV_VETA = 20
 MAX_SLOV_PROZA = 50
+# The firm's own web (simtegen.com, firemni_web.py in SimteGen) is born from
+# this template and checked by it, but it is a shop window, not an app: a
+# catalogue with descriptions and an English privacy notice. The app word
+# limit above refused every update of it from 12. 11. 2026 — the daily bot
+# PR never opened. Everything else still applies to it. Known by the repo's
+# name (config SIMTEGEN_FIRMA_WEB_REPO, default below), never by a file in
+# the repo: a product cannot rename its repo, it could write a file.
+WEB_FIRMY_REPO = "simtegen-web"
+JEN_APLIKACE = {"texty_moc"}
+
+
+def je_web_firmy(root: Path) -> bool:
+    """In CI GitHub names the repo; in SimteGen's clone (a bot PR's check
+    before push) the origin remote does. Neither the builder nor the page
+    can change either."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        try:
+            repo = subprocess.run(["git", "-C", str(root), "remote", "get-url", "origin"],
+                                  capture_output=True, text=True, timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return repo.rstrip("/").removesuffix(".git").rsplit("/", 1)[-1] == WEB_FIRMY_REPO
 
 
 def najdi_prohlizec() -> str | None:
@@ -958,6 +981,7 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
         return [], [], "prohlížeč nenalezen — vizuální kontrola přeskočena"
 
     problemy: list[str] = []
+    vynechat = JEN_APLIKACE if je_web_firmy(root) else set()
     # (page, scheme, kind, item) -> where it was seen. A shared footer is
     # one problem, not fourteen — the first real product printed it per screen.
     nalezy: dict[tuple, dict[str, list[str]]] = {}
@@ -1068,7 +1092,7 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
                         if schema == "light" and nazev == "telefon" and not dt.js(_HLASENI_VIDET):
                             bez_hlaseni.append(obrazovka or stranka.name)
                         for druh, popis in _DRUHY.items():
-                            if schema == "dark" and druh != "kontrast":
+                            if (schema == "dark" and druh != "kontrast") or druh in vynechat:
                                 continue
                             for polozka in nalez.get(druh) or ():
                                 kde_nalez = nalezy.setdefault((stranka.name, schema, popis, polozka),
