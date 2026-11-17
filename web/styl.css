@@ -535,6 +535,9 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
 /* „Proč nepokračujete?“ — po konci zkušebního nebo předplaceného období,
    jedno klepnutí; důvody se zalamují pod otázku. */
 .sg-odchod-duvody { display: flex; flex-wrap: wrap; gap: var(--mezera-2); flex: 1 1 100%; }
+/* Nápověda ve dvou jazycích (vykresli_napovedu.py): vidět je blok jazyka
+   aplikace, simtegen.js nastaví <html lang>. */
+html[lang="en"] [data-jazyk-napovedy="cs"], html:not([lang="en"]) [data-jazyk-napovedy="en"] { display: none; }
 /* No connection (SimteGen.offline): a warning, not an error — nothing is
    lost, it just cannot load right now. */
 .sg-pruh--offline { background: var(--barva-varovani-pozadi); color: var(--barva-varovani); border-color: currentColor; }
