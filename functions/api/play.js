@@ -3,7 +3,7 @@
 // every build); keep the logic there so a fix reaches every product.
 //
 //   GET [?aplikace=play] → { v_aplikaci, dostupne, ukazka, balicek, produkty,
-//                            recenze }
+//                            objednavka, recenze }
 //   POST {token}         → verify, acknowledge, extend predplatne (after a
 //                          purchase, and for every purchase listPurchases()
 //                          still reports)
@@ -29,6 +29,21 @@ function jeUkazka(uzivatel) {
   return uzivatel.email.endsWith("@ukazka.invalid");
 }
 
+// An invoice order still open (ordered, or invoiced and unpaid): the app
+// must not sell the same subscription again — paid by both, the customer
+// paid twice (audit before Play production, 18. 11. 2026). The other
+// direction is the API middleware's (no invoice while Play renews).
+async function objednavkaOtevrena(env, uzivatelId) {
+  try {
+    const radek = await env.DB.prepare(
+      "SELECT 1 AS x FROM objednavky WHERE uzivatel_id = ? AND stav IN ('nova', 'fakturovana') LIMIT 1"
+    ).bind(uzivatelId).first();
+    return Boolean(radek);
+  } catch {
+    return false;
+  }
+}
+
 export async function onRequestGet(context) {
   const { env, data, request } = context;
   const zAplikace = new URL(request.url).searchParams.get("aplikace") === "play";
@@ -44,6 +59,7 @@ export async function onRequestGet(context) {
     ukazka,
     balicek: env.PLAY_BALICEK || null,
     produkty: Object.keys(PRODUKTY),
+    objednavka: !ukazka && await objednavkaOtevrena(env, data.uzivatel.id),
     // Only in the app (a rating needs the app installed from Google Play)
     // and never for the demo — Google's reviewer must not be asked to rate.
     recenze: vAplikaci && !ukazka && Boolean(env.PLAY_BALICEK)

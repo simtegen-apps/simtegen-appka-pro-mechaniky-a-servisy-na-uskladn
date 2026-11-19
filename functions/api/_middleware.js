@@ -74,13 +74,14 @@
 // out and the account has not answered for it; web/simtegen.js then shows
 // the one-tap question (functions/api/odchod.js counts the answer).
 
-import { RELACE_COOKIE, cookieHlavicka } from "../../spolecne.js";
+import { RELACE_COOKIE, cookieHlavicka, ted } from "../../spolecne.js";
 import {
   adresaKlienta, adresaProPocitani, jazykZadosti, jazykyZeStranky, potvrzeniPrihlaseni, tokenZPotvrzeni,
   vLimitu, vyvoj,
 } from "../../ochrana.js";
 import * as overeniProduktu from "./overeni.js";
 import { znackaOdchodu } from "./odchod.js";
+import { UZAVRIT_PO, uzavriNedokoncenou } from "./ukazka-uctu.js";
 
 const ZNAK = /[^a-z0-9._-]/g;
 
@@ -225,9 +226,14 @@ async function zapisZkusebni(context) {
 async function stavUkazky(context) {
   const { env, data, request } = context;
   const radek = await env.DB.prepare(
-    "SELECT po FROM ukazkova_data WHERE uzivatel_id = ?"
+    "SELECT po, nahrano FROM ukazkova_data WHERE uzivatel_id = ?"
   ).bind(data.uzivatel.id).first();
-  if (radek) return "nahrana";
+  if (radek) {
+    if (!radek.po && Number(radek.nahrano) < ted() - UZAVRIT_PO) {
+      await uzavriNedokoncenou(env, data.uzivatel.id);
+    }
+    return "nahrana";
+  }
   // Offered only where the product ships sample data (play/ukazka.json,
   // published as /ukazka.json). The product itself decides WHEN to show the
   // button — in its empty state; this only says whether it can work.
@@ -496,14 +502,106 @@ function objednavkaMimoCesko(request) {
   }, 422);
 }
 
+// A Google Play purchase that still renews: Google charges it again at the
+// end of the period whatever else the account pays. CANCELED does not
+// count — it runs out and is never charged again. The table exists only
+// with the Play module; without it nothing renews. Kept here, not imported
+// from predplatne.js: a template refresh brings this file into a live
+// product without the rest, and an import the old file lacks breaks the
+// product's build (functions/api/ucet/smazat.js keeps its own copy).
+async function beziPlay(env, uzivatelId) {
+  try {
+    const radek = await env.DB.prepare(
+      "SELECT 1 AS x FROM play_nakupy WHERE uzivatel_id = ? AND plati_do > ? AND stav IN " +
+      "('SUBSCRIPTION_STATE_ACTIVE', 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD') LIMIT 1"
+    ).bind(uzivatelId, ted()).first();
+    return Boolean(radek);
+  } catch {
+    return false;
+  }
+}
+
+// One subscription, one way of paying (audit before Play production,
+// 18. 11. 2026). An invoice ordered while Google Play still renews meant
+// paying twice: the invoice extended the period, Google charged on. The
+// demo and the check account (…@ukazka.invalid) order nothing either — the
+// firm would number and send an invoice to an address nobody reads. Here,
+// not in objednavka.js: that one is each product's own and old.
+async function objednavkaNelze(context) {
+  const uzivatel = context.data && context.data.uzivatel;
+  if (!uzivatel) return null; // the handler answers 401
+  if (String(uzivatel.email || "").endsWith("@ukazka.invalid")) {
+    return odpovedJson({ chyba: "V ukázce se nic neobjednává.", kod: "ukazka_neobjednava" }, 403);
+  }
+  if (await beziPlay(context.env, uzivatel.id)) {
+    return odpovedJson({
+      chyba: "Předplatné vám běží přes Google Play — platí se tam a tam se i ruší.", kod: "plati_play",
+    }, 409);
+  }
+  return null;
+}
+
+// Grace for a renewal ordered in time (owner, 19. 11. 2026). An invoice is
+// due in 14 days (SimteGen SIMTEGEN_FAKTURA_SPLATNOST_DNI) and the renewal
+// reminder goes a week before the end — a customer who ordered then and paid
+// on the due date was locked out for days. Whoever ordered BEFORE the paid
+// period (or the trial) ended keeps access until the due date plus three
+// days for the bank; the payment then extends as always. Bounded per order
+// (the product takes no second order while one is open) and only over a
+// "vyprselo" the product itself computed — a product's own rules (a team
+// member's access) are not overruled. Here, not in predplatne.js: that file
+// is the product's, and only this one reaches live products with a template
+// refresh. Before the handlers, so /api/ja, the trial bar, the "why are you
+// leaving" question and every vyzadujPredplatne() see the same state.
+const OCHRANNA_LHUTA_DNI = 17;
+
+async function ochrannaLhuta(context) {
+  const { env, data } = context;
+  const p = data.predplatne;
+  if (!data.uzivatel || !p || p.stav !== "vyprselo" || !p.plati_do) return;
+  try {
+    const radek = await env.DB.prepare(
+      "SELECT MAX(vytvoreno) AS kdy FROM objednavky WHERE uzivatel_id = ? " +
+      "AND stav IN ('nova', 'fakturovana') AND vytvoreno <= ?"
+    ).bind(data.uzivatel.id, p.plati_do).first();
+    const kdy = Number(radek && radek.kdy);
+    if (!kdy) return;
+    const konec = kdy + OCHRANNA_LHUTA_DNI * 86400;
+    const nyni = ted();
+    if (konec <= nyni) return;
+    data.predplatne = { ...p, stav: "aktivni", plati_do: konec,
+      dni_zbyva: Math.ceil((konec - nyni) / 86400), ochranna_lhuta: true };
+  } catch {
+    // A product without orders: nothing to wait for.
+  }
+}
+
 export async function onRequest(context) {
   return zabezpec(await obsluz(context), context.env);
+}
+
+// Every production deploy also lives on at its own address,
+// https://<hash>.<repo>.pages.dev, bound to the live database — with the
+// code of its day (security audit 19. 11. 2026: a September deploy, from
+// before the login and abuse guards, still answered; its address sits in the
+// public Actions log). The API answers in production only on the product's
+// own addresses: its domain and <repo>.pages.dev. A preview (VYVOJ, its own
+// database) is unaffected, and so is a rollback — Cloudflare promotes the
+// old deploy onto the same domain. Deploys made before this line keep their
+// old code: those the owner deletes in Cloudflare once.
+function staraAdresa(env, url) {
+  if (vyvoj(env)) return false;
+  const host = url.hostname.toLowerCase();
+  return host.endsWith(".pages.dev") && host.split(".").length > 3;
 }
 
 async function obsluz(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const cesta = url.pathname;
+  if (staraAdresa(env, url)) {
+    return odpovedJson({ chyba: "Tahle adresa aplikace už neplatí.", kod: "stara_adresa" }, 404);
+  }
   if (!BEZ_TELA.has(request.method)) {
     if (zCiziStranky(request, url)) {
       return odpovedJson({ chyba: "Požadavek z cizí stránky jsme odmítli.", kod: "cizi_stranka" }, 403);
@@ -539,7 +637,7 @@ async function obsluz(context) {
     if (zastaveno) return zastaveno;
   }
   if (request.method === "POST" && cesta === "/api/objednavka") {
-    const mimo = objednavkaMimoCesko(request);
+    const mimo = objednavkaMimoCesko(request) || await objednavkaNelze(context);
     if (mimo) return mimo;
   }
 
@@ -583,6 +681,7 @@ async function obsluz(context) {
       // Czech, as before.
     }
   }
+  await ochrannaLhuta(context);
   let odpoved = predat ? await context.next(predat) : await context.next();
   if (request.method === "POST" && cesta === "/api/prihlaseni") {
     odpoved = await bezOdkazu(odpoved, env);

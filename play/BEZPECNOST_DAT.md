@@ -28,7 +28,7 @@ Prvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129
 
 ## 2. Zásady ochrany soukromí (Privacy policy)
 
-`<adresa>/zasady.html`
+`<adresa>/privacy.html`
 
 ## 3. Bezpečnost údajů (Data safety)
 
@@ -37,7 +37,7 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 1. *Shromažďuje nebo sdílí aplikace některý z požadovaných typů uživatelských údajů?* **Ano**
 2. *Jsou všechny shromážděné údaje šifrovány při přenosu?* **Ano** (jen HTTPS)
 3. *Poskytujete uživatelům způsob, jak požádat o smazání údajů?* **Ano** — v aplikaci Účet → Smazat účet a všechna data; popis na webu.
-4. *Metoda vytvoření účtu:* **Uživatelské jméno a další ověření** (e-mail + jednorázový odkaz, bez hesla). Odkaz na smazání účtu: `<adresa>/zasady.html`
+4. *Metoda vytvoření účtu:* **Uživatelské jméno a další ověření** (e-mail + jednorázový odkaz, bez hesla). Odkaz na smazání účtu: `<adresa>/smazani-uctu.html`
 
 **Sdílení: u žádného typu Ne.** Cloudflare (hosting, databáze), Resend (e-maily) a GitHub (evidence hlášení, šifrovaně) zpracovávají údaje pro nás — Google je za sdílení nepočítá.
 **Zpracování dočasné (ephemeral): Ne** — údaje se ukládají.

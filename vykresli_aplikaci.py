@@ -346,9 +346,14 @@ def _zaznam(manifest: dict) -> dict:
         "snimky": [s for s in a.get("snimky") or [] if isinstance(s, dict)],
         # Paths, not URLs: the product's address is known to the release
         # workflow (custom domain or <repo>.pages.dev), not to the repo.
-        "zasady_cesta": "/zasady.html",
+        # One privacy URL per app in Google Play, and its default listing is
+        # English for a product that speaks it: the English policy
+        # (vykresli_zasady.vykresli_privacy), which links the Czech one.
+        "zasady_cesta": "/privacy.html" if ucty and mluvi_anglicky() else "/zasady.html",
         "ucty": ucty,
-        "smazani_uctu_cesta": "/zasady.html" if ucty else None,
+        # Google wants the deletion steps prominent and about this app — the
+        # policy has them as one bullet, in Czech (vykresli_zasady.vykresli_smazani).
+        "smazani_uctu_cesta": "/smazani-uctu.html" if ucty else None,
         "bezpecnost_dat": _bezpecnost_dat(manifest),
     }
 

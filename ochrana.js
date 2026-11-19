@@ -76,8 +76,23 @@ export function adresaKlienta(request, env) {
   // (acceptance tests, personas — one machine, many accounts): null, and
   // vLimitu skips the per-address limit, the per-product ones still count.
   const ip = request.headers.get("CF-Connecting-IP");
-  if (ip) return ip;
+  if (ip) return sitAdresy(ip);
   return vyvoj(env) ? null : "neznama";
+}
+
+// An IPv6 address counts by its /64 — one connection is given a whole /64,
+// and a full address let a script take a new budget per request (security
+// audit 19. 11. 2026). IPv4 stays the address itself.
+export function sitAdresy(ip) {
+  const a = String(ip || "").trim().toLowerCase();
+  // IPv4, and IPv4 written as IPv6 (::ffff:1.2.3.4): the address itself.
+  if (!a.includes(":") || a.includes(".")) return a;
+  const [hlava, ocas] = a.split("::");
+  const prvni = hlava ? hlava.split(":") : [];
+  const posledni = ocas !== undefined && ocas ? ocas.split(":") : [];
+  const chybi = Math.max(0, 8 - prvni.length - posledni.length);
+  const vse = ocas !== undefined ? [...prvni, ...Array(chybi).fill("0"), ...posledni] : prvni;
+  return vse.slice(0, 4).map((s) => s.replace(/^0+(?=.)/, "") || "0").join(":") + "::/64";
 }
 
 export function adresaProPocitani(email) {

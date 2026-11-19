@@ -10,10 +10,11 @@
 //     it (fraud), and an unacknowledged purchase is refunded by Google
 //     after three days. Both need a Google key, which never reaches the
 //     browser.
-//   - The key is a SEPARATE service account that can only see and
-//     acknowledge orders (Play Console permission "Manage orders and
-//     subscriptions"). It cannot publish or change an app; a leaked product
-//     secret costs order visibility, not the store.
+//   - The key is a SEPARATE service account (Play Console permission "Manage
+//     orders and subscriptions"). It cannot publish or change an app — but
+//     that permission also refunds and cancels (security audit 19. 11. 2026),
+//     so a leaked product secret costs more than order visibility: grant it
+//     per app, never account-wide (docs/Google_Play_Kroky.md, oddíl C).
 //   - Lives outside functions/ (like spolecne.js), so it is template
 //     infrastructure refreshed on every build: a fix here reaches every
 //     product. The route (functions/api/play.js) stays a thin shell.
@@ -184,22 +185,33 @@ export async function zapisNakup(env, uzivatelId, token, fetchFn = fetch) {
       "stav = excluded.stav, overeno = excluded.overeno WHERE play_nakupy.uzivatel_id = excluded.uzivatel_id"
     ).bind(uzivatelId, token, nakup.produkt, nakup.platiDo, nakup.stav, nyni),
   ];
+  // Access and payment only for the account that OWNS the token after the
+  // claim above — in the same transaction. The owner check at the top runs
+  // before Google's answer (hundreds of milliseconds): one token sent from
+  // N accounts at once passed it N times, the claim gave the row to one,
+  // and the rest still got the subscription and a payment each (security
+  // audit 19. 11. 2026). The ownership test is written out in both
+  // statements, not interpolated: the product checker refuses ${…} in SQL.
   if (nakup.platiDo > nyni) {
     // The later date wins: a web invoice already paid ahead is never cut short.
     prikazy.push(env.DB.prepare(
-      "INSERT INTO predplatne (uzivatel_id, plati_do, poznamka, zmeneno) VALUES (?, ?, 'Google Play', ?) " +
+      "INSERT INTO predplatne (uzivatel_id, plati_do, poznamka, zmeneno) SELECT ?, ?, 'Google Play', ? " +
+      "WHERE EXISTS (SELECT 1 FROM play_nakupy WHERE token = ? AND uzivatel_id = ?) " +
       "ON CONFLICT(uzivatel_id) DO UPDATE SET plati_do = MAX(predplatne.plati_do, excluded.plati_do), " +
       "zmeneno = excluded.zmeneno WHERE predplatne.uzivatel_id = ?"
-    ).bind(uzivatelId, nakup.platiDo, nyni, uzivatelId));
+    ).bind(uzivatelId, nakup.platiDo, nyni, token, uzivatelId, uzivatelId));
     if (S_ZAPLACENO.has(nakup.stav) && (!drivejsi || nakup.platiDo > (drivejsi.plati_do || 0))) {
       // A new paid period is a payment: the monthly review counts second
       // purchases from this ledger, whichever way the money came.
       prikazy.push(env.DB.prepare(
-        "INSERT INTO platby (uzivatel_id, mesice, poznamka) VALUES (?, ?, 'Google Play')"
-      ).bind(uzivatelId, PRODUKTY[nakup.produkt] || 1));
+        "INSERT INTO platby (uzivatel_id, mesice, poznamka) SELECT ?, ?, 'Google Play' " +
+        "WHERE EXISTS (SELECT 1 FROM play_nakupy WHERE token = ? AND uzivatel_id = ?)"
+      ).bind(uzivatelId, PRODUKTY[nakup.produkt] || 1, token, uzivatelId));
     }
   }
   await env.DB.batch(prikazy);
+  const majitel = await env.DB.prepare("SELECT uzivatel_id FROM play_nakupy WHERE token = ?").bind(token).first();
+  if (!majitel || majitel.uzivatel_id !== uzivatelId) return { stav: "cizi", plati_do: null };
   // A cancellation counts once — when this purchase first reads CANCELED
   // (the weekly recheck sees it again and again). A tally in odchody
   // (migration 0960), no account; before the migration it is just skipped.

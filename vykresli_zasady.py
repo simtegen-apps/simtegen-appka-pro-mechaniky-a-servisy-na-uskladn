@@ -24,6 +24,7 @@ comparison is a plain string equality. Stdlib only.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -38,6 +39,10 @@ ZASADY = WEB / "zasady.html"
 PODMINKY = WEB / "podminky.html"
 DPA = WEB / "zpracovatelska-smlouva.html"
 ODSTOUPENI = WEB / "odstoupeni-formular.html"
+SMAZANI = WEB / "smazani-uctu.html"
+PRIVACY = WEB / "privacy.html"
+TERMS = WEB / "terms.html"
+INDEX = WEB / "index.html"
 ZAZNAM = Path("ZAZNAM_O_ZPRACOVANI.md")
 # The template's own source attribution (functions/api/_middleware.js). The
 # policy says so whenever the product carries the migration — written by the
@@ -350,7 +355,8 @@ def vykresli_zasady(manifest: dict) -> str:
     <li><strong>Přístup k údajům a jejich výpis</strong> si kdykoli stáhnete přímo v aplikaci
     (Účet → Stáhnout moje data).</li>
     <li><strong>Smazání účtu a všech údajů</strong> provedete přímo v aplikaci
-    (Účet → Smazat účet). Z provozní databáze se údaje smažou okamžitě, ze zabezpečených
+    (Účet → Smazat účet), postup i bez aplikace je na stránce
+    <a href="smazani-uctu.html">Smazání účtu</a>. Z provozní databáze se údaje smažou okamžitě, ze zabezpečených
     záloh nejpozději do 30 dnů, kdy se zálohy přepíší. Déle uchováváme jen účetní
     a daňové doklady, kde nám to ukládá zákon.</li>
     <li>Máte také právo na <strong>opravu</strong>, <strong>omezení zpracování</strong>
@@ -395,12 +401,14 @@ def _play_predplatne(manifest: dict) -> str:
         return ""
     return """  <p><strong>Předplatné v aplikaci z Google Play.</strong> V aplikaci nainstalované
   z Google Play se předplatné kupuje výhradně přes Google Play: platbu přijímá a zpracovává
-  Google podle podmínek Google Play, cena, délka období a automatické obnovení jsou vidět
-  v nabídce před nákupem. Předplatné se obnovuje automaticky na další období, dokud ho
-  zákazník nezruší; zrušit ho lze kdykoli v Google Play (Platby a předplatná → Předplatná)
-  a zaplacené období doběhne. Zaplacené období platí stejně v aplikaci i na webu.
-  <strong>Smazáním účtu se předplatné v Google Play nezruší</strong> — zrušte ho prosím
-  v Google Play, jinak ho Google dál účtuje.</p>
+  Google podle podmínek Google Play, cena v měně a s daněmi podle země zákazníka, délka
+  období a automatické obnovení jsou vidět v nabídce před nákupem. Předplatné se
+  <strong>obnovuje automaticky</strong> na další období, dokud ho zákazník nezruší; zrušit
+  ho lze kdykoli v Google Play (Platby a předplatná → Předplatná) a zaplacené období doběhne.
+  Zaplacené období platí stejně v aplikaci i na webu. Při změně ceny se u předplatného
+  z Google Play postupuje podle pravidel Google Play, která zákazníka o změně předem
+  informují. <strong>Smazáním účtu se předplatné v Google Play nezruší</strong> — aplikace
+  proto smazání účtu nedovolí, dokud se předplatné obnovuje; zrušte ho nejdřív v Google Play.</p>
 """
 
 
@@ -413,7 +421,24 @@ def _play_odstoupeni(manifest: dict) -> str:
     return """  <p><strong>Předplatné koupené přes Google Play:</strong> souhlas se zahájením plnění
   podle § 1837 písm. l) se při nákupu přes Google Play nevyžaduje, právo odstoupit do 14 dnů
   proto trvá v plném rozsahu. Stačí nám napsat na kontaktní adresu; vrátíme celou zaplacenou
-  částku, a to přes Google Play.</p>
+  částku, a to přes Google Play. Pomůže, když připojíte číslo objednávky z potvrzení
+  od Google Play (začíná „GPA.“) — podle něj nákup v Google Play dohledáme.</p>
+"""
+
+
+def _web_predplatne(manifest: dict) -> str:
+    """The subscription ordered on the web: by invoice, for one period, and
+    it does NOT renew — the opposite of the app's (audit before Play
+    production, 18. 11. 2026: the terms said "never renews" for everything
+    and "renews automatically" two lines below). "Faktura", not "daňový
+    doklad": a firm that is not a VAT payer issues no tax document."""
+    return """  <p><strong>Předplatné objednané na webu.</strong> Objednávkové tlačítko je označeno
+  slovy „Objednávka zavazující k platbě“ a před jeho stisknutím zákazník vidí rozsah,
+  délku a celkovou cenu předplatného. Předplatné se hradí na základě faktury vystavené
+  poskytovatelem, se splatností uvedenou na faktuře, a platí na objednané období.
+  <strong>Samo se neobnovuje</strong> — další období si zákazník objedná znovu. Objedná-li ho
+  ještě před koncem zaplaceného (nebo zkušebního) období, služba mu běží dál až do splatnosti
+  faktury; zaplacením se předplatné prodlouží. Zaplacené období se v aplikaci zobrazuje u účtu.</p>
 """
 
 
@@ -450,18 +475,15 @@ def vykresli_podminky(manifest: dict) -> str:
 
   <h2>3. Zkušební období, cena a předplatné</h2>
   <p>Po založení účtu je služba bezplatná po dobu <strong>{_esc(zkusebni)} dní</strong>. Po skončení
-  zkušebního období se nic automaticky neúčtuje a předplatné se samo neobnovuje —
-  další užívání je podmíněno tím, že si zákazník předplatné aktivně objedná.</p>
-  <p>Aktuální ceník je dostupný v aplikaci před objednáním. Uvedené ceny
+  zkušebního období se nic automaticky neúčtuje — další užívání je podmíněno tím,
+  že si zákazník předplatné aktivně objedná nebo koupí.</p>
+  <p>Aktuální ceník je dostupný v aplikaci před objednáním. Ceny objednávané na webu
   jsou {_s(manifest, 'cena_dph', 'doplnit: „včetně DPH“ / „bez DPH, poskytovatel není plátcem DPH“')}
-  a jsou konečné — žádné další poplatky se neúčtují. Objednávkové tlačítko je označeno
-  slovy „Objednávka zavazující k platbě“ a před jeho stisknutím zákazník vidí rozsah,
-  délku a celkovou cenu předplatného.</p>
-  <p>Předplatné se hradí na základě faktury (daňového dokladu) vystavené poskytovatelem,
-  se splatností uvedenou na faktuře. Zaplacené období se v aplikaci zobrazuje u účtu.</p>
-{_play_predplatne(manifest)}  <p>Změnu ceny oznámíme v aplikaci nebo e-mailem nejméně 30 dní předem; nová cena platí
-  až od dalšího předplaceného období. Zákazník, který se změnou nesouhlasí, může smlouvu
-  do účinnosti změny ukončit bez jakékoli sankce.</p>
+  a jsou konečné — žádné další poplatky se neúčtují.</p>
+{_web_predplatne(manifest)}{_play_predplatne(manifest)}  <p>Změna ceny se nedotkne již zaplaceného období; nová cena platí pro období objednaná
+  nebo obnovená po její účinnosti. Zvýšení ceny oznámíme v aplikaci nebo e-mailem nejméně
+  30 dní předem a zákazník, který se změnou nesouhlasí, může smlouvu do účinnosti změny
+  ukončit bez jakékoli sankce.</p>
   <p>Není-li předplatné uhrazeno, přejde účet po uplynutí zaplaceného období do omezeného
   režimu: zákazník se přihlásí, vidí svá data, může si je stáhnout a účet smazat, ale nové
   záznamy nevkládá. Data se v omezeném režimu nemažou.</p>
@@ -1012,11 +1034,674 @@ zpracování a ve zpracovatelské smlouvě — pokud ano, aktualizuj i je.
 """
 
 
+# ── Smazání účtu (Google Play: Account / Data deletion URL) ─────────
+
+def vykresli_smazani(manifest: dict) -> str:
+    """The page Google Play's "delete account" and "delete data" links point
+    to (vykresli_aplikaci.smazani_uctu_cesta). Google wants the steps
+    prominent and about this app; they pointed at the privacy policy, where
+    erasure is one bullet, in Czech only — and an app from Google Play is
+    sold in English too (audit before Play production, 18. 11. 2026). Both
+    languages on one static page: it is read by Google's reviewer and by
+    someone who may no longer be able to open the app."""
+    produkt = _esc(_produkt(manifest))
+    kontakt = _kontakt_html(manifest)
+    provozovatel = _esc(_provozovatel(manifest))
+    play_cs = play_en = ""
+    if _play(manifest):
+        play_cs = """  <p><strong>Předplatné z Google Play smazáním účtu nekončí.</strong> Nejdřív ho zrušte
+  v Google Play (Platby a předplatná → Předplatná); zaplacené období doběhne. Aplikace
+  smazání účtu nedovolí, dokud se předplatné obnovuje.</p>
+"""
+        play_en = """  <p><strong>Deleting the account does not end a Google Play subscription.</strong> Cancel it in
+  Google Play first (Payments &amp; subscriptions → Subscriptions); the paid period runs to its
+  end. The app does not let you delete the account while the subscription still renews.</p>
+"""
+    return f"""{_hlava(f"Smazání účtu a údajů — {_produkt(manifest)}")}
+  <h1>Smazání účtu a údajů — {produkt}</h1>
+  <p>Službu {produkt} provozuje {provozovatel}, kontakt {kontakt}.</p>
+
+  <h2>V aplikaci</h2>
+  <ol>
+    <li>Přihlaste se do aplikace {produkt}.</li>
+    <li>Otevřete <strong>Účet</strong>.</li>
+    <li>Klepněte na <strong>Smazat účet</strong> a smazání potvrďte. Předtím si můžete
+    stáhnout svá data (<strong>Stáhnout moje data</strong>).</li>
+  </ol>
+{play_cs}
+  <h2>Bez aplikace</h2>
+  <p>Napište nám na {kontakt} z e-mailu, kterým se přihlašujete, s předmětem
+  „Smazání účtu“. Účet smažeme a potvrdíme to nejpozději do jednoho měsíce.</p>
+
+  <h2>Co se smaže a co zůstává</h2>
+  <ul>
+    <li>Účet, všechna data, která jste do služby vložili, přihlašovací údaje a hlášení
+    chyb se z provozní databáze smažou <strong>okamžitě</strong>, ze zabezpečených záloh
+    nejpozději do 30 dnů. Zašifrované kopie vašich hlášení u našeho poskytovatele
+    (GitHub) se uzavřou a jejich text se nahradí větou o smazání.</li>
+    <li>Déle uchováváme jen účetní a daňové doklady (faktury), kde nám to ukládá zákon.</li>
+    <li>Souhrnné počty bez vazby na účet (např. kolik lidí službu navštívilo) nejsou
+    osobní údaje a zůstávají.</li>
+  </ul>
+  <p>Podrobnosti jsou v <a href="zasady.html">zásadách zpracování údajů</a>.</p>
+
+  <section lang="en">
+  <h2>Deleting your account and data — {produkt}</h2>
+  <p>{produkt} is run by {provozovatel}, contact {kontakt}.</p>
+  <h3>In the app</h3>
+  <ol>
+    <li>Sign in to {produkt}.</li>
+    <li>Open <strong>Account</strong>.</li>
+    <li>Tap <strong>Delete account</strong> and confirm. You can download your data first
+    (<strong>Download my data</strong>).</li>
+  </ol>
+{play_en}  <h3>Without the app</h3>
+  <p>Write to {kontakt} from the e-mail address you sign in with, subject “Account deletion”.
+  We delete the account and confirm it within one month at the latest.</p>
+  <h3>What is deleted and what stays</h3>
+  <ul>
+    <li>The account, all data you entered, sign-in records and bug reports are deleted from
+    the live database <strong>immediately</strong> and from secured backups within 30 days.
+    The encrypted copies of your reports at our provider (GitHub) are closed and their text
+    replaced with a deletion notice.</li>
+    <li>We keep only accounting and tax documents (invoices) for as long as the law requires.</li>
+    <li>Aggregate counts not linked to any account (such as how many people visited) are not
+    personal data and stay.</li>
+  </ul>
+  <p>{'Details are in the <a href="privacy.html">privacy policy</a>.' if _anglicky() else
+     'Details are in the privacy policy (<a href="zasady.html">zasady.html</a>, in Czech).'}</p>
+  </section>
+
+  <p><a href="index.html">Zpět do aplikace / Back to the app</a></p>
+</body>
+</html>
+"""
+
+
+# ── English: privacy.html, terms.html ──────────────────────────────
+# A product for the world speaks English from its first version (batch B)
+# and Google Play shows its English listing by default — yet the privacy
+# policy and the terms were Czech only (audit before Play production,
+# 18. 11. 2026). Generated only for a product whose app declares English
+# (simtegen-jazyky in web/index.html); a Czech product gets nothing new.
+# The template's own entities, services and cookies are translated here;
+# a product's own entity carries its English in the manifest
+# (ukladame[].en = {ucel, pole, retence}) — the builder's gate asks for it
+# (stavitel._pravni_en_chybi). Anything still only in Czech is shown in
+# Czech and marked, never silently dropped: the Czech version is the one a
+# lawyer approved.
+
+def _anglicky() -> bool:
+    """The app declares English (the same meta simtegen.js reads)."""
+    try:
+        text = INDEX.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    m = re.search(r'<meta\s+name="simtegen-jazyky"\s+content="([^"]*)"', text)
+    return bool(m) and "en" in m.group(1).split()
+
+
+_V_CESTINE = " (in Czech)"
+_CESKA_PISMENA = re.compile(r"[ěščřžýáíéůúňťďĚŠČŘŽÝÁÍÉŮÚŇŤĎ]")
+
+# The template's entities (sablona_pamet/data-manifest.json, stavitel's
+# _INFRA_ENTITY and the Play module): {entita: (purpose, data, retention)}.
+_EN_ENTITY = {
+    "uzivatele": ("customer account and sign-in", "e-mail address, account creation time, app language",
+                  "until the customer deletes the account"),
+    "prihlasovaci_odkazy": ("one-time sign-in by an e-mailed link",
+                            "token digest, e-mail address, expiry, app language", "24 hours"),
+    "relace": ("keeping you signed in", "token digest, link to the account, expiry",
+               "30 days from the last use of the app, at most 90 days from signing in"),
+    "predplatne": ("record of the paid subscription period; an e-mail a week before a prepaid period ends "
+                   "(only when paying by invoice, at most once per period; no advertising)",
+                   "link to the account, end date of the subscription, payment note (e.g. document number)",
+                   "until the customer deletes the account; the operator keeps accounting documents outside "
+                   "the app for the period required by law"),
+    "hlaseni": ("your reports and questions about the app and our answers; we let you know about an answer "
+                "by e-mail (with its text, at most once per answer)",
+                "report text, status, answer, record number in the support system, time",
+                "until the customer deletes the account"),
+    "platby": ("record of paid subscription periods (payment history)",
+               "link to the account, number of months paid, payment note, time of the entry",
+               "until the customer deletes the account; the operator keeps accounting documents outside "
+               "the app for the period required by law"),
+    "objednavky": ("subscription order and record of the consent to start the service",
+                   "link to the account, length and option of the subscription, price, billing details, "
+                   "whether you are a consumer, the consent to start and its time, status",
+                   "until the customer deletes the account; the operator keeps accounting documents outside "
+                   "the app for the period required by law"),
+    "zkusebni_doba": ("notices that the free trial is about to end and has ended (in the app and in at most "
+                      "three service e-mails — 2–3 days and 1 day before the end and after it; no advertising)",
+                      "link to the account, end date of the trial as the app derives it from your account",
+                      "until the customer deletes the account"),
+    "ukazkova_data": ("filling an empty account with made-up sample records on your request, and removing "
+                      "them with one tap",
+                      "link to the account, numbers of the sample records, time loaded (the sample data "
+                      "itself is made up)",
+                      "until the sample data is removed or the customer deletes the account"),
+    "play_nakupy": ("subscription bought in the Google Play app: verifying the purchase with Google and "
+                    "the period it pays for",
+                    "link to the account, Google Play purchase token, product, end of the paid period, "
+                    "subscription state, time of the last check",
+                    "until the customer deletes the account"),
+}
+_EN_UPOMINKY_ZAKLAD = ("so that each notice about the end of the trial or of a prepaid period and each "
+                       "e-mail with an answer to a report goes out at most once")
+_EN_UPOMINKY_ODCHOD = ("and so that the question why you do not continue can be answered only once per ended "
+                       "period (we remember that you answered, not what)")
+_EN_UPOMINKY_RECENZE = ("and so that the request to rate the app in Google Play appears at most twice (only "
+                        "after a repeated payment, never by e-mail)")
+
+# Standard legal bases as the template writes them.
+_EN_ZAKLAD = {
+    "plnění smlouvy": "performance of the contract",
+    "plnění smlouvy, u nezákazníků oprávněný zájem": "performance of the contract; legitimate interest for "
+                                                      "non-customers",
+    "oprávněný zájem — vyhodnocení účinnosti propagace": "legitimate interest — measuring how well our "
+                                                         "promotion works",
+    "oprávněný zájem — funkční a bezpečná služba": "legitimate interest — a working and secure service",
+    "oprávněný zájem — zlepšování služby": "legitimate interest — improving the service",
+    "oprávněný zájem — provoz a zabezpečení služby": "legitimate interest — running and securing the service",
+    "plnění právní povinnosti (zákon o účetnictví, zákon o DPH)": "compliance with a legal obligation "
+                                                                  "(Accounting Act, VAT Act)",
+}
+
+# Retention as the template and products usually write it: the fixed
+# phrases, then "N <unit>". Whatever stays Czech is marked.
+_EN_CAS_FRAZE = (
+    ("do smazání účtu zákazníkem", "until the customer deletes the account"),
+    ("vedeno mimo aplikaci", "kept outside the app"),
+    ("souhrnné počty bez osobních údajů", "aggregate counts without personal data"),
+    ("od posledního použití", "from the last use"),
+    ("nejdéle", "at most"),
+)
+_EN_JEDNOTKY = (
+    (r"(\d+)\s*(?:let|roků|roky|rok)\b", r"\1 years"),
+    (r"(\d+)\s*(?:měsíců|měsíce|měsíc)\b", r"\1 months"),
+    (r"(\d+)\s*(?:dnů|dní|dny|den)\b", r"\1 days"),
+    (r"(\d+)\s*(?:hodin|hodiny|hodina)\b", r"\1 hours"),
+)
+
+
+def _en_cas(text: str) -> str:
+    if not text:
+        return ""
+    out = text
+    for cs, en in _EN_CAS_FRAZE:
+        out = out.replace(cs, en)
+    for vzor, nahrada in _EN_JEDNOTKY:
+        out = re.sub(vzor, nahrada, out)
+    out = out.replace(" a ", " and ").replace("; ", "; ")
+    return out if not _CESKA_PISMENA.search(out) else text + _V_CESTINE
+
+
+def _en_text(text: str) -> str:
+    """A product's own Czech words, kept but marked."""
+    return text + _V_CESTINE if text and _CESKA_PISMENA.search(text) else text
+
+
+_EN_SLUZBY = {
+    "Cloudflare": ("Cloudflare, Inc.", "hosting of the app and the database (primary instance in the EU)",
+                   "primary database instance in the EU"),
+    "Resend": ("Resend (Plus Five Five, Inc.)", "sending account e-mails: the sign-in link, order "
+               "confirmations, notices about the end of the trial and of prepaid periods, and answers to "
+               "reports", "USA / EU"),
+    "GitHub": ("GitHub, Inc. (Microsoft)", "keeping customers' reports for support (report text, technical "
+               "details of the page and an anonymous account fingerprint with whether the subscription is "
+               "paid and the account's age — encrypted, GitHub sees only an unreadable block; no e-mail, no "
+               "name)", "USA / EU"),
+    "Google Play": ("Google Ireland Limited / Google Commerce Limited", "selling the subscription in the "
+                    "Google Play app: Google takes and processes the payment; we learn only that a purchase "
+                    "exists and until when it is paid", "EU"),
+}
+_EN_COOKIES = {
+    "__Host-relace": ("keeping you signed in (technical, HttpOnly)",
+                      "30 days from the last use, at most 90 days"),
+    "aplikace": ("remembering that the page runs inside the Google Play app, so that it never offers "
+                 "another way of paying there (technical)", "1 year"),
+}
+
+
+def _ukladame_en(manifest: dict) -> list[dict]:
+    """English rows in the same order as _ukladame (so the two policies
+    describe the same table)."""
+    rows = []
+    for u, cz in zip(manifest.get("ukladame") or [], _ukladame(manifest)):
+        entita = u.get("entita", "")
+        vlastni = u.get("en") if isinstance(u.get("en"), dict) else {}
+        if entita == "upominky":
+            ucel = _EN_UPOMINKY_ZAKLAD
+            if _ODCHODY_ZNACKA in (u.get("ucel") or ""):
+                ucel += "; " + _EN_UPOMINKY_ODCHOD
+            if _RECENZE_ZNACKA in (u.get("ucel") or ""):
+                ucel += "; " + _EN_UPOMINKY_RECENZE
+            sablona = (ucel, "link to the account, kind of notice, time sent", "until the customer deletes the account")
+        else:
+            sablona = _EN_ENTITY.get(entita)
+        if vlastni.get("ucel"):
+            ucel, pole, retence = (vlastni.get("ucel"), vlastni.get("pole") or _en_text(cz["pole"]),
+                                   vlastni.get("retence") or _en_cas(cz["retence"]))
+        elif sablona:
+            ucel, pole, retence = sablona
+        else:
+            ucel, pole, retence = _en_text(cz["ucel"]), _en_text(cz["pole"]), _en_cas(cz["retence"])
+        rows.append({"ucel": ucel, "pole": pole,
+                     "zaklad": vlastni.get("zaklad") or _EN_ZAKLAD.get(cz["zaklad"]) or _en_text(cz["zaklad"]),
+                     "retence": retence, "retence_label": cz.get("retence_label")})
+    vlastnich = len(manifest.get("ukladame") or [])
+    for cz in _ukladame(manifest)[vlastnich:]:
+        rows.append({"ucel": _EN_RADKY_SABLONY.get(cz["entita"], (_en_text(cz["ucel"]),))[0],
+                     "pole": _EN_RADKY_SABLONY.get(cz["entita"], (None, _en_text(cz["pole"])))[1],
+                     "zaklad": _EN_ZAKLAD.get(cz["zaklad"]) or _en_text(cz["zaklad"]),
+                     "retence": _en_cas(cz["retence"]), "retence_label": cz.get("retence_label")})
+    return rows
+
+
+# The rows the template adds by itself (_ukladame after the declared ones).
+_EN_RADKY_SABLONY = {
+    "zdroj příchodu": ("finding out which of our promotion (an ad, a catalogue) brings customers",
+                       "the source and campaign name from the link you arrived by (e.g. “sklik”, “spring-offer”), "
+                       "with the account; aggregate visit counts by source not linked to anyone. Nothing is "
+                       "stored in your browser."),
+    "chyby aplikace": ("finding and fixing errors you run into in the app, even if you do not report them",
+                       "aggregate counts of script errors by day, screen and place in our code — no error text, "
+                       "not linked to a person or device. Nothing is stored in your browser."),
+    "proč zákazníci nepokračují": ("finding out why customers do not continue after the trial or the "
+                                   "subscription, and improving the product accordingly",
+                                   "aggregate counts of reasons by day and channel — your answer to an optional "
+                                   "question after the trial or a prepaid period ends, and the cancellation "
+                                   "reason Google Play records — not linked to a person. With the account we "
+                                   "only remember that you answered for that period (so it is not asked "
+                                   "again), not what you answered."),
+    "provozní a bezpečnostní logy": ("operational and security records (logs)",
+                                     "IP address, time and type of the request, browser identification"),
+    "podpora a komunikace": ("handling a question or a support request", "e-mail address and the "
+                             "content of the communication"),
+    "účetní a daňové doklady": ("accounting and tax documents", "billing details, amount, date"),
+}
+_ODCHODY_ZNACKA = "proč nepokračujete"
+_RECENZE_ZNACKA = "hodnocení v Google Play"
+
+
+def _retence_en_html(row: dict) -> str:
+    if row.get("retence"):
+        return _esc(row["retence"])
+    return f'<span class="doplnit">({_esc(row.get("retence_label") or "doplnit")})</span>'
+
+
+def _hlava_en(title: str) -> str:
+    return _hlava(title).replace('<html lang="cs">', '<html lang="en">', 1)
+
+
+def _identita_en(manifest: dict, *, plna: bool) -> str:
+    parts = [f"<strong>{_esc(_provozovatel(manifest))}</strong>, company ID (IČO) {_s(manifest, 'ico', 'doplnit IČO')}"]
+    if plna:
+        parts.append(f"VAT ID (DIČ) {_s(manifest, 'dic', 'doplnit DIČ / „nejsme plátci DPH“')}")
+    parts.append(f"registered office {_s(manifest, 'sidlo', 'doplnit sídlo')}, Czech Republic")
+    if plna:
+        parts.append(f"registered in the Commercial Register kept by "
+                     f"{_s(manifest, 'zapis_or', 'doplnit soud a spisovou značku')}")
+    parts.append(f"e-mail {_kontakt_html(manifest)}")
+    return ", ".join(parts)
+
+
+def _meta_en(manifest: dict, ceska: str) -> str:
+    verze = manifest.get("verze_dokumentu") or "2.0"
+    return (f'  <p class="meta">Version {_esc(verze)} · effective from '
+            f"{_s(manifest, 'ucinnost_od', 'doplnit datum účinnosti')} · earlier versions on request. "
+            f'This is a translation of the <a href="{ceska}">Czech version</a>, which prevails in case of '
+            "doubt.</p>")
+
+
+def _cena_dph_en(manifest: dict) -> str:
+    text = (manifest.get("cena_dph") or "").strip()
+    if not text:
+        return _s(manifest, "cena_dph", 'doplnit: „včetně DPH“ / „bez DPH, poskytovatel není plátcem DPH“')
+    nizko = text.lower()
+    if "není plátcem" in nizko or "neni platcem" in nizko:
+        return "without VAT — the provider is not a VAT payer"
+    if "včetně dph" in nizko:
+        return "including VAT"
+    return _esc(text) + _V_CESTINE
+
+
+def vykresli_privacy(manifest: dict) -> str | None:
+    if not _anglicky():
+        return None
+    produkt = _produkt(manifest)
+    rows = "\n".join(
+        f"      <tr><td>{_esc(r['ucel'])}</td><td>{_esc(r['pole'])}</td>"
+        f"<td>{_esc(r['zaklad'])}</td><td>{_retence_en_html(r)}</td></tr>"
+        for r in _ukladame_en(manifest))
+    sluzby = []
+    for s in manifest.get("sluzby_treti_strany") or []:
+        plny, ucel, kde = _EN_SLUZBY.get(s.get("nazev") or "", (s.get("nazev") or "", _en_text(s.get("ucel") or ""), ""))
+        odkaz = f' (<a href="{_esc(s["dpa"])}">data processing agreement</a>)' if s.get("dpa") else ""
+        sluzby.append(f"    <li><strong>{_esc(plny)}</strong> — {_esc(ucel)}{f' ({_esc(kde)})' if kde else ''}{odkaz}</li>")
+    cookies = []
+    for c in manifest.get("cookies") or []:
+        ucel, trvani = _EN_COOKIES.get(c.get("nazev") or "", (_en_text(c.get("ucel") or ""), _en_cas(c.get("trvani") or "")))
+        cookies.append(f"    <li><code>{_esc(c.get('nazev', ''))}</code> — {_esc(ucel)}; valid for {_esc(trvani)}.</li>")
+    return f"""{_hlava_en(f"Privacy policy — {produkt}")}
+  <h1>Privacy policy</h1>
+{_meta_en(manifest, "zasady.html")}
+
+  <p>The service <strong>{_esc(produkt)}</strong> is operated by, and your data is controlled by,
+  {_identita_en(manifest, plna=False)}. Contact us at that e-mail with any question about your data.</p>
+  <p>We have not appointed a data protection officer — none of the conditions of Article 37 GDPR that
+  would require it applies to us. Questions about data are handled at the contact e-mail above.</p>
+
+  <h2>Our role</h2>
+  <p>For the data described in this policy we are the <strong>controller</strong> — we decide why and
+  how it is processed.</p>
+  <p>Besides that we store the content you put into the service. If it contains personal data of other
+  people (for example your own customers), you are their controller and we are only a
+  <strong>processor</strong> storing it for you on your instructions. That role is governed by the
+  <a href="zpracovatelska-smlouva.html">data processing agreement</a> (in Czech); this policy does not
+  cover such content.</p>
+
+  <h2>What we store and why</h2>
+  <p>The legal basis is the performance of a contract (providing the service you asked for, Article 6(1)(b)
+  GDPR) and, for operational and security records, our legitimate interest (Article 6(1)(f) GDPR) in the
+  service working, not being misused, and the cause of a fault or an attack being traceable.</p>
+  <table>
+    <thead>
+      <tr><th>Purpose</th><th>Data</th><th>Legal basis</th><th>How long</th></tr>
+    </thead>
+    <tbody>
+{rows}
+    </tbody>
+  </table>
+  <p>Giving an e-mail address is a contractual requirement — without it no account can be created and the
+  service cannot be provided. Other data arises from using the service. There is no automated
+  decision-making or profiling with legal effects for you.</p>
+
+  <h2>Where the data is and who processes it</h2>
+  <p>The data runs on the infrastructure of the processors below; the primary database instance is located
+  in the European Union. We do not sell data or pass it on for advertising. Further recipients are our
+  accountant and, to the extent necessary, public authorities where the law requires it.</p>
+  <ul>
+{chr(10).join(sluzby)}
+  </ul>
+
+  <h2>Transfers outside the European Union</h2>
+  <p>The processors listed are companies based in the United States. Although the primary database instance
+  is in the EU, the data may be accessed from the United States during operation (in particular for support,
+  protecting the service and delivering e-mail). Such a transfer is covered by the European Commission's
+  <strong>standard contractual clauses</strong> under Article 46(2)(c) GDPR, which form part of the
+  processing agreements linked above, or by the Commission's adequacy decision (EU–US Data Privacy
+  Framework) where the processor is certified under it. We will provide a copy of the safeguards on request
+  at the contact e-mail.</p>
+
+  <h2>Cookies</h2>
+  <p>We use only technical cookies necessary for the service — no tracking or advertising cookies. The law
+  does not require consent for such cookies (Section 89(3) of Czech Act No. 127/2005 Coll.,
+  on Electronic Communications):</p>
+  <ul>
+{chr(10).join(cookies)}
+  </ul>
+  <p>When you switch the language or the currency in the app yourself, your browser remembers that choice
+  (browser storage, item <code>sg-volba</code>) so you need not repeat it. Nothing else is in it and it is
+  never sent anywhere; you remove it by clearing the site's data in your browser. The default currency
+  follows the country you connect from — our hosting provider knows it from the connection and we do not
+  store it anywhere.</p>
+
+  <h2>Your rights</h2>
+  <ul>
+    <li><strong>Access to your data and a copy of it</strong>: download it in the app at any time
+    (Account → Download my data).</li>
+    <li><strong>Deleting the account and all data</strong>: in the app (Account → Delete account); the
+    steps, also without the app, are on the page <a href="smazani-uctu.html">Deleting your account</a>.
+    Data is deleted from the live database immediately and from secured backups within 30 days, when the
+    backups are overwritten. We keep longer only accounting and tax documents where the law requires it.</li>
+    <li>You also have the right to <strong>rectification</strong>, <strong>restriction of
+    processing</strong> and <strong>data portability</strong> — write to the contact e-mail above.</li>
+    <li><strong>Right to object</strong> (Article 21 GDPR): you may object at any time, at the contact
+    e-mail, to processing based on our legitimate interest — that is, to the operational and security
+    records. We then stop unless we demonstrate compelling legitimate grounds to continue.</li>
+    <li>You may lodge a <strong>complaint</strong> with the Czech Office for Personal Data Protection
+    (Úřad pro ochranu osobních údajů), Pplk. Sochora 27, 170 00 Prague 7
+    (<a href="https://uoou.gov.cz">uoou.gov.cz</a>), or with the supervisory authority of your country.</li>
+  </ul>
+  <p>We answer a request within one month at the latest; in complex cases this may be extended by two
+  further months, and we will tell you so.</p>
+
+  <h2>Security incidents</h2>
+  <p>If a personal data breach occurred, we would notify the Office for Personal Data Protection within
+  72 hours of finding out, where it is likely to result in a risk to you. Where it is likely to result in a
+  high risk to you, we would also inform you without undue delay. We have a written procedure for this.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We may update this policy; we announce a substantial change in the app or by e-mail at least 30 days
+  in advance. Earlier versions are available on request.</p>
+
+  <h2>Related documents</h2>
+  <p><a href="terms.html">Terms of service</a> · <a href="zasady.html">Zásady zpracování údajů (Czech)</a>
+  · <a href="zpracovatelska-smlouva.html">Data processing agreement (Czech)</a></p>
+
+  <p><a href="index.html">Back to the app</a></p>
+</body>
+</html>
+"""
+
+
+def _play_predplatne_en(manifest: dict) -> str:
+    if not _play(manifest):
+        return ""
+    return """  <p><strong>Subscription in the app from Google Play.</strong> In the app installed from Google Play the
+  subscription is bought only through Google Play: Google takes and processes the payment under the Google
+  Play terms; the price in the customer's currency and with the taxes of their country, the length of the
+  period and the automatic renewal are shown in the offer before buying. The subscription
+  <strong>renews automatically</strong> for another period until the customer cancels it; it can be
+  cancelled at any time in Google Play (Payments &amp; subscriptions → Subscriptions) and the paid period
+  runs to its end. The paid period applies equally in the app and on the web. A price change of a Google Play
+  subscription follows the Google Play rules, which tell the customer in advance. <strong>Deleting the
+  account does not cancel the Google Play subscription</strong> — the app therefore does not allow deleting
+  the account while the subscription still renews; cancel it in Google Play first.</p>
+"""
+
+
+def _play_odstoupeni_en(manifest: dict) -> str:
+    if not _play(manifest):
+        return ""
+    return """  <p><strong>Subscription bought through Google Play:</strong> a purchase through Google Play does not ask
+  for the consent under Section 1837(l), so the right of withdrawal applies in full. Just write to us at
+  the contact address; we refund the whole amount paid, through Google Play. It helps if you include the
+  order number from Google Play's receipt (it starts with “GPA.”) — we find the purchase by it.</p>
+"""
+
+
+def vykresli_terms(manifest: dict) -> str | None:
+    if not _anglicky():
+        return None
+    produkt = _produkt(manifest)
+    zkusebni = manifest.get("zkusebni_dni") or 30
+    return f"""{_hlava_en(f"Terms of service — {produkt}")}
+  <h1>Terms of service of {_esc(produkt)}</h1>
+{_meta_en(manifest, "podminky.html")}
+
+  <p>Provider: {_identita_en(manifest, plna=True)}.</p>
+
+  <h2>1. What the service is and who it is for</h2>
+  <p><strong>{_esc(produkt)}</strong> is a web application provided remotely (software as a service). The
+  customer uses it in their browser, installs nothing, and the data kept in the service remain theirs.</p>
+  <p>An ordinary up-to-date browser (Chrome, Firefox, Safari, Edge) with JavaScript and cookies enabled and
+  an internet connection are all that is needed. The customer bears the cost of the connection at their
+  operator's rates — the provider charges nothing for the use of means of distance communication.</p>
+  <p>The service may be used by businesses and consumers. A <strong>consumer</strong> is a person who
+  concludes the contract outside their business. Provisions marked “for consumers” apply only to them.</p>
+
+  <h2>2. Conclusion of the contract and the account</h2>
+  <p>The contract is concluded by creating an account (signing in with a one-time e-mailed link) and lasts
+  until the customer deletes the account or either party ends it under article 9. It is concluded for an
+  indefinite period; the contract is in Czech and this English text is its translation; the provider
+  archives it electronically.</p>
+  <p>The sign-in link delivered by e-mail is the key to the account. The customer therefore takes care that
+  no unauthorised person has access to their mailbox and tells us without delay of any suspected misuse. They
+  are not liable for consequences they did not cause and could not reasonably prevent.</p>
+
+  <h2>3. Free trial, price and subscription</h2>
+  <p>After the account is created the service is free for <strong>{_esc(zkusebni)} days</strong>. Nothing
+  is charged automatically when the trial ends — further use requires the customer to actively order or buy
+  a subscription.</p>
+  <p>The current price list is shown in the app before ordering. Prices ordered on the web are
+  {_cena_dph_en(manifest)} and are final — no further fees are charged.</p>
+  <p><strong>Subscription ordered on the web.</strong> The order button is labelled with words meaning
+  “order with an obligation to pay” and before pressing it the customer sees the scope, length and total
+  price of the subscription. The subscription is paid on the basis of an invoice issued by the provider,
+  due as stated on the invoice, and covers the period ordered. <strong>It does not renew by
+  itself</strong> — the customer orders the next period again. If they order it before the paid period (or the
+  free trial) ends, the service keeps running until the invoice is due; paying extends the subscription. The
+  paid period is shown in the app with the account.</p>
+{_play_predplatne_en(manifest)}  <p>A price change does not affect a period already paid; the new price applies to periods ordered or
+  renewed after it takes effect. We announce a price increase in the app or by e-mail at least 30 days in
+  advance, and a customer who disagrees may end the contract before it takes effect without any penalty.</p>
+  <p>If the subscription is not paid, the account switches to a limited mode when the paid period ends: the
+  customer can sign in, see their data, download it and delete the account, but cannot add new records. Data
+  is not deleted in limited mode.</p>
+
+  <h2>4. Withdrawal within 14 days (for consumers)</h2>
+  <div class="spotrebitel">
+  <p>A consumer may withdraw from the contract <strong>within 14 days of its conclusion</strong>, without
+  giving a reason and without any penalty (Section 1829 of the Czech Civil Code).</p>
+  <p>Withdrawal can be made by any unequivocal statement — by e-mail to the contact address above, or using
+  the model withdrawal form below. We confirm receipt of the withdrawal in text form without undue delay.</p>
+  <p>If a consumer withdraws, we refund all payments received within 14 days, by the same means of payment
+  unless agreed otherwise.</p>
+  <p><strong>When the right of withdrawal ends:</strong> for a digital service provided for payment, the
+  right ends if performance began with the consumer's prior express consent given before the 14-day period
+  ended and the consumer was informed that they thereby lose the right of withdrawal (Section 1837(l) of the
+  Civil Code). We ask for this consent and information with a separate tick box when the subscription is
+  ordered and confirm it to the consumer in text form. Without that consent we start providing the paid
+  service only after the 14-day period.</p>
+  <p>The free trial is not a contract for payment and the consumer has no payment obligation from it; the
+  account can be deleted at any time.</p>
+{_play_odstoupeni_en(manifest)}  <p><strong>Model withdrawal form</strong> (complete and return it only if you wish to withdraw):<br>
+  To: {_esc(_provozovatel(manifest))}, {_s(manifest, 'sidlo', 'doplnit sídlo')}, e-mail {_kontakt_html(manifest)}<br>
+  I hereby give notice that I withdraw from my contract for the provision of the digital service
+  {_esc(produkt)}. Ordered on / received on: … · Name of consumer: … · Address of consumer: … ·
+  E-mail of the account: … · Date: …</p>
+  </div>
+
+  <h2>5. Availability, support and defects</h2>
+  <p>The provider runs the service with professional care and throughout the contract ensures that it is fit
+  for its usual purpose, has the usual characteristics and matches the description in these terms. It
+  provides the updates needed to keep the service working and secure.</p>
+  <p>Planned downtime is announced in advance where possible. Support is by e-mail at the address above, on
+  working days.</p>
+  <div class="spotrebitel">
+  <p><strong>For consumers:</strong> if the digital service has a defect, the consumer has the rights under
+  Section 2389a et seq. of the Civil Code — in particular to have the defect remedied within a reasonable
+  time, to a reasonable price reduction and, for a material defect, to withdraw from the contract. These
+  rights cannot be limited or excluded in advance and nothing in these terms about availability or limitation
+  of liability affects them. It is enough to report the defect by e-mail.</p>
+  </div>
+  <p>For business customers the provider does not guarantee uninterrupted availability unless agreed
+  otherwise.</p>
+
+  <h2>6. Customer data, export and portability</h2>
+  <p>Data the customer puts into the service is theirs. The provider processes it only to run the service,
+  under the <a href="privacy.html">privacy policy</a> and, where the customer is the controller of other
+  people's personal data, under the <a href="zpracovatelska-smlouva.html">data processing agreement</a>
+  (in Czech), which forms part of these terms.</p>
+  <p>The customer can download a complete export of their data in a structured, commonly used,
+  machine-readable format (JSON) in the app at any time and free of charge, and delete the account with its
+  data. The export covers all records the customer entered and their account details; it does not include
+  the provider's internal technical data (such as operational logs) or data protected as the provider's
+  trade secret.</p>
+  <p><strong>Switching to another provider.</strong> If the customer decides to move to another service,
+  the provider gives reasonable assistance: the export described above, and the data stays available for
+  download for <strong>at least 30 days</strong> after notice is given (transition period). The provider
+  charges nothing for the export and the assistance. After the transition period and the completed switch
+  the provider deletes the data. These rules follow Regulation (EU) 2023/2854 (Data Act) on switching
+  between data processing services.</p>
+
+  <h2>7. Customer's obligations</h2>
+  <p>The customer uses the service lawfully, does not put into it content they have no right to, and does
+  not try to circumvent its security or load it beyond normal use. The customer is responsible for the
+  content they put into the service; where it includes other people's personal data, they are responsible
+  for having a legal basis for it.</p>
+
+  <h2>8. Liability</h2>
+  <p>The provider is liable for damage caused by breaching these terms. It is not liable for damage caused
+  by the customer's incorrect use of the service or for circumstances excluding liability under Section
+  2913(2) of the Civil Code.</p>
+  <p><strong>For business customers</strong> compensation is limited to the amount the customer paid for
+  the service in the last 12 months and lost profit is not compensated. The limit does not apply to damage
+  caused intentionally or by gross negligence.</p>
+  <div class="spotrebitel">
+  <p><strong>For consumers</strong> the limitation in the previous paragraph <strong>does not
+  apply</strong>. A consumer is compensated in full under the law; the consumer's rights for defective
+  performance and to compensation are not limited in any way (Section 1814 of the Civil Code).</p>
+  </div>
+
+  <h2>9. Ending the contract</h2>
+  <p>The customer may end the contract at any time without penalty by deleting the account in the app.
+  Deletion is irreversible: before it completes, the app offers to download the data and asks for
+  confirmation. After deletion the data is removed from the live database immediately and from secured
+  backups within 30 days, when the backups are overwritten.</p>
+  <p>The provider may terminate the contract with 30 days' notice given by e-mail; the notice period never
+  exceeds 2 months and is followed by the transition period under article 6. Prepaid subscription for the
+  unused period is then refunded pro rata.</p>
+  <p>The provider may end the contract with immediate effect only for a material breach of these terms by
+  the customer, in particular putting unlawful content into the service, attacking its security, misusing it
+  to send unsolicited messages or loading it beyond normal use. Unless the nature of the breach rules it out,
+  the provider first asks the customer to remedy it within a reasonable time. Even on immediate termination
+  the customer can download their data for 30 days.</p>
+  <p>If the provider discontinues the service as a whole, it announces this at least 60 days in advance,
+  allows the data to be downloaded and refunds the pro-rata part of the subscription.</p>
+
+  <h2>10. Changes to the terms</h2>
+  <p>As this service is provided in the ordinary course of business to a larger number of customers, the
+  provider reserves the right under Section 1752 of the Civil Code to change these terms to a reasonable
+  extent — in particular when the law, the scope of the service or the technical conditions of operation
+  change.</p>
+  <p>The provider announces a change in the app and by e-mail at least 30 days before it takes effect,
+  together with what changes and the right to reject it. A customer who disagrees may end the contract before
+  the change takes effect without penalty; the provider refunds the pro-rata part of the prepaid
+  subscription. A change that would worsen the customer's position and that the customer rejects does not
+  apply to them until the end of the paid period.</p>
+
+  <h2>11. Out-of-court dispute resolution and supervision (for consumers)</h2>
+  <div class="spotrebitel">
+  <p>A consumer has the right to out-of-court resolution of a consumer dispute. The competent body is the
+  <strong>Czech Trade Inspection Authority</strong> (Česká obchodní inspekce), Central Inspectorate — ADR
+  Department, Gorazdova 1969/24, 120 00 Prague 2, <a href="https://adr.coi.gov.cz">adr.coi.gov.cz</a>,
+  e-mail adr@coi.gov.cz (Sections 14 and 20d et seq. of Act No. 634/1992 Coll., on Consumer Protection).</p>
+  <p>The proposal can be filed within 1 year of the day the consumer first raised the claim with the
+  provider. The procedure is free of charge for the consumer.</p>
+  <p>Compliance with consumer protection law is supervised by the Czech Trade Inspection Authority
+  (<a href="https://coi.gov.cz">coi.gov.cz</a>), data protection by the Office for Personal Data Protection
+  (<a href="https://uoou.gov.cz">uoou.gov.cz</a>).</p>
+  </div>
+
+  <h2>12. Final provisions</h2>
+  <p>The contract is governed by Czech law. If the customer is a business, disputes belong to the courts of
+  the provider's registered office. If the customer is a consumer, jurisdiction follows the general rules and
+  the consumer may be sued only in the courts of their residence; the choice of law does not deprive the
+  consumer of the protection given by the mandatory rules of the country of their habitual residence.</p>
+  <p>If any provision of these terms is invalid or unenforceable, the other provisions remain in force.</p>
+
+  <p><a href="index.html">Back to the app</a> ·
+  <a href="privacy.html">Privacy policy</a> ·
+  <a href="podminky.html">Obchodní podmínky (Czech)</a> ·
+  <a href="smazani-uctu.html">Deleting your account</a></p>
+</body>
+</html>
+"""
+
+
 VYSTUPY = (
     (ZASADY, vykresli_zasady),
     (PODMINKY, vykresli_podminky),
     (DPA, vykresli_dpa),
     (ODSTOUPENI, vykresli_odstoupeni),
+    (SMAZANI, vykresli_smazani),
+    # None for a product that does not speak English: nothing is written
+    # and the checker expects nothing (kontrola_manifestu._zkontroluj_zasady).
+    (PRIVACY, vykresli_privacy),
+    (TERMS, vykresli_terms),
     (ZAZNAM, vykresli_zaznam),
     (POSTUP, vykresli_postup),
 )
@@ -1028,9 +1713,14 @@ def main() -> int:
         return 1
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     WEB.mkdir(parents=True, exist_ok=True)
+    hotovo = []
     for path, render in VYSTUPY:
-        path.write_text(render(manifest), encoding="utf-8", newline="\n")
-    print("Vygenerováno: " + ", ".join(str(p) for p, _ in VYSTUPY) + ".")
+        text = render(manifest)
+        if text is None:
+            continue
+        path.write_text(text, encoding="utf-8", newline="\n")
+        hotovo.append(str(path))
+    print("Vygenerováno: " + ", ".join(hotovo) + ".")
     return 0
 
 

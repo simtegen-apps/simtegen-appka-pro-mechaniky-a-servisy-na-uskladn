@@ -55,6 +55,10 @@
       "play.nepodarilo": "Nákup se nepodařil.",
       "play.aktivni": "Předplatné máte aktivní.",
       "play.nelze": "Předplatné teď v aplikaci koupit nejde.",
+      "play.objednavka": "Předplatné už máte objednané jinou cestou — až se vyřídí, poběží i tady.",
+      "play.cizi": "Předplatné tohoto účtu Google patří k jinému účtu aplikace. Přihlaste se tím účtem, "
+        + "nebo nám napište přes Nahlásit chybu.",
+      "play.zkusebni": "Zkušební doba vám běží do {datum}. Nákupem začne placené období hned.",
       "play.cena.mesic": "{cena} měsíčně",
       "play.cena.rok": "{cena} ročně",
       "play.podminky.mesic": "Platí se přes Google Play a obnovuje se automaticky každý měsíc za {cena}, "
@@ -84,6 +88,10 @@
       "play.nepodarilo": "The purchase didn't go through.",
       "play.aktivni": "Your subscription is active.",
       "play.nelze": "The subscription can't be bought in the app right now.",
+      "play.objednavka": "You've already ordered the subscription another way — once it's settled, it applies here too.",
+      "play.cizi": "This Google account's subscription belongs to another account in the app. Sign in with "
+        + "that account, or write to us through Report a problem.",
+      "play.zkusebni": "Your trial runs until {datum}. Buying starts the paid period right away.",
       "play.cena.mesic": "{cena} a month",
       "play.cena.rok": "{cena} a year",
       "play.podminky.mesic": "Paid through Google Play and renewed automatically every month for {cena} "
@@ -251,9 +259,18 @@
       zprava.textContent = t("play.chrome");
       return Promise.resolve();
     }
-    var pozadavek = new PaymentRequest(
-      [{ supportedMethods: BILLING, data: { sku: polozka.itemId } }],
-      { total: { label: t("play.celkem"), amount: { currency: polozka.price.currency, value: "0" } } });
+    var pozadavek;
+    try {
+      pozadavek = new PaymentRequest(
+        [{ supportedMethods: BILLING, data: { sku: polozka.itemId } }],
+        { total: { label: t("play.celkem"), amount: { currency: polozka.price.currency, value: "0" } } });
+    } catch (e) {
+      // Thrown, not rejected: a page that forbids payments (Permissions-
+      // Policy) or an old Chrome. Without this the button stayed grey and
+      // silent (audit 18. 11. 2026).
+      zprava.textContent = t("play.nepodarilo");
+      return Promise.resolve();
+    }
     return pozadavek.show().then(function (odpoved) {
       zprava.textContent = t("play.overuji");
       return api("/api/play", "POST", { token: odpoved.details.purchaseToken }).then(function (r) {
@@ -269,7 +286,7 @@
     });
   }
 
-  function panel(misto, sluzba, polozky, stav, info) {
+  function panel(misto, sluzba, polozky, stav, info, cizi) {
     var obal = prvek("div", "sg-play");
     var zprava = prvek("p", "zprava");
     zprava.setAttribute("aria-live", "polite");
@@ -281,11 +298,26 @@
       misto.replaceChildren(obal);
       return;
     }
+    // Ordered the other way and not settled yet: selling it here again is
+    // paying twice. No word about how it was ordered — in the app that is
+    // the Payments policy's business.
+    if (info.objednavka && !info.ukazka) {
+      obal.appendChild(prvek("p", "", t("play.objednavka")));
+      misto.replaceChildren(obal);
+      return;
+    }
     if (!polozky.length) {
       obal.appendChild(prvek("p", "", t("play.nelze")));
       misto.replaceChildren(obal);
       return;
     }
+    // Google gives no free trial on its side: buying now ends ours. Said
+    // before the button, not discovered on the receipt.
+    if (stav && stav.stav === "zkusebni" && stav.plati_do && !info.ukazka) {
+      var dat = SG && SG.datum ? SG.datum(stav.plati_do) : new Date(stav.plati_do * 1000).toLocaleDateString();
+      obal.appendChild(prvek("p", "popisek", t("play.zkusebni", { datum: dat })));
+    }
+    if (cizi) obal.appendChild(prvek("p", "popisek", t("play.cizi")));
     polozky.forEach(function (p) {
       var o = obdobi(p);
       var radek = prvek("div", "sg-play-nabidka");
@@ -321,12 +353,14 @@
 
   // Purchases Google still reports for this phone: the one just paid for
   // if the answer got lost, renewals, a purchase from before reinstalling.
+  // Resolves to the server's answers (409 = the purchase is another
+  // account's), [] when Google would not say.
   function dorovnej(sluzba) {
     return sluzba.listPurchases().then(function (nakupy) {
       return Promise.all((nakupy || []).map(function (n) {
         return api("/api/play", "POST", { token: n.purchaseToken }).catch(function () { return null; });
       }));
-    }).catch(function () { return null; });
+    }).catch(function () { return []; });
   }
 
   // ── Hodnocení v Google Play ──────────────────────────────────────────
@@ -387,21 +421,40 @@
         return;
       }
       if (info.recenze && info.balicek) zadostORecenzi(info.balicek);
-      if (!mista.length) return;
+      // In the app, on EVERY page — not only the one with the offer: Google
+      // renews on its own and the server learns it only when asked. Before
+      // (audit 18. 11. 2026) a paying customer opening any other screen saw
+      // "subscription expired" after each renewal, and a refund was never
+      // seen by a customer who only used the app. One Google call per live
+      // purchase and page; the refund recheck (obnov) at most weekly.
+      var predtim = (ja.predplatne || {}).stav;
       sluzbaPlay().then(function (sluzba) {
-        // The demo shows the offer with its terms (the reviewer checks them)
-        // but cannot buy; elsewhere no key means nothing to offer.
-        if (!sluzba || !(info.dostupne || info.ukazka)) {
-          Array.prototype.forEach.call(mista, function (m) { panel(m, null, [], null, info); });
-          return null;
-        }
-        return dorovnej(sluzba).then(function () {
-          return Promise.all([sluzba.getDetails(PRODUKTY), api("/api/ja")]);
-        }).then(function (vysledky) {
-          var polozky = (vysledky[0] || []).filter(function (p) { return PRODUKTY.indexOf(p.itemId) >= 0; });
-          // Fresh state: dorovnej() may have just extended it.
-          var stav = (vysledky[1].data || {}).predplatne;
-          Array.prototype.forEach.call(mista, function (m) { panel(m, sluzba, polozky, stav, info); });
+        return Promise.all([
+          sluzba && info.dostupne ? dorovnej(sluzba) : Promise.resolve([]),
+          info.dostupne ? api("/api/play", "POST", { obnov: true }).catch(function () { return null; }) : null,
+        ]).then(function (vysledky) {
+          var cizi = (vysledky[0] || []).some(function (r) { return r && r.status === 409; });
+          return api("/api/ja").then(function (r2) {
+            var stav = (r2.data || {}).predplatne;
+            // Paid up just now (a renewal, a lost answer): the page was drawn
+            // as unpaid — bars, the "why are you leaving" question, 402s.
+            // Once, and only towards paid: the next load starts paid.
+            if (stav && stav.stav === "aktivni" && predtim && predtim !== "aktivni") {
+              location.reload();
+              return null;
+            }
+            if (!mista.length) return null;
+            // The demo shows the offer with its terms (the reviewer checks
+            // them) but cannot buy; elsewhere no key means nothing to offer.
+            if (!sluzba || !(info.dostupne || info.ukazka)) {
+              Array.prototype.forEach.call(mista, function (m) { panel(m, null, [], null, info, cizi); });
+              return null;
+            }
+            return sluzba.getDetails(PRODUKTY).then(function (detaily) {
+              var polozky = (detaily || []).filter(function (p) { return PRODUKTY.indexOf(p.itemId) >= 0; });
+              Array.prototype.forEach.call(mista, function (m) { panel(m, sluzba, polozky, stav, info, cizi); });
+            });
+          });
         });
       }).catch(function () {
         Array.prototype.forEach.call(mista, function (m) { panel(m, null, [], null, info); });
