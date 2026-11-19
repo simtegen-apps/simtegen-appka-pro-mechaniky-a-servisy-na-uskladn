@@ -286,6 +286,17 @@
     zprava.replaceChildren(doc.createTextNode(t("play.nepodarilo")), kod);
   }
 
+  // The server's answer when it would not confirm a purchase Google took:
+  // the HTTP status and, for our own refusals, their code and Google's
+  // reason. The first test purchase (19. 11. 2026) said only "couldn't be
+  // verified" — an answer without our sentence, and nobody could tell from
+  // where. Codes, not words: the same for every language.
+  function kodOdpovedi(r) {
+    var d = (r && r.data) || {};
+    return " [overeni: HTTP " + (r ? r.status : "?") + (d.kod ? " " + d.kod : "") +
+      (d.detail ? " — " + String(d.detail).slice(0, 160) : "") + "]";
+  }
+
   function kup(sluzba, polozka, zprava) {
     if (!window.PaymentRequest) {
       zprava.textContent = t("play.chrome");
@@ -307,7 +318,7 @@
       zprava.textContent = t("play.overuji");
       return api("/api/play", "POST", { token: odpoved.details.purchaseToken }).then(function (r) {
         return odpoved.complete(r.ok ? "success" : "fail").then(function () {
-          if (!r.ok) throw new Error(duvod(r, "play.neovereno"));
+          if (!r.ok) throw new Error(duvod(r, "play.neovereno") + kodOdpovedi(r));
           zprava.textContent = t("play.hotovo");
           setTimeout(function () { location.reload(); }, 1200);
         });
