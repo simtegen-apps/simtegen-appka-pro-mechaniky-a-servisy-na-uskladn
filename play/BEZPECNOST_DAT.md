@@ -28,7 +28,7 @@ Prvních 30 dní je zdarma. Potom předplatné Standard za celou provozovnu: 129
 
 ## 2. Zásady ochrany soukromí (Privacy policy)
 
-`<adresa>/zasady.html`
+`<adresa>/privacy.html`
 
 ## 3. Bezpečnost údajů (Data safety)
 
@@ -37,7 +37,7 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 1. *Shromažďuje nebo sdílí aplikace některý z požadovaných typů uživatelských údajů?* **Ano**
 2. *Jsou všechny shromážděné údaje šifrovány při přenosu?* **Ano** (jen HTTPS)
 3. *Poskytujete uživatelům způsob, jak požádat o smazání údajů?* **Ano** — v aplikaci Účet → Smazat účet a všechna data; popis na webu.
-4. *Metoda vytvoření účtu:* **Uživatelské jméno a další ověření** (e-mail + jednorázový odkaz, bez hesla). Odkaz na smazání účtu: `<adresa>/zasady.html`
+4. *Metoda vytvoření účtu:* **Uživatelské jméno a další ověření** (e-mail + jednorázový odkaz, bez hesla). Odkaz na smazání účtu: `<adresa>/smazani-uctu.html`
 
 **Sdílení: u žádného typu Ne.** Cloudflare (hosting, databáze), Resend (e-maily) a GitHub (evidence hlášení, šifrovaně) zpracovávají údaje pro nás — Google je za sdílení nepočítá.
 **Zpracování dočasné (ephemeral): Ne** — údaje se ukládají.
@@ -60,10 +60,7 @@ Vyplní se sama: workflow Vydání ji s každým vydáním posílá Googlu (`bez
 
 ## 4. Obsah aplikace — ostatní prohlášení (App content)
 
-- **Reklamy:** Ne, aplikace neobsahuje reklamy.
-- **Cílová skupina:** 18 let a více.
-- **Hodnocení obsahu (dotazník IARC):** kategorie Nástroje / Produktivita; na otázky o násilí, sexu, vulgaritách, drogách, hazardu a sdílení polohy odpověz Ne. Uživatelé spolu v aplikaci nekomunikují.
-- **Zpravodajská aplikace / vládní aplikace / finanční funkce / zdraví:** Ne.
+Reklamy, cílové publikum, státní aplikaci, finanční funkce, zdraví, inzertní ID a dotazník hodnocení obsahu (IARC) vyplň podle `obchod/PRVNI_VYDANI.md` z artefaktu workflow Vydání (strojově `obchod/play_console.json`). Odpovědi tam vznikají z konkrétního sestavení (jestli aplikace prodává předplatné přes Google Play — pak je nákup digitálního zboží **Ano**, jestli balíček žádá inzertní ID, jakou má kategorii), proto se tady neopakují.
 - **Přístup k aplikaci (App access):** Všechny funkce nebo jejich část jsou omezené → Přidat pokyny. Název: `Ukázka`; uživatelské jméno a heslo nevyplňuj; do „Další informace“ vlož:
 
 ```

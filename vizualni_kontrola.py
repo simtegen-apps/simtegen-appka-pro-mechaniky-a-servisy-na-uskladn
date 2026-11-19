@@ -45,7 +45,8 @@ from pathlib import Path
 # Pages that are not app screens: generated legal texts (both templates'
 # lists) and the offline shell from vykresli_aplikaci.py.
 PRESKOCIT = {"zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
-             "odstoupeni-formular.html", "offline.html"}
+             "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
+             "offline.html"}
 
 # (name, width, height, screenshot?) — 360 is the small Android the owner's
 # customers actually carry; 820 is the narrow end of the tablet layout, where
@@ -82,6 +83,13 @@ MAX_SLOV_PROZA = 50
 # the repo: a product cannot rename its repo, it could write a file.
 WEB_FIRMY_REPO = "simtegen-web"
 JEN_APLIKACE = {"texty_moc"}
+# The help page is prose by design: vykresli_napovedu.py renders it from
+# napoveda.json, the customer reads it when the buttons were not enough, and
+# the support agent answers from it. The app word limit on it could never be
+# met (a whole help page within 50 words) — build 18 spent six rounds on it
+# and tried to edit the generator (16. 11. 2026). Only the limit; overflow,
+# contrast and the rest still apply to it.
+TEXTOVE_STRANKY = {"napoveda.html"}
 
 
 def je_web_firmy(root: Path) -> bool:
@@ -1092,7 +1100,8 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
                         if schema == "light" and nazev == "telefon" and not dt.js(_HLASENI_VIDET):
                             bez_hlaseni.append(obrazovka or stranka.name)
                         for druh, popis in _DRUHY.items():
-                            if (schema == "dark" and druh != "kontrast") or druh in vynechat:
+                            if (schema == "dark" and druh != "kontrast") or druh in vynechat \
+                                    or (stranka.name in TEXTOVE_STRANKY and druh in JEN_APLIKACE):
                                 continue
                             for polozka in nalez.get(druh) or ():
                                 kde_nalez = nalezy.setdefault((stranka.name, schema, popis, polozka),
@@ -1386,20 +1395,33 @@ def _sloz(dt: _DevTools, zaklad: str, sablona: tuple, stitek: str, titulek: str,
 
 # What the store pictures are made of: everything that can change a screen
 # (pages, styles, scripts, API, schema, demo data, the manifest) plus the
-# composition itself (this file). Not the pictures' bytes: demo data with
-# relative dates ("Dnes") changes the pixels every day while the app looks
-# the same — and every listing change of a live app goes to Google review.
+# composition itself. Not the pictures' bytes: demo data with relative dates
+# ("Dnes") changes the pixels every day while the app looks the same — and
+# every listing change of a live app goes to Google review.
+#
+# The composition is its own pieces, not this whole file, and the template's
+# Python tools and legal pages are left out (audit 18. 11. 2026): a change
+# to a check or a generator re-shot every live app and sent each listing to
+# Google's review again, with not a pixel different.
 _MIMO_OTISK = {".git", ".github", "node_modules", ".wrangler", "uat", "docs"}
+
+
+def _otisk_skladby() -> bytes:
+    import inspect
+
+    kusy = [_KOMPOZICE, _DOPLN, inspect.getsource(_sloz), inspect.getsource(obchod)]
+    return "\0".join(kusy).replace("\r\n", "\n").encode("utf-8")
 
 
 def otisk_zdroju(root: Path) -> str:
     import hashlib
 
-    h = hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n"))
+    h = hashlib.sha256(_otisk_skladby())
     for cesta in sorted(root.rglob("*")):
         cast = cesta.relative_to(root)
-        if (not cesta.is_file() or set(cast.parts) & _MIMO_OTISK or cesta.suffix == ".md"
-                or cast.as_posix() == "play/co_je_noveho.txt"):
+        if (not cesta.is_file() or set(cast.parts) & _MIMO_OTISK or cesta.suffix in (".md", ".py")
+                or cast.as_posix() == "play/co_je_noveho.txt"
+                or (cast.parts[0] == "web" and len(cast.parts) == 2 and cast.name in PRESKOCIT)):
             continue
         h.update(b"\0" + cast.as_posix().encode("utf-8") + b"\0")
         h.update(cesta.read_bytes().replace(b"\r\n", b"\n"))

@@ -26,8 +26,14 @@ const TRVANI = 24 * 3600;
 // script filling the database. The old per-data-centre cache counter was
 // dodged by spreading over the network and let everything through when
 // the cache failed; this one refuses instead.
-const LIMIT_IP = 5;
+// Per address 30, not 5 (audit 19. 11. 2026): Google's reviewers and its
+// pre-launch test devices come from shared Google networks, so five demos an
+// hour from "one address" could lock the reviewer out — and an app the
+// reviewer cannot enter is rejected. The product-wide cap is what keeps a
+// script from filling the database, and it stays as it was.
+const LIMIT_IP = 30;
 const LIMIT_CELKEM = 60;
+const OKNO = 3600;
 
 async function uklid(env) {
   // A few expired demos per new one: housekeeping without a scheduler, and
@@ -59,9 +65,17 @@ export async function onRequestPost(context) {
     ukazka = null;
   }
   if (!ukazka || !Array.isArray(ukazka.kroky)) return json({ chyba: "Ukázka tu není." }, 404);
-  if (!(await vLimitu(env, "ukazka_ip", adresaKlienta(request, env), LIMIT_IP, 3600))
-      || !(await vLimitu(env, "ukazka", "vse", LIMIT_CELKEM, 3600))) {
-    return json({ chyba: "Ukázek je teď moc, zkus to za chvíli." }, 429);
+  if (!(await vLimitu(env, "ukazka_ip", adresaKlienta(request, env), LIMIT_IP, OKNO))
+      || !(await vLimitu(env, "ukazka", "vse", LIMIT_CELKEM, OKNO))) {
+    // The counters are fixed hourly windows (vLimitu): the next demo is
+    // possible when this one ends — say when, so a person (or a reviewer
+    // writing up a rejection) reads "wait", not "broken".
+    const zbyva = OKNO - (Math.floor(Date.now() / 1000) % OKNO);
+    const minut = Math.max(1, Math.ceil(zbyva / 60));
+    return json({
+      chyba: `Ukázek je teď moc najednou. Zkuste to prosím za chvíli (nejpozději za ${minut} min).`,
+      kod: "ukazka_limit",
+    }, 429, { "Retry-After": String(zbyva) });
   }
 
   await uklid(env);

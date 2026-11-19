@@ -43,7 +43,7 @@ async function tabulky(env) {
 
 // Last rowid of every product table. Whole table, not just this account:
 // the next row anyone inserts gets a higher one.
-async function snimek(env) {
+export async function snimek(env) {
   const vysledek = {};
   for (const nazev of await tabulky(env)) {
     try {
@@ -90,6 +90,20 @@ async function nahrat(context) {
     return json({ chyba: "Ukázková data už v účtu máte." }, 409);
   }
   return json({ kroky });
+}
+
+// A load the page never finished (closed mid-way) is closed by the server on
+// the next /api/ja, two minutes after it started at the earliest
+// (functions/api/_middleware.js). Left open, "Odstranit ukázková data" took
+// TODAY as the boundary and deleted every row the customer added since —
+// weeks of real work (security audit 19. 11. 2026).
+export const UZAVRIT_PO = 120;
+
+export async function uzavriNedokoncenou(env, uzivatelId) {
+  const po = await snimek(env);
+  await env.DB.prepare(
+    "UPDATE ukazkova_data SET po = ? WHERE uzivatel_id = ? AND po IS NULL"
+  ).bind(JSON.stringify(po), uzivatelId).run();
 }
 
 async function hotovo(context) {

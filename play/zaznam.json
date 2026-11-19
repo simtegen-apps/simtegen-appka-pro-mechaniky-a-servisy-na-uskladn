@@ -91,9 +91,9 @@
       "tablet": true
     }
   ],
-  "zasady_cesta": "/zasady.html",
+  "zasady_cesta": "/privacy.html",
   "ucty": true,
-  "smazani_uctu_cesta": "/zasady.html",
+  "smazani_uctu_cesta": "/smazani-uctu.html",
   "bezpecnost_dat": {
     "sbira": true,
     "sdili": false,
