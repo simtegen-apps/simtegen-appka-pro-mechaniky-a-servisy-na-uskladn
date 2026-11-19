@@ -262,6 +262,30 @@
     return odkaz;
   }
 
+  // A failure from Chrome or Google, not from our server: our sentence, and
+  // under it the browser's own code and words. Before (19. 11. 2026) the
+  // first test purchase said only "didn't go through" — no order reached
+  // Google and nobody could tell why without a cable to the phone. The
+  // code is what the owner (or support) needs; the customer can ignore it.
+  // Our server's refusals are plain Errors with our own sentence: shown as
+  // they are, no code.
+  function selhani(zprava, e, kde) {
+    var jmeno = e && e.name ? String(e.name) : "?";
+    if (jmeno === "Error" && e.message) {
+      zprava.textContent = e.message;
+      return;
+    }
+    var slova = e && e.message ? String(e.message).slice(0, 200) : "";
+    try { console.warn("SimteGen purchase (" + kde + "):", jmeno, slova); } catch (x) { /* no console */ }
+    var kod = prvek("small", "sg-play-kod", "[" + kde + ": " + jmeno + (slova ? " — " + slova : "") + "]");
+    // Inline, not in styl.css: the module carries its own look, and a long
+    // English browser message must wrap instead of widening the phone page.
+    kod.style.display = "block";
+    kod.style.overflowWrap = "anywhere";
+    kod.style.opacity = "0.75";
+    zprava.replaceChildren(doc.createTextNode(t("play.nepodarilo")), kod);
+  }
+
   function kup(sluzba, polozka, zprava) {
     if (!window.PaymentRequest) {
       zprava.textContent = t("play.chrome");
@@ -276,7 +300,7 @@
       // Thrown, not rejected: a page that forbids payments (Permissions-
       // Policy) or an old Chrome. Without this the button stayed grey and
       // silent (audit 18. 11. 2026).
-      zprava.textContent = t("play.nepodarilo");
+      selhani(zprava, e, "vytvoreni");
       return Promise.resolve();
     }
     return pozadavek.show().then(function (odpoved) {
@@ -290,7 +314,11 @@
       });
     }).catch(function (e) {
       // AbortError = the customer closed Google's sheet; nothing happened.
-      zprava.textContent = e && e.name === "AbortError" ? "" : (e.message || t("play.nepodarilo"));
+      if (e && e.name === "AbortError") {
+        zprava.textContent = "";
+        return;
+      }
+      selhani(zprava, e, "platba");
     });
   }
 
