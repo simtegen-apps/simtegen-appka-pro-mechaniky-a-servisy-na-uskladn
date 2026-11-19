@@ -3,11 +3,15 @@
 // every build); keep the logic there so a fix reaches every product.
 //
 //   GET [?aplikace=play] → { v_aplikaci, dostupne, ukazka, balicek, produkty,
-//                            recenze }
+//                            objednavka, nakup, recenze }
+//                          nakup: the account already has a live or pending
+//                          Play purchase — the app offers no second one
 //   POST {token}         → verify, acknowledge, extend predplatne (after a
 //                          purchase, and for every purchase listPurchases()
 //                          still reports)
-//   POST {obnov: true}   → re-ask Google about purchases about to run out
+//   POST {obnov: true}   → re-ask Google about purchases about to run out,
+//                          and (at most every 6 h for the whole app) about
+//                          refunds and chargebacks (kontrolaVracenych)
 //   POST {recenze: "hotovo"|"pozdeji"} → the answer to the rating request
 //                          (play_nakupy.zadostORecenzi); needs no Google key
 //
@@ -18,7 +22,9 @@
 // (with 401): the login screen needs it as much as the account.
 
 import { ctiCookie, json } from "../../spolecne.js";
-import { dostupne, obnovNakupy, zapisNakup, zadostORecenzi, zapisRecenzi, PRODUKTY } from "../../play_nakupy.js";
+import {
+  dostupne, kontrolaVracenych, maNakup, obnovNakupy, zapisNakup, zadostORecenzi, zapisRecenzi, PRODUKTY,
+} from "../../play_nakupy.js";
 
 const COOKIE = "aplikace";
 const ROK = 365 * 24 * 3600;
@@ -27,6 +33,21 @@ const ROK = 365 * 24 * 3600;
 // tied to one would vanish with it.
 function jeUkazka(uzivatel) {
   return uzivatel.email.endsWith("@ukazka.invalid");
+}
+
+// An invoice order still open (ordered, or invoiced and unpaid): the app
+// must not sell the same subscription again — paid by both, the customer
+// paid twice (audit before Play production, 18. 11. 2026). The other
+// direction is the API middleware's (no invoice while Play renews).
+async function objednavkaOtevrena(env, uzivatelId) {
+  try {
+    const radek = await env.DB.prepare(
+      "SELECT 1 AS x FROM objednavky WHERE uzivatel_id = ? AND stav IN ('nova', 'fakturovana') LIMIT 1"
+    ).bind(uzivatelId).first();
+    return Boolean(radek);
+  } catch {
+    return false;
+  }
 }
 
 export async function onRequestGet(context) {
@@ -44,6 +65,8 @@ export async function onRequestGet(context) {
     ukazka,
     balicek: env.PLAY_BALICEK || null,
     produkty: Object.keys(PRODUKTY),
+    objednavka: !ukazka && await objednavkaOtevrena(env, data.uzivatel.id),
+    nakup: !ukazka && await maNakup(env, data.uzivatel.id),
     // Only in the app (a rating needs the app installed from Google Play)
     // and never for the demo — Google's reviewer must not be asked to rate.
     recenze: vAplikaci && !ukazka && Boolean(env.PLAY_BALICEK)
@@ -69,6 +92,14 @@ export async function onRequestPost(context) {
   try {
     if (telo && telo.obnov === true) {
       const obnoveno = await obnovNakupy(env, data.uzivatel.id);
+      // Refunds of ANY customer, not this one's: the call that every page
+      // load already makes is the only clock a Pages product has. Its
+      // failure is not this customer's problem — the next load retries.
+      try {
+        await kontrolaVracenych(env);
+      } catch {
+        // retried on the next page load (the slot was given back)
+      }
       return json({ obnoveno });
     }
     const token = typeof telo?.token === "string" ? telo.token.trim() : "";

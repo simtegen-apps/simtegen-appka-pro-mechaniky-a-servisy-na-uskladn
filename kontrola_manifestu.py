@@ -42,7 +42,11 @@ ZAKLADNI_TABULKY = {"uzivatele", "prihlasovaci_odkazy", "relace"}
 # Aggregates the template ships itself (migration 0910, visits per source):
 # the privacy policy describes them on its own (vykresli_zasady), so the
 # product's manifest need not — but they are still held to "numbers only".
-SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek", "odchody"}
+SABLONOVE_AGREGATY = {"zdroje_navstev", "chyby_stranek", "odchody",
+                      # The Play module's (migration 0905): when the app last
+                      # asked Google for refunds — a time, no account. Not in
+                      # the policy: it describes nobody.
+                      "play_kontroly"}
 # Abuse limits and single-use check signatures (migration 0940): security
 # plumbing like ZAKLADNI_TABULKY — digests that change every window, swept
 # within hours, never linked to an account, so neither export nor
@@ -148,7 +152,11 @@ def _zkontroluj_zasady(manifest: dict) -> list[str]:
 
     chyby: list[str] = []
     for path, render in generator.VYSTUPY:
-        if not path.exists() or path.read_text(encoding="utf-8") != render(manifest):
+        ocekavane = render(manifest)
+        if ocekavane is None:
+            # Not for this product (the English pages of a Czech-only app).
+            continue
+        if not path.exists() or path.read_text(encoding="utf-8") != ocekavane:
             chyby.append(f"{path.as_posix()} neodpovídá manifestu — spusť "
                          "`python3 vykresli_zasady.py` (needituj ho ručně).")
     return chyby
@@ -213,7 +221,8 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
     return chyby
 
 
-LEGAL_PAGES = ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html", "odstoupeni-formular.html")
+LEGAL_PAGES = ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html", "odstoupeni-formular.html",
+               "smazani-uctu.html", "privacy.html", "terms.html")
 
 # Design system v2 („Mřížka a papír“). The files are template
 # infrastructure (the builder refreshes them on every build); produkt.css

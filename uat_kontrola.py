@@ -214,7 +214,11 @@ def _endpointy(root: Path, verejna: set[str]) -> list[tuple[str, str, str]]:
     api = root / "functions" / "api"
     for soubor in sorted(api.rglob("*.js")) if api.exists() else []:
         rel = soubor.relative_to(root).as_posix()
-        if rel in verejna:
+        # A middleware at any depth is no route: Pages runs it around the
+        # handlers below it (the Play module's functions/api/ucet/_middleware.js,
+        # 19. 11. 2026) — probed as "/api/ucet/_middleware" it answered with
+        # the page's 200 and read as an endpoint open to anyone.
+        if rel in verejna or soubor.name == "_middleware.js":
             continue
         casti = list(soubor.relative_to(root / "functions").with_suffix("").parts)
         if casti[-1] == "index":

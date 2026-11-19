@@ -405,7 +405,9 @@ def _argument(text: str, start: int) -> tuple[str, int]:
     return text[start:], len(text)
 
 
-_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|\$\{[^}]*\}|[^`\\])*`', re.S)
+# Unambiguous alternatives: "$" is either the start of "${…}" or a plain
+# character, never both — CodeQL's ReDoS warning (security audit 19. 11. 2026).
+_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|\$\{[^}]*\}|\$(?!\{)|[^`\\$])*`', re.S)
 
 
 _KONSTANTA = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -473,7 +475,7 @@ def _sql_z_argumentu(arg: str, konstanty: dict[str, str],
             sql += obsah
         elif _KONSTANTA.match(token) and token in konstanty:
             sql += konstanty[token]
-        elif re.match(r"^\w+\((?:\s*(?:\x00|\d+)\s*,?)*\)$", token):
+        elif re.match(r"^\w+\((?:\s*+(?:\x00|\d++)\s*+,?+)*+\)$", token):  # possessive: no ReDoS (3.11+)
             # Helper with literal arguments; its literals were masked above.
             for _ in range(token.count("\x00")):
                 next(literaly)
