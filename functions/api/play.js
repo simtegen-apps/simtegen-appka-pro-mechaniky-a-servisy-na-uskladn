@@ -112,9 +112,18 @@ export async function onRequestPost(context) {
       return json({ chyba: "Google tenhle nákup nepotvrdil." }, 402);
     }
     return json(vysledek);
-  } catch {
+  } catch (e) {
     // Google unreachable or refusing: the purchase is safe — Play keeps it
     // and the app re-sends it from listPurchases() on the next start.
-    return json({ chyba: "Nákup se teď nepodařilo ověřit, zkusíme to znovu při příštím otevření." }, 502);
+    // detail: our own short reason ("Google neověřil nákup (403)"), shown
+    // as a code under the sentence — without it the first test purchase
+    // (19. 11. 2026) could not tell a missing permission from a bad key.
+    // Never the key or Google's body: only the sentences play_nakupy.js
+    // writes ("Google …"); anything else by its type alone — a JSON.parse
+    // error quotes the text it failed on, and that text is the key.
+    const zprava = String((e && e.message) || "");
+    const detail = /^Google [^\n]{0,120}$/.test(zprava) ? zprava : String((e && e.name) || "Error");
+    return json({ chyba: "Nákup se teď nepodařilo ověřit, zkusíme to znovu při příštím otevření.",
+      kod: "google", detail }, 502);
   }
 }
