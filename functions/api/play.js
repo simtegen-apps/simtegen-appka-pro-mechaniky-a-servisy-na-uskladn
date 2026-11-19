@@ -121,9 +121,12 @@ export async function onRequestPost(context) {
     // Never the key or Google's body: only the sentences play_nakupy.js
     // writes ("Google …"); anything else by its type alone — a JSON.parse
     // error quotes the text it failed on, and that text is the key.
+    // 503, not 502: Cloudflare swaps an origin's 502 (and 504) for its own
+    // error page, so this JSON never reached the app — the second test
+    // purchase showed "HTTP 502" with no sentence and no code (19. 11. 2026).
     const zprava = String((e && e.message) || "");
     const detail = /^Google [^\n]{0,120}$/.test(zprava) ? zprava : String((e && e.name) || "Error");
     return json({ chyba: "Nákup se teď nepodařilo ověřit, zkusíme to znovu při příštím otevření.",
-      kod: "google", detail }, 502);
+      kod: "google", detail }, 503);
   }
 }
