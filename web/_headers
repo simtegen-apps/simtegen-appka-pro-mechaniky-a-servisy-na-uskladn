@@ -22,10 +22,18 @@
 # Permissions-Policy payment=(self): nákup předplatného v aplikaci z Google Play
 # jde přes Payment Request (Play Billing v TWA). S payment=() ho prohlížeč
 # zakázal i vlastní stránce — v aplikaci nešlo nic koupit (audit 18. 11. 2026).
+#
+# connect-src https://play.google.com/billing: Chrome porovná identifikátor
+# platební metody Play Billing s connect-src a bez něj PaymentRequest vůbec
+# nevytvoří („payment method identifier violates Content Security Policy“) —
+# první zkušební nákup 19. 11. 2026 skončil v obou aplikacích dřív, než se
+# otevřelo okno Google Play. Jen tahle jedna adresa s cestou (ne celá doména):
+# skript se přes ni nikam jinam nedostane. Bezpečnostní kontrola jinou adresu
+# v connect-src nepustí.
 /*
   Cache-Control: no-cache
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://play.google.com/billing; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(self)
