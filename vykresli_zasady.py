@@ -65,8 +65,23 @@ _STYL = """    body { font-family: system-ui, sans-serif; max-width: 40rem; marg
     .spotrebitel { border-left: 3px solid #2b6cb0; background: #eef5fb; padding: 0.6rem 0.9rem; }
     .formular { border: 1px solid #999; padding: 1rem 1.2rem; }"""
 
+# The legal text's own version and effective date. The clauses live in this
+# file, so their version belongs to the template, not to a product: a
+# manifest's old "verze_dokumentu"/"ucinnost_od" (Kusovník carried "2.0"
+# and an empty date) would otherwise stamp new clauses with a stale version
+# or a red "(doplnit …)". Version 2.1 = the review of 23. 11. 2026: AI in
+# support (Anthropic, AI Act art. 50), customers' clients' data out of the
+# controller's table, English DPA, firm's registry in English.
+VERZE = "2.1"
+UCINNOST = "24. 11. 2026"
+# Retention the review confirmed (23. 11. 2026) for the two rows the
+# template itself adds; a manifest may still say otherwise for its product.
+RETENCE_LOGY = "30 dní"
+RETENCE_PODPORA = "12 měsíců"
+BALANCNI_TEST = "proveden 24. 11. 2026 (dokument vede správce, na vyžádání jej předloží)"
+
 # Processors the template itself brings. A product adds its own via
-# manifest.sluzby_treti_strany; these two are always there because the
+# manifest.sluzby_treti_strany; these are always there because the
 # template's login and hosting need them.
 _ZPRACOVATELE_SIDLO = {
     "Cloudflare": ("Cloudflare, Inc.", "USA", "primární instance databáze v EU"),
@@ -75,7 +90,33 @@ _ZPRACOVATELE_SIDLO = {
     # Payment in the Play app: Google sells and collects as the store; we
     # only learn that a purchase exists and until when it is paid.
     "Google Play": ("Google Ireland Limited / Google Commerce Limited", "Irsko", "EU"),
+    "Anthropic": ("Anthropic, PBC", "USA", "USA"),
 }
+
+# Every product of the memory template has the report form, and every
+# report is read first by the support agent — a model from Anthropic that
+# sorts it and answers ordinary questions (SimteGen's podpora.py/schranka.py,
+# on the firm's machine, not in the product). So the processor is the
+# template's, not something a product declares: a manifest written before
+# 23. 11. 2026 does not name it, and the policies said nothing of AI at all
+# (the lawyer's review: AI Act art. 50 transparency, GDPR art. 13). It is
+# appended to the declared list wherever processors are listed.
+_ANTHROPIC = {
+    "nazev": "Anthropic",
+    "ucel": "automatické třídění hlášení a dotazů zaslaných podpoře a odpovědi na běžné dotazy pomocí "
+            "umělé inteligence (text hlášení a technické údaje o stránce, bez e-mailu a jména, pokud je "
+            "sami do textu nenapíšete); data se nepoužívají k trénování modelů; složitější a právní věci "
+            "vyřizuje člověk",
+    "dpa": "https://www.anthropic.com/legal/data-processing-addendum",
+}
+
+
+def _sluzby(manifest: dict) -> list[dict]:
+    """The declared processors plus the template's own (Anthropic)."""
+    sluzby = [s for s in manifest.get("sluzby_treti_strany") or [] if isinstance(s, dict)]
+    if not any(s.get("nazev") == _ANTHROPIC["nazev"] for s in sluzby):
+        sluzby.append(_ANTHROPIC)
+    return sluzby
 
 
 def _play(manifest: dict) -> bool:
@@ -135,11 +176,26 @@ def _identita_html(manifest: dict, *, plna: bool) -> str:
 
 
 def _meta(manifest: dict, *, cinna: bool = False) -> str:
-    verze = manifest.get("verze_dokumentu") or "2.0"
     slovo = "účinná od" if cinna else "účinné od"
-    return (f'  <p class="meta">Verze {_esc(verze)} · {slovo} '
-            f"{_s(manifest, 'ucinnost_od', 'doplnit datum účinnosti')} · "
+    return (f'  <p class="meta">Verze {VERZE} · {slovo} {UCINNOST} · '
             "předchozí verze poskytneme na vyžádání.</p>")
+
+
+def _ucetni_externi(manifest: dict) -> bool:
+    """Does an outside accountant receive billing data? The firm keeps its
+    books itself (SimteGen's own accounting, 23. 11. 2026) — then naming
+    "our accountant" as a recipient would describe a transfer that never
+    happens."""
+    ucetni = str(manifest.get("ucetni") or "").strip().lower()
+    return bool(ucetni) and not ucetni.startswith("účetnictví vede správce")
+
+
+def _role_zpracovatel(u: dict) -> bool:
+    """An entity holding the customer's own clients' data (motorists,
+    a joiner's end customers): there we are the processor, so it belongs in
+    the DPA and the processor's record, never in the controller's table —
+    the lawyer read the old table as us confusing the two roles."""
+    return isinstance(u, dict) and u.get("role") == "zpracovatel"
 
 
 def _hlava(title: str, *, aplikace: bool = False) -> str:
@@ -225,7 +281,7 @@ def _zpracovatel_radek(s: dict) -> tuple[str, str, str, str]:
 
 def _radky_sluzby(manifest: dict) -> str:
     rows = []
-    for s in manifest.get("sluzby_treti_strany") or []:
+    for s in _sluzby(manifest):
         plny, _, kde, dpa = _zpracovatel_radek(s)
         odkaz = f' (<a href="{_esc(dpa)}">zpracovatelská smlouva</a>)' if dpa else ""
         kde_txt = f" ({_esc(kde)})" if kde else ""
@@ -247,6 +303,8 @@ def _ukladame(manifest: dict) -> list[dict]:
     "nothing else" while all three existed."""
     rows = []
     for u in manifest.get("ukladame") or []:
+        if _role_zpracovatel(u):
+            continue  # the processor's part: _obsah_rows, the DPA and record B
         rows.append({
             "entita": u.get("entita", ""), "ucel": u.get("ucel", ""), "pole": u.get("pole", ""),
             "zaklad": u.get("zaklad") or "plnění smlouvy",
@@ -298,8 +356,7 @@ def _ukladame(manifest: dict) -> list[dict]:
         "zaklad": "oprávněný zájem — provoz a zabezpečení služby",
         "zaklad_cl": "čl. 6/1/f — oprávněný zájem",
         "subjekty": "zákazníci a návštěvníci",
-        "retence": manifest.get("retence_logy") or "",
-        "retence_label": "doplnit skutečnou dobu, typicky 30 dnů",
+        "retence": manifest.get("retence_logy") or RETENCE_LOGY,
     })
     rows.append({
         "entita": "podpora a komunikace",
@@ -308,8 +365,7 @@ def _ukladame(manifest: dict) -> list[dict]:
         "zaklad": "plnění smlouvy, u nezákazníků oprávněný zájem",
         "zaklad_cl": "čl. 6/1/b, u nezákazníků čl. 6/1/f",
         "subjekty": "zákazníci, zájemci",
-        "retence": manifest.get("retence_podpora") or "",
-        "retence_label": "doplnit, typicky 1 rok",
+        "retence": manifest.get("retence_podpora") or RETENCE_PODPORA,
     })
     rows.append({
         "entita": "účetní a daňové doklady",
@@ -321,6 +377,83 @@ def _ukladame(manifest: dict) -> list[dict]:
         "retence": (manifest.get("retence_doklady") or "10 let") + "; vedeno mimo aplikaci",
     })
     return rows
+
+
+def _obsah_seznam(manifest: dict) -> str:
+    """The processor's part, one line per entity: what the customer keeps
+    about their own clients there and for how long — named in the policy
+    so the customer sees where it went, governed by the DPA."""
+    radky = []
+    for u in manifest.get("ukladame") or []:
+        if _role_zpracovatel(u):
+            radky.append(f"    <li>{_esc(u.get('ucel', ''))} — {_esc(u.get('retence', ''))}</li>")
+    return "\n".join(radky)
+
+
+def _obsah_seznam_en(manifest: dict) -> str:
+    radky = []
+    for u in manifest.get("ukladame") or []:
+        if _role_zpracovatel(u):
+            en = u.get("en") if isinstance(u.get("en"), dict) else {}
+            ucel = en.get("ucel") or _en_text(u.get("ucel", ""))
+            retence = en.get("retence") or _en_cas(u.get("retence", ""))
+            radky.append(f"    <li>{_esc(ucel)} — {_esc(retence)}</li>")
+    return "\n".join(radky)
+
+
+def _role_odstavec(manifest: dict) -> str:
+    seznam = _obsah_seznam(manifest)
+    vycet = (f"""
+  <p>V této službě jsou to tyto záznamy; u každého je, kdy je služba smaže sama (dřív je kdykoli
+  smažete vy):</p>
+  <ul>
+{seznam}
+  </ul>""" if seznam else "")
+    return f"""  <p>Vedle toho ukládáme obsah, který do služby vložíte vy. Jsou-li v něm osobní údaje
+  třetích osob (např. vašich zákazníků), jste jejich správcem vy a my jsme pouze
+  <strong>zpracovatelem</strong>, který je pro vás ukládá podle vašich pokynů.
+  Pravidla pro tuto roli jsou ve <a href="zpracovatelska-smlouva.html">zpracovatelské
+  smlouvě</a>; tyto zásady na takový obsah nedopadají a v tabulce níže proto není.</p>{vycet}"""
+
+
+def _role_odstavec_en(manifest: dict) -> str:
+    seznam = _obsah_seznam_en(manifest)
+    vycet = (f"""
+  <p>In this service these are the following records; each says when the service deletes it by itself
+  (you can delete it earlier at any time):</p>
+  <ul>
+{seznam}
+  </ul>""" if seznam else "")
+    return f"""  <p>Besides that we store the content you put into the service. If it contains personal data of other
+  people (for example your own customers), you are their controller and we are only a
+  <strong>processor</strong> storing it for you on your instructions. That role is governed by the
+  <a href="data-processing-agreement.html">data processing agreement</a>; this policy does not
+  cover such content, which is why it is not in the table below.</p>{vycet}"""
+
+
+# The support agent, told where the customer writes and in the policy
+# (AI Act art. 50: a person must know they are dealing with AI; GDPR art. 13:
+# who processes the text). The same sentence in spirit as the report form
+# (web/simtegen.js sg.hlaseni.ai) and the signature of every answer the
+# agent writes (SimteGen podpora.py).
+_PODPORA_AI_CS = """  <h2>Podpora a umělá inteligence</h2>
+  <p>Hlášení a dotazy, které nám pošlete z aplikace, nejprve přečte náš <strong>asistent s umělou
+  inteligencí</strong> (model společnosti Anthropic). Hlášení roztřídí a na běžné dotazy odpoví sám
+  z popisu aplikace; každá jeho odpověď je tak označená. Chyby, přání, složitější a právní věci
+  (odstoupení, vrácení peněz, žádosti o údaje) vyřizuje člověk. Asistent nerozhoduje o vašich právech
+  ani o vašem účtu. Asistent vidí text hlášení a technické údaje o stránce, ne váš e-mail ani jméno —
+  pokud je sami do textu nenapíšete; nepište proto do hlášení osobní údaje svých zákazníků.</p>
+"""
+
+_PODPORA_AI_EN = """  <h2>Support and artificial intelligence</h2>
+  <p>Reports and questions you send us from the app are first read by our <strong>artificial
+  intelligence assistant</strong> (a model by Anthropic). It sorts the reports and answers ordinary
+  questions by itself from the description of the app; each of its answers is marked as such. Bugs,
+  wishes, more complex and legal matters (withdrawal, refunds, data requests) are handled by a person. The
+  assistant does not decide about your rights or your account. It sees the text of the report and
+  technical details of the page, not your e-mail or name — unless you write them into the text yourself;
+  so please do not put your own customers' personal data into a report.</p>
+"""
 
 
 def _retence_html(row: dict) -> str:
@@ -354,11 +487,7 @@ def vykresli_zasady(manifest: dict) -> str:
   <h2>V jaké roli údaje zpracováváme</h2>
   <p>U údajů popsaných v těchto zásadách jsme <strong>správcem</strong> — rozhodujeme,
   proč a jak se zpracovávají.</p>
-  <p>Vedle toho ukládáme obsah, který do služby vložíte vy. Jsou-li v něm osobní údaje
-  třetích osob (např. vašich zákazníků), jste jejich správcem vy a my jsme pouze
-  <strong>zpracovatelem</strong>, který je pro vás ukládá podle vašich pokynů.
-  Pravidla pro tuto roli jsou ve <a href="zpracovatelska-smlouva.html">zpracovatelské
-  smlouvě</a>; tyto zásady na takový obsah nedopadají.</p>
+{_role_odstavec(manifest)}
 
   <h2>Jaké údaje ukládáme a proč</h2>
   <p>Právním základem je plnění smlouvy (poskytnutí služby, kterou jste si vyžádali,
@@ -380,12 +509,13 @@ def vykresli_zasady(manifest: dict) -> str:
   <h2>Kde údaje jsou a kdo je zpracovává</h2>
   <p>Data běží na infrastruktuře níže uvedených zpracovatelů; primární instance databáze
   je umístěna v Evropské unii. Údaje nikomu neprodáváme a nepředáváme je k reklamním účelům.
-  Kategoriemi příjemců jsou dále náš účetní a v nezbytném rozsahu orgány veřejné moci,
-  ukládá-li nám to zákon.</p>
+  Kategoriemi příjemců jsou dále {"náš účetní a " if _ucetni_externi(manifest) else ""}v nezbytném
+  rozsahu orgány veřejné moci, ukládá-li nám to zákon.</p>
   <ul>
 {_radky_sluzby(manifest)}
   </ul>
 
+{_PODPORA_AI_CS}
   <h2>Předávání mimo Evropskou unii</h2>
   <p>Uvedení zpracovatelé jsou společnosti se sídlem ve Spojených státech. Přestože primární
   instance databáze je v EU, může při provozu (zejména při podpoře, ochraně provozu
@@ -902,21 +1032,30 @@ def vykresli_dpa(manifest: dict) -> str:
 def vykresli_zaznam(manifest: dict) -> str:
     produkt = _produkt(manifest)
     provozovatel = _provozovatel(manifest)
-    verze = manifest.get("verze_dokumentu") or "2.0"
     radky = "\n".join(
         f"| {r['entita']} | {r['ucel']} | {r['subjekty']} | {r['pole']} | {r['zaklad_cl']} | {_retence_md(r)} |"
         for r in _ukladame(manifest)
     )
     zprac = []
-    for s in manifest.get("sluzby_treti_strany") or []:
+    for s in _sluzby(manifest):
         plny, zeme, kde, _ = _zpracovatel_radek(s)
         zaruky = "standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů"
         zprac.append(f"| {plny}{f' ({zeme})' if zeme else ''} | {s.get('ucel', '')} | {kde or '—'} | {zaruky} |")
-    zpracovatele_jmena = "; ".join(_zpracovatel_radek(s)[0] for s in manifest.get("sluzby_treti_strany") or [])
+    zpracovatele_jmena = "; ".join(_zpracovatel_radek(s)[0] for s in _sluzby(manifest))
+    entity_b = [u for u in manifest.get("ukladame") or [] if _role_zpracovatel(u)]
+    radky_b = "\n".join(f"| {u.get('entita', '')} | {u.get('ucel', '')} | {u.get('pole', '')} | {u.get('retence', '')} |"
+                        for u in entity_b)
+    tabulka_b = (f"""
+Entity, ve kterých jsou údaje vložené zákazníkem:
+
+| Entita | Účel | Kategorie údajů | Doba uložení (nesmaže-li je správce dříve) |
+|---|---|---|---|
+{radky_b}
+""" if entity_b else "")
     return f"""<!-- {_HLAVICKA} -->
 # Záznam o činnostech zpracování — {produkt}
 
-**Verze:** {verze} · **poslední aktualizace:** {_m(manifest, 'ucinnost_od', 'doplnit datum')} · **zpracoval:** {_m(manifest, 'odpovedna_osoba', 'doplnit jméno')}
+**Verze:** {VERZE} · **poslední aktualizace:** {UCINNOST} · **zpracoval:** {_m(manifest, 'odpovedna_osoba', 'doplnit jméno')}
 **Přezkoumat:** nejméně 1× ročně a při každé změně zpracování, zpracovatelů nebo účelů.
 
 **Správce:** {provozovatel}, IČO {_m(manifest, 'ico', 'doplnit')}, se sídlem {_m(manifest, 'sidlo', 'doplnit')},
@@ -939,11 +1078,11 @@ správcem, a **B** pro zpracování prováděná pro zákazníky, kde je {provoz
 
 **Oprávněný zájem (čl. 6/1/f)** je u logů vymezen jako zajištění provozu, dostupnosti
 a bezpečnosti služby a možnost dohledat příčinu poruchy nebo útoku. Test proporcionality:
-{_m(manifest, 'balancni_test', 'doplnit odkaz na provedený balanční test nebo datum jeho provedení')}.
+{manifest.get('balancni_test') or BALANCNI_TEST}.
 
 ### A.2 Kategorie příjemců
 
-Zpracovatelé uvedení v části A.3; účetní ({_m(manifest, 'ucetni', 'doplnit obchodní firmu')}); orgány veřejné moci
+Zpracovatelé uvedení v části A.3; účetnictví: {_m(manifest, 'ucetni', 'doplnit obchodní firmu účetního')}; orgány veřejné moci
 v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávají k reklamním účelům.
 
 ### A.3 Zpracovatelé a předávání mimo EU
@@ -981,7 +1120,7 @@ do aplikace vkládají údaje třetích osob. Právním rámcem je
 | **Předání mimo EU** | jen na pokyn správce nebo v rámci dalších zpracovatelů, se zárukami podle A.3 |
 | **Doba zpracování** | po dobu trvání smlouvy o službě; poté výmaz nebo vrácení dle volby správce |
 | **Technická a organizační opatření** | shodná s A.4 |
-
+{tabulka_b}
 ---
 
 ## Poznámky k vedení záznamu
@@ -1337,6 +1476,11 @@ _EN_SLUZBY = {
     "Google Play": ("Google Ireland Limited / Google Commerce Limited", "selling the subscription in the "
                     "Google Play app: Google takes and processes the payment; we learn only that a purchase "
                     "exists and until when it is paid", "EU"),
+    "Anthropic": ("Anthropic, PBC", "automatically sorting reports and questions sent to support and "
+                  "answering ordinary questions with artificial intelligence (the report text and technical "
+                  "details of the page, no e-mail or name unless you write them into the text yourself); the "
+                  "data is not used to train models; more complex and legal matters are handled by a person",
+                  "USA"),
 }
 _EN_COOKIES = {
     "__Host-relace": ("keeping you signed in (technical, HttpOnly)",
@@ -1350,7 +1494,10 @@ def _ukladame_en(manifest: dict) -> list[dict]:
     """English rows in the same order as _ukladame (so the two policies
     describe the same table)."""
     rows = []
-    for u, cz in zip(manifest.get("ukladame") or [], _ukladame(manifest)):
+    # The same filter as _ukladame: zip pairs each declared entity with its
+    # Czech row, so a processor entity left in here would shift every row.
+    vlastni_entity = [u for u in manifest.get("ukladame") or [] if not _role_zpracovatel(u)]
+    for u, cz in zip(vlastni_entity, _ukladame(manifest)):
         entita = u.get("entita", "")
         vlastni = u.get("en") if isinstance(u.get("en"), dict) else {}
         if entita == "upominky":
@@ -1372,8 +1519,7 @@ def _ukladame_en(manifest: dict) -> list[dict]:
         rows.append({"ucel": ucel, "pole": pole,
                      "zaklad": vlastni.get("zaklad") or _EN_ZAKLAD.get(cz["zaklad"]) or _en_text(cz["zaklad"]),
                      "retence": retence, "retence_label": cz.get("retence_label")})
-    vlastnich = len(manifest.get("ukladame") or [])
-    for cz in _ukladame(manifest)[vlastnich:]:
+    for cz in _ukladame(manifest)[len(vlastni_entity):]:
         rows.append({"ucel": _EN_RADKY_SABLONY.get(cz["entita"], (_en_text(cz["ucel"]),))[0],
                      "pole": _EN_RADKY_SABLONY.get(cz["entita"], (None, _en_text(cz["pole"])))[1],
                      "zaklad": _EN_ZAKLAD.get(cz["zaklad"]) or _en_text(cz["zaklad"]),
@@ -1423,17 +1569,50 @@ def _identita_en(manifest: dict, *, plna: bool) -> str:
         parts.append(f"VAT ID (DIČ) {_s(manifest, 'dic', 'doplnit DIČ / „nejsme plátci DPH“')}")
     parts.append(f"registered office {_s(manifest, 'sidlo', 'doplnit sídlo')}, Czech Republic")
     if plna:
-        parts.append(f"registered in the Commercial Register kept by "
-                     f"{_s(manifest, 'zapis_or', 'doplnit soud a spisovou značku')}")
+        parts.append(f"registered in the Commercial Register {_zapis_en(manifest)}")
     parts.append(f"e-mail {_kontakt_html(manifest)}")
     return ", ".join(parts)
 
 
+# The register line as the firm's setting holds it is Czech grammar
+# ("Městským soudem v Praze pod spisovou značkou C 357544") — pasted into an
+# English sentence it read "kept by Městským soudem…" (the lawyer's review,
+# 23. 11. 2026). The register courts are few and fixed (the regional courts
+# and Prague's municipal one), so they are mapped, not translated.
+_SOUDY_EN = {
+    "Městským soudem v Praze": "the Municipal Court in Prague",
+    "Krajským soudem v Brně": "the Regional Court in Brno",
+    "Krajským soudem v Ostravě": "the Regional Court in Ostrava",
+    "Krajským soudem v Plzni": "the Regional Court in Plzeň",
+    "Krajským soudem v Ústí nad Labem": "the Regional Court in Ústí nad Labem",
+    "Krajským soudem v Hradci Králové": "the Regional Court in Hradec Králové",
+    "Krajským soudem v Českých Budějovicích": "the Regional Court in České Budějovice",
+}
+
+
+def _zapis_en(manifest: dict) -> str:
+    zapis = " ".join(str(manifest.get("zapis_or") or "").split())
+    if not zapis:
+        return "kept by " + _s(manifest, "zapis_or", "doplnit soud a spisovou značku")
+    m = re.match(r"^(.+?) pod spisovou značkou (.+)$", zapis)
+    if m and m.group(1) in _SOUDY_EN:
+        return f"kept by {_SOUDY_EN[m.group(1)]}, file no. {_esc(m.group(2))}"
+    return "kept by " + _esc(zapis) + _V_CESTINE
+
+
+_MESICE_EN = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
+              "October", "November", "December")
+
+
+def _en_datum(datum: str) -> str:
+    """"24. 11. 2026" → "24 November 2026" (the template's own date)."""
+    m = re.match(r"^\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\s*$", datum)
+    return f"{int(m.group(1))} {_MESICE_EN[int(m.group(2)) - 1]} {m.group(3)}" if m else datum
+
+
 def _meta_en(manifest: dict, ceska: str) -> str:
-    verze = manifest.get("verze_dokumentu") or "2.0"
-    return (f'  <p class="meta">Version {_esc(verze)} · effective from '
-            f"{_s(manifest, 'ucinnost_od', 'doplnit datum účinnosti')} · earlier versions on request. "
-            f'This is a translation of the <a href="{ceska}">Czech version</a>, which prevails in case of '
+    return (f'  <p class="meta">Version {VERZE} · effective from {_en_datum(UCINNOST)} · earlier versions on '
+            f'request. This is a translation of the <a href="{ceska}">Czech version</a>, which prevails in case of '
             "doubt.</p>")
 
 
@@ -1443,7 +1622,9 @@ def _cena_dph_en(manifest: dict) -> str:
         return _s(manifest, "cena_dph", 'doplnit: „včetně DPH“ / „bez DPH, poskytovatel není plátcem DPH“')
     nizko = text.lower()
     if "není plátcem" in nizko or "neni platcem" in nizko:
-        return "without VAT — the provider is not a VAT payer"
+        # In "Prices … are {this} and are final" — a dash clause there read
+        # "…not a VAT payer and are final" (23. 11. 2026).
+        return "without VAT (the provider is not a VAT payer)"
     if "včetně dph" in nizko:
         return "including VAT"
     return _esc(text) + _V_CESTINE
@@ -1458,7 +1639,7 @@ def vykresli_privacy(manifest: dict) -> str | None:
         f"<td>{_esc(r['zaklad'])}</td><td>{_retence_en_html(r)}</td></tr>"
         for r in _ukladame_en(manifest))
     sluzby = []
-    for s in manifest.get("sluzby_treti_strany") or []:
+    for s in _sluzby(manifest):
         plny, ucel, kde = _EN_SLUZBY.get(s.get("nazev") or "", (s.get("nazev") or "", _en_text(s.get("ucel") or ""), ""))
         odkaz = f' (<a href="{_esc(s["dpa"])}">data processing agreement</a>)' if s.get("dpa") else ""
         sluzby.append(f"    <li><strong>{_esc(plny)}</strong> — {_esc(ucel)}{f' ({_esc(kde)})' if kde else ''}{odkaz}</li>")
@@ -1478,11 +1659,7 @@ def vykresli_privacy(manifest: dict) -> str | None:
   <h2>Our role</h2>
   <p>For the data described in this policy we are the <strong>controller</strong> — we decide why and
   how it is processed.</p>
-  <p>Besides that we store the content you put into the service. If it contains personal data of other
-  people (for example your own customers), you are their controller and we are only a
-  <strong>processor</strong> storing it for you on your instructions. That role is governed by the
-  <a href="zpracovatelska-smlouva.html">data processing agreement</a> (in Czech); this policy does not
-  cover such content.</p>
+{_role_odstavec_en(manifest)}
 
   <h2>What we store and why</h2>
   <p>The legal basis is the performance of a contract (providing the service you asked for, Article 6(1)(b)
@@ -1502,12 +1679,14 @@ def vykresli_privacy(manifest: dict) -> str | None:
 
   <h2>Where the data is and who processes it</h2>
   <p>The data runs on the infrastructure of the processors below; the primary database instance is located
-  in the European Union. We do not sell data or pass it on for advertising. Further recipients are our
-  accountant and, to the extent necessary, public authorities where the law requires it.</p>
+  in the European Union. We do not sell data or pass it on for advertising. Further recipients are
+  {"our accountant and, " if _ucetni_externi(manifest) else ""}to the extent necessary, public authorities
+  where the law requires it.</p>
   <ul>
 {chr(10).join(sluzby)}
   </ul>
 
+{_PODPORA_AI_EN}
   <h2>Transfers outside the European Union</h2>
   <p>The processors listed are companies based in the United States. Although the primary database instance
   is in the EU, the data may be accessed from the United States during operation (in particular for support,
@@ -1562,7 +1741,7 @@ def vykresli_privacy(manifest: dict) -> str | None:
 
   <h2>Related documents</h2>
   <p><a href="terms.html">Terms of service</a> · <a href="zasady.html">Zásady zpracování údajů (Czech)</a>
-  · <a href="zpracovatelska-smlouva.html">Data processing agreement (Czech)</a></p>
+  · <a href="data-processing-agreement.html">Data processing agreement</a></p>
 
   <p><a href="index.html">Back to the app</a></p>
 </body>
@@ -1687,8 +1866,8 @@ def vykresli_terms(manifest: dict) -> str | None:
   <h2>6. Customer data, export and portability</h2>
   <p>Data the customer puts into the service is theirs. The provider processes it only to run the service,
   under the <a href="privacy.html">privacy policy</a> and, where the customer is the controller of other
-  people's personal data, under the <a href="zpracovatelska-smlouva.html">data processing agreement</a>
-  (in Czech), which forms part of these terms.</p>
+  people's personal data, under the <a href="data-processing-agreement.html">data processing
+  agreement</a>, which forms part of these terms.</p>
   <p>The customer can download a complete export of their data in a structured, commonly used,
   machine-readable format (JSON) in the app at any time and free of charge, and delete the account with its
   data. The export covers all records the customer entered and their account details; it does not include
@@ -1776,6 +1955,189 @@ def vykresli_terms(manifest: dict) -> str | None:
 """
 
 
+def _radky_sluzby_en(manifest: dict) -> str:
+    rows = []
+    for s in _sluzby(manifest):
+        plny, ucel, kde = _EN_SLUZBY.get(s.get("nazev") or "", (s.get("nazev") or "", _en_text(s.get("ucel") or ""), ""))
+        odkaz = f' (<a href="{_esc(s["dpa"])}">data processing agreement</a>)' if s.get("dpa") else ""
+        rows.append(f"    <li><strong>{_esc(plny)}</strong> — {_esc(ucel)}{f' ({_esc(kde)})' if kde else ''}{odkaz}</li>")
+    return "\n".join(rows)
+
+
+def _obsah_zakaznika_en(manifest: dict) -> str:
+    if manifest.get("obsah_zakaznika_popis_en"):
+        return manifest["obsah_zakaznika_popis_en"]
+    if manifest.get("obsah_zakaznika_popis"):
+        return _en_text(manifest["obsah_zakaznika_popis"])
+    return ("identification and contact details (name, address, phone, e-mail), details of a job or order "
+            "(description, dates, price, place of performance), billing details and the content of notes and "
+            "free-text fields the controller fills in")
+
+
+def _subjekty_obsahu_en(manifest: dict) -> str:
+    if manifest.get("subjekty_obsahu_en"):
+        return manifest["subjekty_obsahu_en"]
+    if manifest.get("subjekty_obsahu"):
+        return _en_text(manifest["subjekty_obsahu"])
+    return ("people whose data the controller puts into the service — typically its customers and contact "
+            "persons of its business partners, possibly its staff")
+
+
+DPA_EN = WEB / "data-processing-agreement.html"
+
+
+def vykresli_dpa_en(manifest: dict) -> str | None:
+    """The DPA in English for a product that speaks English: a business
+    customer abroad accepts it with the terms, and the lawyer's review
+    (23. 11. 2026) found the English pages pointing to a Czech-only
+    agreement. A translation of vykresli_dpa clause by clause — change both
+    together; the Czech one prevails."""
+    if not _anglicky():
+        return None
+    produkt = _produkt(manifest)
+    return f"""{_hlava_en(f"Data processing agreement — {produkt}")}
+  <h1>Data processing agreement</h1>
+{_meta_en(manifest, "zpracovatelska-smlouva.html")}
+
+  <p>Concluded under Article 28 of Regulation (EU) 2016/679 (GDPR) between the <strong>customer</strong> of
+  the service {_esc(produkt)} as the <strong>controller</strong> and {_identita_en(manifest, plna=False)}
+  as the <strong>processor</strong>. It forms part of the <a href="terms.html">terms of service</a>.</p>
+
+  <h2>1. Subject matter, nature, purpose and duration of the processing</h2>
+  <p><strong>Subject matter and nature:</strong> the processor stores and makes available for the controller
+  the personal data the controller puts into the service. The processing is automated and includes storage
+  in a database, display in the app, backups, export and erasure.</p>
+  <p><strong>Purpose:</strong> solely running the service for the controller. The processor does not use the
+  data for its own purposes, does not sell it and does not pass it on for advertising.</p>
+  <p><strong>Duration:</strong> the processing lasts as long as the contract for the service and ends with
+  erasure or return of the data under article 10.</p>
+  <p>This agreement covers the <strong>content the controller puts into the service</strong>. It does not
+  cover data about the controller's account (e-mail address, sign-in tokens, sessions, subscription records,
+  operational logs) — for those the processor is an independent controller and their processing is described
+  in the <a href="privacy.html">privacy policy</a>.</p>
+
+  <h2>2. Categories of data subjects and of personal data</h2>
+  <p><strong>Data subjects:</strong> {_esc(_subjekty_obsahu_en(manifest))}.</p>
+  <p><strong>Categories of personal data:</strong> {_esc(_obsah_zakaznika_en(manifest))}.</p>
+  <p>The exact scope is determined by the controller through the data it puts into the service. The
+  controller is responsible for having a legal basis for processing it and for having properly informed the
+  data subjects.</p>
+  <p>The service is <strong>not intended</strong> for special categories of data under Article 9 GDPR (data
+  concerning health, biometric data and the like) or for data relating to criminal convictions under
+  Article 10 GDPR. If the controller puts them in nevertheless, it does so at its own responsibility and
+  must tell the processor in advance so that the adequacy of security can be assessed.</p>
+
+  <h2>3. The controller's instructions</h2>
+  <p>The processor processes the data only on documented instructions from the controller; using the service
+  under the terms of service and this agreement is such an instruction. The controller sends further
+  instructions to the contact e-mail; for an instruction beyond the ordinary running of the service, the
+  parties may agree on covering the necessary costs.</p>
+  <p>If the processor considers an instruction to infringe the GDPR or other data protection law, it tells the
+  controller without delay and need not carry it out until it is clarified.</p>
+  <p>The data is processed in the European Union. The processor transfers it outside the EU only on the
+  controller's instruction or on the basis of EU or Member State law; in that case it informs the controller
+  in advance unless that law prohibits it on important grounds of public interest. Transfers related to
+  engaging further processors are governed by article 6.</p>
+
+  <h2>4. Confidentiality</h2>
+  <p>Only persons who have committed themselves to confidentiality by contract or are under a statutory
+  obligation of confidentiality have access to the data. The obligation continues after their involvement
+  in the processing and after this agreement ends.</p>
+
+  <h2>5. Security</h2>
+  <p>Taking into account the state of the art, the nature of the processing and the risks, the processor
+  applies in particular these technical and organisational measures (Article 32 GDPR):</p>
+  <ul>
+    <li>encrypted transfer (HTTPS) and encryption of data at rest by the infrastructure provider;</li>
+    <li>sign-in without passwords by one-time links — only digests of the tokens are stored in the
+    database;</li>
+    <li>a separate database for each product with the primary instance in the EU and a separate test database
+    (no production data is copied into the test database);</li>
+    <li>restricted and recorded access to the production environment, only for the persons who need it;</li>
+    <li>regular backups, overwritten within 30 days at the latest;</li>
+    <li>account deletion by the controller directly in the app, which deletes all its data;</li>
+    <li>a written procedure for security incidents and regular checks that the measures work.</li>
+  </ul>
+  <p>The processor may change the measures but must not lower the level of security achieved.</p>
+
+  <h2>6. Further processors</h2>
+  <p>The controller gives general authorisation to engage further processors. Currently engaged are:</p>
+  <ul>
+{_radky_sluzby_en(manifest)}
+  </ul>
+  <p>The processor imposes on each further processor by contract the same data protection obligations as it
+  has under this agreement, in particular sufficient technical and organisational security. If a further
+  processor fails to fulfil its obligations, <strong>the processor remains fully liable to the controller
+  for its performance</strong> (Article 28(4) GDPR).</p>
+  <p>The processor announces an intended change or addition of further processors in the app or by e-mail at
+  least 30 days in advance. The controller may object within that period; if no agreement is reached, it may
+  end the contract for the service as of the day the change takes effect, without penalty and with a pro-rata
+  refund of the subscription.</p>
+  <p>Transfers outside the EU within the further processors listed are covered by the European Commission's
+  standard contractual clauses under Article 46(2)(c) GDPR, which form part of the linked processing
+  agreements, or by an adequacy decision. The processor provides a copy of the safeguards on request.</p>
+
+  <h2>7. Assistance</h2>
+  <p>The processor assists the controller:</p>
+  <ul>
+    <li><strong>with data subjects' requests</strong> (Article 28(3)(e) GDPR) — a copy, rectification and
+    erasure of data are available to the controller directly in the app; for other requests the processor
+    assists by e-mail without undue delay, within 5 working days at the latest. If a data subject turns to the
+    processor directly, the processor does not handle the request and forwards it to the controller without
+    undue delay;</li>
+    <li><strong>with the obligations under Articles 32 to 36 GDPR</strong> — security, breach notification,
+    impact assessment and prior consultation, taking into account the nature of the processing and the
+    information available to it.</li>
+  </ul>
+
+  <h2>8. Demonstrating compliance and audits</h2>
+  <p>The processor makes available to the controller all information necessary to demonstrate compliance with
+  Article 28 GDPR and <strong>allows for audits</strong>, including inspections, by the controller or an
+  auditor mandated by it, and contributes to them (Article 28(3)(h) GDPR).</p>
+  <p>Practical conditions: an audit is announced at least 14 days in advance, takes place in working hours,
+  must not disrupt the operation unreasonably and the auditor is bound by confidentiality. At most one audit
+  a year is free of charge; this does not apply to an audit after a security incident or on the instruction of
+  a supervisory authority. These conditions do not limit the controller's right to an audit, they only
+  govern how it is carried out.</p>
+
+  <h2>9. Personal data breach</h2>
+  <p>If the processor becomes aware of a personal data breach concerning the controller's data, it notifies
+  the controller without undue delay, <strong>within 24 hours of becoming aware of it at the latest</strong>,
+  so that the controller can meet its 72-hour deadline under Article 33 GDPR. The notification describes the
+  nature of the breach, the categories and approximate number of data subjects and records concerned, the
+  likely consequences and the measures taken or proposed. Where not all information is available at once,
+  the processor provides it in phases without further undue delay.</p>
+  <p>The processor does not notify breaches concerning the controller's data to the supervisory authority or
+  to data subjects — that is the controller's obligation, unless the controller expressly asks the processor
+  to do so.</p>
+
+  <h2>10. Termination, erasure and return of data</h2>
+  <p>When the provision of the service ends, the processor, at the <strong>controller's choice</strong>,
+  either deletes the personal data or returns it, and deletes existing copies (Article 28(3)(g) GDPR). The
+  controller states its choice by the end of the transition period under article 6 of the terms of service at
+  the latest; if it does not, the processor deletes the data after that period.</p>
+  <p>Return means an export in a structured, commonly used and machine-readable format, available to the
+  controller directly in the app. By deleting the account in the app the controller chooses erasure.</p>
+  <p>Data is deleted from the live database immediately and from backups within 30 days, when they are
+  overwritten. Data is kept longer only where EU or Member State law requires it; the processor informs the
+  controller of such a case.</p>
+
+  <h2>11. Liability and final provisions</h2>
+  <p>The parties' liability is governed by Article 82 GDPR and the terms of service; a limitation of
+  compensation agreed in the terms of service does not apply to obligations under this agreement breached
+  intentionally or by gross negligence.</p>
+  <p>This agreement is governed by Czech law. If any of its provisions conflicts with the GDPR, the GDPR
+  applies and the other provisions remain in force.</p>
+
+  <p><a href="index.html">Back to the app</a> ·
+  <a href="terms.html">Terms of service</a> ·
+  <a href="privacy.html">Privacy policy</a> ·
+  <a href="zpracovatelska-smlouva.html">Zpracovatelská smlouva (Czech)</a></p>
+</body>
+</html>
+"""
+
+
 VYSTUPY = (
     (ZASADY, vykresli_zasady),
     (PODMINKY, vykresli_podminky),
@@ -1786,6 +2148,7 @@ VYSTUPY = (
     # and the checker expects nothing (kontrola_manifestu._zkontroluj_zasady).
     (PRIVACY, vykresli_privacy),
     (TERMS, vykresli_terms),
+    (DPA_EN, vykresli_dpa_en),
     # None without the Play module (no paragraph to hide, nothing to load).
     (PODMINKY_JS, vykresli_podminky_js),
     (ZAZNAM, vykresli_zaznam),

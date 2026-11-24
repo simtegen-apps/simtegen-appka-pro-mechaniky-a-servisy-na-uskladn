@@ -73,6 +73,11 @@
 // answers X-SimteGen-Odchod: otazka once the trial or the paid period ran
 // out and the account has not answered for it; web/simtegen.js then shows
 // the one-tap question (functions/api/odchod.js counts the answer).
+//
+// And the product's colour for its mails (email_obal.js): the light
+// --barva-produktu from web/produkt.css, read once per worker like the
+// name, handed to /api/prihlaseni and /api/objednavka as
+// context.data.barva (with the name, which the order mail now carries too).
 
 import { RELACE_COOKIE, cookieHlavicka, ted } from "../../spolecne.js";
 import {
@@ -82,6 +87,7 @@ import {
 import * as overeniProduktu from "./overeni.js";
 import { znackaOdchodu } from "./odchod.js";
 import { UZAVRIT_PO, uzavriNedokoncenou } from "./ukazka-uctu.js";
+import { barvaZCss } from "../../email_obal.js";
 
 const ZNAK = /[^a-z0-9._-]/g;
 
@@ -182,6 +188,19 @@ async function nactiNazev(context) {
 async function nactiJazyky(context) {
   await nactiStranku(context);
   return jazykyProduktu;
+}
+
+// The square before the product's name in its mails. A file the CI keeps
+// to one variable (kontrola_manifestu), so a pattern reads it; "" = the
+// file does not say, and the mail is in ink. Remembered only once the
+// file answered — a failed fetch is tried again on the next mail.
+let barvaProduktu = null;
+
+async function nactiBarvu(context) {
+  if (barvaProduktu !== null) return barvaProduktu;
+  const css = await context.env.ASSETS.fetch(new URL("/produkt.css", context.request.url));
+  barvaProduktu = (css.ok && barvaZCss(await css.text())) || "";
+  return barvaProduktu;
 }
 
 // The language onto the login link, and from the link onto the account it
@@ -664,12 +683,19 @@ async function obsluz(context) {
       // Before migration 0950: the account stays Czech, as before.
     }
   }
-  if (request.method === "POST" && cesta === "/api/prihlaseni") {
+  if (request.method === "POST" && (cesta === "/api/prihlaseni" || cesta === "/api/objednavka")) {
     try {
       context.data.produkt = (await nactiNazev(context)) || undefined;
     } catch {
       // Without a name the mail says "Váš přihlašovací odkaz", as before.
     }
+    try {
+      context.data.barva = (await nactiBarvu(context)) || undefined;
+    } catch {
+      // Without the colour the square is ink; the mail goes all the same.
+    }
+  }
+  if (request.method === "POST" && cesta === "/api/prihlaseni") {
     try {
       // The page may say which language it shows (the template's login form
       // does); otherwise the browser's, like the page's own choice.
