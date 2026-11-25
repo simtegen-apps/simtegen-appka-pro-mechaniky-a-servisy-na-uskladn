@@ -57,7 +57,12 @@
       "play_ucely": [
         "funkce"
       ],
-      "play_volitelne": true
+      "play_volitelne": true,
+      "en": {
+        "ucel": "the shop's details for labels and the app's settings",
+        "pole": "name, phone and address of the shop, label format, default storage price, set code counter, plan and end of the trial, whether the guide was shown, opening hours and lunch break, number of customers served at once, number of team invitations in the last hour and of preparation lists sent in the last day (protection against misuse), time the record was created",
+        "retence": "until the customer deletes the account"
+      }
     },
     {
       "entita": "zakaznici",
@@ -72,7 +77,13 @@
       ],
       "play_ucely": [
         "funkce"
-      ]
+      ],
+      "role": "zpracovatel",
+      "en": {
+        "ucel": "records of motorists whose tyres the shop stores, and contacting them about tyre changes",
+        "pole": "name, phone, e-mail (optional), note, sample-data flag, time the record was created",
+        "retence": "until the motorist is deleted in the app or the account is deleted"
+      }
     },
     {
       "entita": "sady",
@@ -86,7 +97,13 @@
       ],
       "play_ucely": [
         "funkce"
-      ]
+      ],
+      "role": "zpracovatel",
+      "en": {
+        "ucel": "records of stored tyre sets, printing labels and an overview of unpaid storage",
+        "pole": "set code, link to the motorist, registration plate and description of the vehicle, tyre type and size, number of pieces, tread, whether mounted on rims, tread depths of the four wheels, position in the store, status, dates received and handed out, price and whether paid, note, sample-data flag, time the record was created",
+        "retence": "while stored and 24 months after the set is handed out"
+      }
     },
     {
       "entita": "pohyby",
@@ -98,7 +115,13 @@
       ],
       "play_ucely": [
         "funkce"
-      ]
+      ],
+      "role": "zpracovatel",
+      "en": {
+        "ucel": "history of a set being received, handed out and moved across seasons",
+        "pole": "link to the set, type of movement, date, note, time the record was created",
+        "retence": "24 months after the set is handed out"
+      }
     },
     {
       "entita": "objednavky",
@@ -112,7 +135,13 @@
       ],
       "play_ucely": [
         "funkce"
-      ]
+      ],
+      "role": "zpracovatel",
+      "en": {
+        "ucel": "the shop's appointment calendar and preparing wheels for the next day",
+        "pole": "link to the motorist and the set, or a name without a record, date and time of the appointment, duration, task, whether mounted on rims, whether the customer waits, status, whether prepared, note, sample-data flag, time the record was created",
+        "retence": "24 months from the appointment"
+      }
     },
     {
       "entita": "clenove",
@@ -126,7 +155,12 @@
         "ucet",
         "funkce"
       ],
-      "play_volitelne": true
+      "play_volitelne": true,
+      "en": {
+        "ucel": "access of the shop's other staff to the app and their permissions",
+        "pole": "staff member's e-mail address, role (administrator, mechanic, read-only), whether and when the invitation was accepted, time the record was created",
+        "retence": "until the staff member is removed in the app or the account is deleted"
+      }
     },
     {
       "entita": "predplatne",
@@ -169,7 +203,12 @@
         "funkce",
         "ucet"
       ],
-      "play_volitelne": true
+      "play_volitelne": true,
+      "en": {
+        "ucel": "subscription order from the app and record of the consumer's consent to start the service before the withdrawal period ends",
+        "pole": "link to the account, length of the subscription in months, chosen option and price, billing details, whether a consumer, consent to start before the 14-day period ends and its time, order status, time created",
+        "retence": "until the customer deletes the account; the operator keeps tax documents outside the app for the period required by law"
+      }
     },
     {
       "entita": "play_nakupy",
@@ -235,7 +274,12 @@
       "play_ucely": [
         "funkce"
       ],
-      "play_volitelne": true
+      "play_volitelne": true,
+      "en": {
+        "ucel": "the app language a staff member chose (Czech or English), so the app opens in it on every device",
+        "pole": "link to the account, chosen app language, time of the last change",
+        "retence": "until the customer deletes the account"
+      }
     },
     {
       "entita": "hlaseni",
@@ -393,5 +437,7 @@
   "ico": "13980351",
   "sidlo": "Korunní 2569/108, Vinohrady, 101 00 Praha 10",
   "dic": "CZ13980351",
-  "zapis_or": "Městským soudem v Praze pod spisovou značkou C 357544"
+  "zapis_or": "Městským soudem v Praze pod spisovou značkou C 357544",
+  "obsah_zakaznika_popis_en": "name, phone and possibly e-mail of the motorist whose tyres the shop stores, the vehicle's registration plate and description, details of the stored sets (size, tread, tread depths, position in the store, price and whether storage is paid), workshop appointments and the content of notes the shop's staff fill in",
+  "subjekty_obsahu_en": "motorists whose tyres the shop stores or changes, and the shop's staff the administrator invites into the app"
 }
