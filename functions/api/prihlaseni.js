@@ -75,7 +75,7 @@ export async function onRequestPost(context) {
     body: JSON.stringify({
       from: env.EMAIL_ODESILATEL,
       to: [email],
-      ...prihlasovaciEmail(context.data.produkt, odkaz, context.data.jazyk),
+      ...prihlasovaciEmail(context.data.produkt, odkaz, context.data.jazyk, context.data.barva),
     }),
   });
   if (!odpoved.ok) {
