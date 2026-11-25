@@ -1,7 +1,7 @@
 <!-- GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: data-manifest.json, generátor: vykresli_zasady.py. -->
 # Záznam o činnostech zpracování — Pneusklad — evidence uskladněných pneu
 
-**Verze:** 2.0 · **poslední aktualizace:** (doplnit datum) · **zpracoval:** (doplnit jméno)
+**Verze:** 2.1 · **poslední aktualizace:** 24. 11. 2026 · **zpracoval:** (doplnit jméno)
 **Přezkoumat:** nejméně 1× ročně a při každé změně zpracování, zpracovatelů nebo účelů.
 
 **Správce:** SimteGen, s.r.o., IČO 13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10,
@@ -41,17 +41,17 @@ správcem, a **B** pro zpracování prováděná pro zákazníky, kde je SimteGe
 | zdroj příchodu | zjistit, která naše propagace (reklama, katalog) přivádí zákazníky | zákazníci a návštěvníci | název zdroje a kampaně z odkazu, kterým jste přišli (např. „sklik“, „jarni-akce“), u účtu; souhrnné počty návštěv podle zdroje bez vazby na osobu. Nic se neukládá do vašeho prohlížeče. | čl. 6/1/f — oprávněný zájem | u účtu do jeho smazání; souhrnné počty bez osobních údajů |
 | chyby aplikace | najít a opravit chyby, na které v aplikaci narazíte, i když nám je nenahlásíte | zákazníci a návštěvníci | souhrnné počty chyb skriptu podle dne, obrazovky a místa v našem kódu — bez textu chyby, bez vazby na osobu nebo zařízení. Nic se neukládá do vašeho prohlížeče. | čl. 6/1/f — oprávněný zájem | souhrnné počty bez osobních údajů |
 | proč zákazníci nepokračují | zjistit, proč zákazníci po zkušební době nebo předplatném nepokračují, a podle toho produkt zlepšit | zákazníci | souhrnné počty důvodů podle dne a cesty — vaše odpověď na nepovinnou otázku po konci zkušebního nebo předplaceného období a důvod zrušení předplatného, který zaznamená Google Play — bez vazby na osobu. U účtu si pamatujeme jen to, že jste na otázku za dané období odpověděli (aby se neopakovala), ne co jste odpověděli. | čl. 6/1/f — oprávněný zájem | souhrnné počty bez osobních údajů |
-| provozní a bezpečnostní logy | provozní a bezpečnostní záznamy (logy) | zákazníci a návštěvníci | IP adresa, čas a typ požadavku, identifikace prohlížeče | čl. 6/1/f — oprávněný zájem | (doplnit skutečnou dobu, typicky 30 dnů) |
-| podpora a komunikace | vyřízení dotazu nebo požadavku podpory | zákazníci, zájemci | e-mailová adresa a obsah komunikace | čl. 6/1/b, u nezákazníků čl. 6/1/f | (doplnit, typicky 1 rok) |
+| provozní a bezpečnostní logy | provozní a bezpečnostní záznamy (logy) | zákazníci a návštěvníci | IP adresa, čas a typ požadavku, identifikace prohlížeče | čl. 6/1/f — oprávněný zájem | 30 dní |
+| podpora a komunikace | vyřízení dotazu nebo požadavku podpory | zákazníci, zájemci | e-mailová adresa a obsah komunikace | čl. 6/1/b, u nezákazníků čl. 6/1/f | 12 měsíců |
 | účetní a daňové doklady | účetní a daňové doklady | zákazníci | fakturační údaje, částka, datum | čl. 6/1/c — právní povinnost | 10 let; vedeno mimo aplikaci |
 
 **Oprávněný zájem (čl. 6/1/f)** je u logů vymezen jako zajištění provozu, dostupnosti
 a bezpečnosti služby a možnost dohledat příčinu poruchy nebo útoku. Test proporcionality:
-(doplnit odkaz na provedený balanční test nebo datum jeho provedení).
+proveden 24. 11. 2026 (dokument vede správce, na vyžádání jej předloží).
 
 ### A.2 Kategorie příjemců
 
-Zpracovatelé uvedení v části A.3; účetní ((doplnit obchodní firmu)); orgány veřejné moci
+Zpracovatelé uvedení v části A.3; účetnictví: (doplnit obchodní firmu účetního); orgány veřejné moci
 v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávají k reklamním účelům.
 
 ### A.3 Zpracovatelé a předávání mimo EU
@@ -62,6 +62,7 @@ v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávaj
 | Resend (Plus Five Five, Inc.) (USA) | odeslání přihlašovacího odkazu, odeslání seznamu přípravy na následující den na e-mail servisu a odeslání objednávky předplatného provozovateli i jejího potvrzení zákazníkovi; upozornění na konec zkušebního období; upozornění na konec předplaceného období a odpovědi na hlášení | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 | GitHub, Inc. (Microsoft) (USA) | evidence hlášení zákazníků pro podporu (text hlášení, technické údaje o stránce a anonymní otisk účtu s údajem, zda je předplatné zaplacené, a stářím účtu — šifrovaně, GitHub vidí jen nečitelný blok; bez e-mailu a jména) | USA / EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 | Google Ireland Limited / Google Commerce Limited (Irsko) | prodej předplatného v aplikaci z Google Play a ověření nákupu (platbu zpracovává Google) | EU | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
+| Anthropic, PBC (USA) | automatické třídění hlášení a dotazů zaslaných podpoře a odpovědi na běžné dotazy pomocí umělé inteligence (text hlášení a technické údaje o stránce, bez e-mailu a jména, pokud je sami do textu nenapíšete); data se nepoužívají k trénování modelů; složitější a právní věci vyřizuje člověk | USA | standardní smluvní doložky EK (čl. 46/2/c), případně rámec EU–USA pro ochranu údajů |
 
 Kopie záruk: uloženy u správce, na žádost poskytovány subjektům údajů.
 
@@ -88,7 +89,7 @@ do aplikace vkládají údaje třetích osob. Právním rámcem je
 | **Kategorie subjektů údajů** | motoristé, kterým servis skladuje nebo přezouvá pneumatiky, a pracovníci servisu, které správce pozve do aplikace |
 | **Kategorie údajů** | jméno, telefon a případně e-mail motoristy, kterému servis skladuje pneumatiky, registrační značka a popis jeho vozidla, údaje o uskladněných sadách (rozměr, dezén, hloubky dezénu, pozice ve skladu, cena a stav zaplacení uskladnění), termíny objednávek do dílny a obsah poznámek, které pracovník servisu vyplní |
 | **Zvláštní kategorie (čl. 9/10)** | služba k nim není určena; jejich vkládání je smluvně vyloučeno |
-| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.); GitHub, Inc. (Microsoft); Google Ireland Limited / Google Commerce Limited (viz A.3) |
+| **Další zpracovatelé** | Cloudflare, Inc.; Resend (Plus Five Five, Inc.); GitHub, Inc. (Microsoft); Google Ireland Limited / Google Commerce Limited; Anthropic, PBC (viz A.3) |
 | **Předání mimo EU** | jen na pokyn správce nebo v rámci dalších zpracovatelů, se zárukami podle A.3 |
 | **Doba zpracování** | po dobu trvání smlouvy o službě; poté výmaz nebo vrácení dle volby správce |
 | **Technická a organizační opatření** | shodná s A.4 |

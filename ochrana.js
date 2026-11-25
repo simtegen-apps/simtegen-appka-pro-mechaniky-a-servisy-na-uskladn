@@ -9,6 +9,8 @@
 // name their old spolecne.js does not export would break the whole
 // Functions bundle on deploy. This file travels with them.
 
+import { htmlEmailu, PRIHLASIT, PRILOHA_LOGA } from "./email_obal.js";
+
 const KODOVAC = new TextEncoder();
 
 // ── The customer's language (batch B, 14. 11. 2026) ──────────────────
@@ -39,21 +41,32 @@ export function jazykZadosti(jazyky, zadany, acceptLanguage) {
 // The login mail. Czech word for word as the template always wrote it (the
 // build swaps an older product's own copy of that text for this call —
 // stavitel._EMAIL_JAZYK); English for a customer reading the app in English.
-export function prihlasovaciEmail(produkt, odkaz, jazyk) {
-  if (jazyk === "en") {
-    return {
+// The HTML part is the same text in the product's dress, the link as a
+// button (email_obal.js); `barva` is the product's colour the template
+// middleware read from web/produkt.css — absent (an older product's call
+// with three arguments) the square is ink, nothing else changes.
+export function prihlasovaciEmail(produkt, odkaz, jazyk, barva) {
+  const en = jazyk === "en";
+  const zprava = en
+    ? {
       subject: produkt ? `${produkt}: your sign-in link` : "Your sign-in link",
       text: "Hello,\n\nto sign in" + (produkt ? ` to ${produkt}` : "")
         + ", open this link (valid for 1 hour):\n"
         + `${odkaz}\n\nIf you did not ask to sign in, ignore this e-mail.\n`,
+    }
+    : {
+      subject: produkt ? `${produkt}: přihlašovací odkaz` : "Váš přihlašovací odkaz",
+      text: "Dobrý den,\n\npro přihlášení" + (produkt ? ` do služby ${produkt}` : "")
+        + " otevřete tento odkaz (platí 1 hodinu):\n"
+        + `${odkaz}\n\nPokud jste o přihlášení nežádali, e-mail ignorujte.\n`,
     };
-  }
-  return {
-    subject: produkt ? `${produkt}: přihlašovací odkaz` : "Váš přihlašovací odkaz",
-    text: "Dobrý den,\n\npro přihlášení" + (produkt ? ` do služby ${produkt}` : "")
-      + " otevřete tento odkaz (platí 1 hodinu):\n"
-      + `${odkaz}\n\nPokud jste o přihlášení nežádali, e-mail ignorujte.\n`,
-  };
+  zprava.html = htmlEmailu({
+    predmet: zprava.subject, text: zprava.text, produkt, barva, jazyk: en ? "en" : "cs",
+    tlacitko: { odkaz, popisek: PRIHLASIT[en ? "en" : "cs"] },
+  });
+  // The HTML's logo is cid:-referenced: without the attachment it is broken.
+  zprava.attachments = [PRILOHA_LOGA];
+  return zprava;
 }
 
 export function vyvoj(env) {

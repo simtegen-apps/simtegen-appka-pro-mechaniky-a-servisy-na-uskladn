@@ -222,7 +222,7 @@ def _zkontroluj_tabulky(manifest: dict) -> list[str]:
 
 
 LEGAL_PAGES = ("zasady.html", "podminky.html", "zpracovatelska-smlouva.html", "odstoupeni-formular.html",
-               "smazani-uctu.html", "privacy.html", "terms.html")
+               "smazani-uctu.html", "privacy.html", "terms.html", "data-processing-agreement.html")
 
 # Design system v2 („Mřížka a papír“). The files are template
 # infrastructure (the builder refreshes them on every build); produkt.css
