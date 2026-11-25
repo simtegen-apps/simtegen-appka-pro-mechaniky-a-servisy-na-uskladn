@@ -1433,6 +1433,9 @@ _EN_ZAKLAD = {
 # phrases, then "N <unit>". Whatever stays Czech is marked.
 _EN_CAS_FRAZE = (
     ("do smazání účtu zákazníkem", "until the customer deletes the account"),
+    # The template's own "zdroj příchodu" row (25. 11. 2026: it stayed Czech,
+    # marked, in every English policy).
+    ("u účtu do jeho smazání", "with the account until it is deleted"),
     ("vedeno mimo aplikaci", "kept outside the app"),
     ("souhrnné počty bez osobních údajů", "aggregate counts without personal data"),
     ("od posledního použití", "from the last use"),
