@@ -24,10 +24,6 @@ správcem, a **B** pro zpracování prováděná pro zákazníky, kde je SimteGe
 | prihlasovaci_odkazy | jednorázové přihlášení e-mailovým odkazem | zákazníci služby | otisk tokenu, e-mailová adresa, expirace, jazyk aplikace | čl. 6/1/b — plnění smlouvy | 24 hodin |
 | relace | udržení přihlášení | zákazníci služby | otisk tokenu, odkaz na účet, expirace | čl. 6/1/b — plnění smlouvy | 30 dní od posledního použití aplikace, nejdéle 90 dní od přihlášení |
 | nastaveni_servisu | údaje servisu na štítek a nastavení aplikace | zákazníci služby | název, telefon a adresa provozovny, formát štítku, výchozí cena uskladnění, čítač kódů sad, tarif a konec zkušebního období, příznak zobrazení návodu, otevírací doba a pauza na oběd, počet souběžně odbavovaných zákazníků, počet pozvánek do týmu za poslední hodinu a odeslaných seznamů přípravy za poslední den (ochrana proti zneužití), čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
-| zakaznici | evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí | zákazníci služby | jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | do smazání zákazníka v aplikaci nebo do smazání účtu |
-| sady | evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění | zákazníci služby | kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | po dobu uskladnění a 24 měsíců po výdeji sady |
-| pohyby | historie příjmů, výdejů a přesunů sady napříč sezónami | zákazníci služby | odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | 24 měsíců po výdeji sady |
-| objednavky | objednávkový kalendář servisu a příprava kol na následující den | zákazníci služby | odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, údaj o montáži na discích, příznak celodenního čekání, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | 24 měsíců od termínu |
 | clenove | přístup dalších pracovníků servisu do aplikace a jejich oprávnění | zákazníci služby | e-mailová adresa pracovníka, role (správce, mechanik, jen čtení), zda a kdy pracovník pozvánku přijal, čas vytvoření záznamu | čl. 6/1/b — plnění smlouvy | do odebrání pracovníka v aplikaci nebo do smazání účtu |
 | predplatne | evidence zaplaceného období předplatného; upozornění e-mailem týden před koncem předplaceného období (jen při platbě fakturou, nejvýš jednou za období; žádná reklama) | zákazníci služby | odkaz na účet, datum konce předplatného, poznámka k platbě, čas poslední změny | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
 | platby | historie plateb předplatného, aby bylo vidět obnovení i ukončení | zákazníci služby | odkaz na účet, počet zaplacených měsíců, poznámka k platbě, čas zapsání | čl. 6/1/b — plnění smlouvy | do smazání účtu zákazníkem |
@@ -93,6 +89,15 @@ do aplikace vkládají údaje třetích osob. Právním rámcem je
 | **Předání mimo EU** | jen na pokyn správce nebo v rámci dalších zpracovatelů, se zárukami podle A.3 |
 | **Doba zpracování** | po dobu trvání smlouvy o službě; poté výmaz nebo vrácení dle volby správce |
 | **Technická a organizační opatření** | shodná s A.4 |
+
+Entity, ve kterých jsou údaje vložené zákazníkem:
+
+| Entita | Účel | Kategorie údajů | Doba uložení (nesmaže-li je správce dříve) |
+|---|---|---|---|
+| zakaznici | evidence motoristů, kterým servis skladuje pneu, a jejich kontaktování ohledně přezutí | jméno, telefon, e-mail (volitelně), poznámka, příznak ukázkových dat, čas vytvoření záznamu | do smazání zákazníka v aplikaci nebo do smazání účtu |
+| sady | evidence uskladněných sad pneu, tisk štítků a přehled nezaplaceného uskladnění | kód sady, odkaz na motoristu, registrační značka a popis vozidla, typ a rozměr pneu, počet kusů, dezén, údaj o montáži na discích, hloubky dezénu čtyř kol, pozice ve skladu, stav, datum příjmu a výdeje, cena a příznak zaplacení, poznámka, příznak ukázkových dat, čas vytvoření záznamu | po dobu uskladnění a 24 měsíců po výdeji sady |
+| pohyby | historie příjmů, výdejů a přesunů sady napříč sezónami | odkaz na sadu, typ pohybu, datum, poznámka, čas vytvoření záznamu | 24 měsíců po výdeji sady |
+| objednavky | objednávkový kalendář servisu a příprava kol na následující den | odkaz na motoristu a sadu nebo jméno bez evidence, datum a čas termínu, délka, úkon, údaj o montáži na discích, příznak celodenního čekání, stav, příznak připravenosti, poznámka, příznak ukázkových dat, čas vytvoření záznamu | 24 měsíců od termínu |
 
 ---
 
