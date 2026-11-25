@@ -439,5 +439,9 @@
   "dic": "CZ13980351",
   "zapis_or": "Městským soudem v Praze pod spisovou značkou C 357544",
   "obsah_zakaznika_popis_en": "name, phone and possibly e-mail of the motorist whose tyres the shop stores, the vehicle's registration plate and description, details of the stored sets (size, tread, tread depths, position in the store, price and whether storage is paid), workshop appointments and the content of notes the shop's staff fill in",
-  "subjekty_obsahu_en": "motorists whose tyres the shop stores or changes, and the shop's staff the administrator invites into the app"
+  "subjekty_obsahu_en": "motorists whose tyres the shop stores or changes, and the shop's staff the administrator invites into the app",
+  "datova_schranka": "f57tb7i",
+  "odpovedna_osoba": "jednatel společnosti",
+  "zastup": "nestanoven",
+  "ucetni": "účetnictví vede správce sám"
 }
