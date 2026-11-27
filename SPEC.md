@@ -1,168 +1,108 @@
-# Specifikace — build 16
+# Specifikace — build 20
 
-Build 16 zjednoduší hotový Pneusklad jen v textech a rozložení, funkce ani data se nemění. Úvod bude mít hlavní větu, podvětu, tři krátké přednosti, jednu kartu ceny s jedním tarifem a větou o zkušebním období a jedno tlačítko. Z hlavičky, z Dnes i z Nastavení zmizí volba jazyka. Jazyk se zvolí sám a ručně se mění jen jedním řádkem v Účtu. Přepínač měny v produktu nebude. Patička s právními odkazy na jednom malém řádku bude jen na úvodu a v Účtu, spodní menu se ukáže až po přihlášení. Zmizí vysvětlující odstavce pod nadpisy sekcí a prázdné stavy budou mít jeden řádek, česky i anglicky.
+Build 18 opraví příčiny chyb skriptu na přihlášení a načítání, které jsem našel v kódu. Přihlášení dnes padá při slabém signálu, odkaz jde odeslat dvakrát a po výpadku zůstane aplikace navždy na kostře načítání. Nikdo také nezkontroluje, jestli se zákazník mezitím přihlásil odkazem v jiné kartě nebo v prohlížeči. Produktový skript se přestěhuje z index.html do dvou souborů (web/pneusklad.js, web/prihlaseni.js), takže počítadlo chyb místo „jine“ zapíše soubor a řádek, a tím i krok přihlášení. Obrazovky, texty, data, ceny ani funkce se nemění.
 
 ## Placená hodnota (proč přijde druhý nákup)
-Servis dál platí 129 Kč měsíčně za provozovnu za evidenci, kde leží čí kola, za tisk štítků a za objednávky s připomínkou. Druhý nákup přichází každou sezónu, protože kola zůstávají v regálu a evidence se přenáší ze sezóny do sezóny. Tento build tu hodnotu chrání: platící zákazník appku označil za nepřehlednou a kratší obrazovky odstraní důvod odejít, aniž by se změnila jediná funkce nebo jediný údaj.
+Platí se dál 129 Kč měsíčně za provozovnu za evidenci, kde leží čí kola, za štítky a za objednávky s připomínkou, a druhý nákup přichází každou sezónu, protože kola zůstávají v regálu. Tenhle build hodnotu nepřidává: odstraňuje překážku na cestě k ní. Kdo se nepřihlásí, nezaloží účet, nezačne zkušební období a nikdy nezaplatí.
 
 ## Design (obrazovky, navigace, stavy)
-BARVA PRODUKTU: beze změny #c2410c (pálená oranžová). Je to barva pryže a výstražných štítků v dílně. Kontrast na papíře #f6f4ef vychází přibližně 4,7:1, tedy ≥ 4,5:1 (SPEC buildu 15 uváděl 6,7:1, to byla chyba výpočtu; CI to stejně přepočítá). web/produkt.css se nemění. Návrhový systém v3 se nemění: žádná nová třída ani barva. Do <style> v index.html přibudou jen pravidla viditelnosti (patička, menu) bez barev.
+BARVA PRODUKTU: beze změny #c2410c (pálená oranžová, pryž a výstražné štítky v dílně), kontrast na papíře #f6f4ef asi 4,7:1, tedy ≥ 4,5:1. web/styl.css, web/produkt.css a DESIGN.md se nemění. Žádná nová třída, barva ani obrazovka.
 
-TYPY OBRAZOVEK: všechny zůstávají PŘEHLED. Nástroj produkt nemá a mít nebude: zákazník nic neskládá, sada se zapisuje a štítek se tiskne. Obrazovky ani jejich hlavní akce se nemění:
-1) Načítání (#obrazovka-nacitani): .kostra, beze změny.
-2) Úvod a přihlášení (#obrazovka-prihlaseni), přehled. Na obrazovce je jen tohle:
-   - H1 .titulek-velky „Víte, kde má který zákazník uložené pneu?“ (beze změny, drží SEO a UAT)
-   - podvěta jako jeden <p> „Pro malé a mobilní pneuservisy. Bez instalace.“
-   - tři přednosti jako .seznam bez druhého řádku: „Evidence pneu přes všechny sezóny“, „Štítky z vaší tiskárny“, „Připomínka den před přezutím“
-   - ceník jako jedna .karta.vykres: .stitek „Standard“, .cislo-obri `<span data-cena="doporuceni">`, vedle `<span data-cena-jednotka="doporuceni">`, a jedna věta „Prvních 30 dní zdarma, bez karty.“ (počet dní ze zkusebni_dni)
-   - pole „E-mail provozovny“ s nápovědou „Pošleme vám odkaz, heslo nepotřebujete.“
-   - hlavní akce „Začít zdarma“ v .lista-dole
-   Zmizí: nadpis sekce Přihlášení, odstavec o datech v EU, druhé řádky předností, „Cena od“, celá sekce Ceník se třemi variantami, nadpis a odstavec sekce ukázky a tlačítko English.
-   - Ukázka: tlačítko data-ukazka (vedlejší) zůstává kvůli pravidlům Google Play, ale s třídou .jen-v-aplikaci. Na webu je tak na úvodu opravdu jedno tlačítko.
-   - Měna: částku dává simtegen.js podle země (CZ = Kč, Evropa = EUR, jinde USD), žádný data-prepinac-meny.
-   - Tablet a notebook: .mrizka s7 vlevo (H1, podvěta, přednosti) a s5 vpravo (karta ceny, e-mail, tlačítko). Patička je pod obsahem na celou šířku.
-   - Načítání: .kostra místo částky, dokud nedorazí cenik.json. Chyba: když se ceník nenačte, karta zůstane skrytá (žádný prázdný rám) a přihlášení funguje dál. Chyba odeslání odkazu se ukáže pod polem jako dosud.
-3) Dnes (#obrazovka-dnes), přehled, hlavní akce „Nová sada na uskladnění“. Zmizí nabídka #jazyk-nabidka. Prázdný stav: „Zapište první uskladněnou sadu.“ a vedlejší „Naplnit ukázkovými daty“ (data-ukazkova-data, jen vlastník). Sekce Stav dne, Najít a Dnešní objednávky zůstávají. Načítání .kostra, chyba .hlaska.chyba jako dosud.
-4) Sklad, přehled. Prázdný stav: „V regálu zatím nic neleží.“
-5) Zákazníci, přehled. Prázdný stav: „Zatím žádní zákazníci.“
-6) Zákazník a 7) Sada (detail), přehled, beze změny rozložení.
-8) Nová sada (průvodce 4 kroky), přehled. Zmizí odstavec pod „Hloubka dezénu“, pole dostane jen nápovědu „V mm, nepovinné.“
-9) Objednávky, přehled. Prázdný stav: „Tento týden žádné objednávky.“
-10) Nová objednávka, přehled, beze změny.
-11) Příprava kol, přehled. Prázdný stav: „Na tento den nic naplánováno.“
-12) Sezónní přehled, přehled. Zmizí odstavce pod třemi sekcemi (obvolat, opotřebené, nezaplacené), nadpis s počtem zůstane. Prázdný stav: „Přehled se naplní s první sadou.“
-13) Nastavení, přehled, hlavní akce „Uložit nastavení“. Zmizí odstavec pod Provoz a řádek „Jazyk aplikace · Language“. Řádky Předplatné, Tým a Účet a data zůstávají jako cesta do podobrazovek.
-14) Tým, přehled, hlavní akce „Přidat kolegu“. Zmizí odstavec o rolích (role jsou vidět na přepínači). Prázdný stav: „Zatím jste tu sami.“
-15) Účet a data (#obrazovka-ucet), přehled, hlavní akce „Stáhnout moje data“, vedlejší „Odhlásit se“. Sekce bez odstavců: Vaše data, Ukázková data, Odejít ze servisu (jen člen cizího servisu) a Smazání účtu (nevratnost řekne potvrzovací panel SimteGen.potvrd). Karta Doporučit kolegovi zůstane jen s tlačítkem. Nově přibudou jeden řádek „Jazyk“ se slotem `<div data-prepinac-jazyka>` (Čeština | English kreslí simtegen.js) a řádek „Nápověda“ (odkaz na napoveda.html, lang="cs"). Dole je patička.
-16) Předplatné, přehled, hlavní akce „Objednávka zavazující k platbě“ (jen web), v aplikaci nákup přes data-predplatne-play. Samostatná sekce Ceník s odstavci (seznam variant a „Cena je za provozovnu…“) zmizí. Ceny jsou vidět ve volbě varianty a v „Celkem k úhradě“ přímo v objednávce, takže volba varianty zůstává (je to funkce). Chyba načtení: jeden řádek „Stav předplatného se nepodařilo načíst.“ a tlačítko Zkusit znovu.
+TYPY OBRAZOVEK: všechny zůstávají PŘEHLED. Nástroj produkt nemá: zákazník nic neskládá, sada se zapisuje a štítek se tiskne. Pokus mění jen chování dvou obrazovek, jejich vzhled ne:
 
-PATIČKA: jen na úvodu a v Účtu. Řeší to body[data-obrazovka] nastavovaný v ukaz(id) a pravidlo .paticka { display:none }, kromě těchto dvou obrazovek. Obsah je jeden malý řádek .popisek: „Zásady · Podmínky · Smlouva o zpracování · Odstoupení“. Podmínky a Odstoupení mají data-objednavka, takže je aplikace z Google Play skryje. V angličtině řádek začíná „In Czech:“. Nahlásit chybu zůstává na konci řádku patičky (jak chce DESIGN.md, část Text) a navíc v menu (tablet, notebook) a v hlavičce (telefon).
+1) Načítání (#obrazovka-nacitani), přehled, bez akce.
+   - Načítání: .kostra jako dosud.
+   - NOVĚ chyba: když po /api/ja selže síť při načítání nastavení, aplikace nezůstane navždy na kostře. Ukáže pruh šablony „Zkusit znovu“ (SimteGen.offline(obnov)) a po úspěchu ho schová (SimteGen.spojeno()).
+   - Když server mezitím odpoví 401, otevře se přihlášení.
+   - Prázdný stav nemá (je to přechod).
+2) Úvod a přihlášení (#obrazovka-prihlaseni), přehled, hlavní akce „Začít zdarma“. Rozložení buildu 16 beze změny: H1, podvěta, tři přednosti, karta tarifu, pole „E-mail provozovny“, tlačítko v .lista-dole, vedlejší „Vyzkoušet ukázku“ (data-ukazka, .jen-v-aplikaci). Tablet a notebook: .mrizka s7 vlevo, s5 vpravo.
+   - Načítání: kostra ceny jako dosud. Během odesílání je tlačítko zablokované (disabled, aria-busy) a pod polem stojí „Odesílám…“, takže Enter + klepnutí nepošle dva odkazy.
+   - Chyba: hláška serveru pod polem jako dosud. NOVĚ i při výpadku sítě, kdy se ukáže stávající „Něco se nepovedlo. Zkuste to prosím znovu.“ a tlačítko se odblokuje (dnes zůstane „Odesílám…“ navždy).
+   - Prázdný stav: obrazovka prázdná nebývá.
+   - NOVĚ návrat: když se zákazník vrátí do karty nebo aplikace (visibilitychange na viditelnou, pageshow z mezipaměti zpět), zatímco je na přihlášení, aplikace jednou zjistí stav přes SimteGen.kdoJsem().
+     - Při „prihlasen“ rovnou otevře Dnes (u nového účtu s průvodcem a prázdným stavem).
+     - Při „odhlasen“ zůstane, jak je.
+     - Žádné dotazování v intervalu.
+   - Tlačítko Zpět bez přihlášení nechá přihlášení a neotevře Dnes odhlášenému.
+3)–16) Dnes, Sklad, Zákazníci, Zákazník, Sada, Nová sada, Objednávky, Nová objednávka, Příprava kol, Sezónní přehled, Nastavení, Tým, Účet a data, Předplatné: beze změny (typ, hlavní akce, prázdné, načítací i chybové stavy podle SPEC buildu 16). Prázdný stav Dnes s „Naplnit ukázkovými daty“ zůstává.
 
-NAVIGACE: beze změny 4 položky (Dnes · Sklad · Objednávky · Nastavení). Na telefonu se spodní pás ukáže až po přihlášení (body:not(.prihlasen) .navigace skryté pod 768 px a .lista-dole pak sedí u spodní hrany). Na tabletu a notebooku zůstává před přihlášením levý pruh jen se značkou a Nahlásit chybu. Kliky: hlavní hodnota je na 0–1 klepnutí (Dnes, Sklad), štítek na 2 (Sklad → sada → Tisk), jazyk na 3 (Nastavení → Účet a data → řádek Jazyk). Každá podobrazovka má dál vlastní šipku Zpět.
+NAVIGACE: beze změny 4 položky (Dnes · Sklad · Objednávky · Nastavení), hlavní hodnota na 0–1 klepnutí, štítek na 2. Spodní pás na telefonu až po přihlášení. Na tabletu a notebooku levý pruh.
 
-JAZYK: volí se sám. Před přihlášením platí volba šablony (?jazyk=, ruční volba, jazyk prohlížeče, slovenština = čeština). Po přihlášení má přednost uložená volba účtu (/api/jazyk), bez volby (null) zůstane automatika a nic se nevynucuje. Ruční změna jde jen přes řádek v Účtu. Uloží se k účtu jako dosud a po novém načtení se aplikace vrátí do Účtu a ukáže „Jazyk uložen“ s Vrátit.
+TEXTY: žádný nový ani změněný text. Použije se stávající obecne.odesilam a obecne.nepovedlo_znovu (česky i anglicky v texty.js). Kdyby stavba přece jen potřebovala nový klíč, patří do obou jazyků.
 
-TEXTY: slovní limity podle nové části Text v DESIGN.md. Cíle stavby: H1 ≤ 8 slov, podvěta ≤ 8, přednost ≤ 5, tlačítko ≤ 4, prázdný stav jedna věta ≤ 8 slov, žádný .popisek pod .sekce-titulek. Angličtina se zkrátí stejně, například „Record your first stored set.“, „Nothing on the rack yet.“, „First 30 days free, no card.“
+ODCHYLKA K POTVRZENÍ MAJITELEM: zadání chce v hlášení chyby „zařízení“. Počítadlo chyb (functions/api/chyba-stranky.js, migrace 0930, web/simtegen.js) je infrastruktura šablony označená NEUPRAVOVAT V PRODUKTU. Úmyslně neukládá user agent ani text chyby a CI to vynucuje (kontrola_manifestu.SABLONOVE_AGREGATY, „jen čísla“). Vlastní měření zadání firmy zakazuje.
+- Build proto dodá „krok přihlášení“: soubor a řádek, např. prihlaseni.js:57 = odeslání odkazu, pneusklad.js:… = načtení nastavení.
+- Zařízení ne. To nese jen dobrovolné „Nahlásit chybu“, kam šablona už přikládá velikost okna a prohlížeč.
+- Hrubou třídu zařízení (telefon/tablet/počítač, aplikace/web) v počítadle navrhuji jako samostatnou změnu šablony.
 
 ## Plán
-1. Obnova šablony (stavba, ne stavitel): převzít aktuální DESIGN.md (nová část Text), web/styl.css, web/simtegen.js, web/ikony.svg a kontrolní skripty. Přečíst novou část Text a pokud jsou její limity přísnější než cíle ve specifikaci, platí limity šablony.
-2. web/index.html, úvod: přestavět #obrazovka-prihlaseni podle Designu. Cena přes data-cena="doporuceni" a data-cena-jednotka="doporuceni" z web/cenik.json, žádný data-prepinac-meny. Smazat #uvod-cenik-sekce a vykresliUvod() zjednodušit na větu o zkušebním období. Obal tlačítka data-ukazka dostane .jen-v-aplikaci. Zachovat #email, #poslat-odkaz, POST /api/navsteva {stranka:"uvod"} a celou cestu přihlášení beze změny.
-3. web/index.html, jazyk: odstranit #hlavicka-jazyk, #jazyk-nabidka, řádek #nast-jazyk a k nim JS (nabidniJazyk, zNabidky, predPrihlasenimAnglicky, obsluhu tlačítek). V srovnejJazyk() při volbě null jazyk nevynucovat (cil = volba || SimteGen.jazyk()). V #obrazovka-ucet přidat jeden .radek se slotem data-prepinac-jazyka. Stávající zachycení kliku v [data-prepinac-jazyka] (POST /api/jazyk s keepalive) doplnit o značku jazyk-zmenen, aby se aplikace po novém načtení vrátila do Účtu (poPrepnutiJazyka → ukaz("obrazovka-ucet")).
-4. web/index.html, patička a menu: v ukaz(id) nastavit document.body.dataset.obrazovka. Do <style> přidat: .paticka viditelná jen pro obrazovka-prihlaseni a obrazovka-ucet. Pod 768 px body:not(.prihlasen) .navigace { display:none } a .lista-dole { bottom: env(safe-area-inset-bottom) }. Patičku přepsat na jeden řádek právních odkazů s „·“ a s Nahlásit chybu na konci (DESIGN.md, Text). Nápověda zůstala v témže řádku, viz odchylky níže.
-5. web/index.html, sekce: smazat všechny .popisek přímo pod .sekce-titulek (provoz, tým, účet, ukázková data, odejít, smazání, hloubka dezénu, tři sekce Sezónního přehledu ve funkci sekce(), Ceník na Předplatném). Zrušit samostatnou sekci Ceník na Předplatném. Kartu Doporučit zkrátit na tlačítko. ID, data-objednavka, data-predplatne-play, data-ukazka a data-ukazkova-data zůstávají.
-6. web/texty.js: zkrátit české i anglické texty podle limitů (prázdné stavy, přednosti, podvěta, nápověda e-mailu, zkušební věta, patička). Smazat klíče, které nikdo nepoužívá (uvod.*_popis, nast.provoz_popis, tym.popis, ucet.*_popis, jazyk.nabidka…, nast.jazyk…). Oba jazyky musí mít stejné klíče a {proměnné} (kontrola_jazyku.py).
-7. uat/scenare.json: scénář úvodu upravit na nové přednosti a na data-cena="doporuceni" místo #uvod-cena-cislo. Doplnit neobsahuje: „hlavicka-jazyk“, „jazyk-nabidka“, „data-prepinac-meny“. Přidat scénáře z pole akceptace. Scénář „Ceník a zkušební doba…“ (/api/ja) zůstává, server se nemění.
-8. napoveda.json: téma „Aplikace v angličtině“ přepsat (jazyk se volí sám, ručně v Nastavení → Účet a data → Jazyk) a téma Tým (odchod ze servisu) srovnat s novými názvy. Vygeneruje vykresli_napovedu.py.
-9. play/co_je_noveho.txt přepsat, například: „Aplikace je přehlednější: kratší texty, jednodušší úvodní obrazovka a méně odstavců. Jazyk se nastaví sám podle telefonu, změníte ho v Nastavení → Účet a data. Evidence, štítky, objednávky ani ceny se nemění.“
-10. README.md (krátká poznámka o jazyce a patičce) a SPEC.md (specifikace buildu 16 a seznam souborů změněných mimo rozsah).
-11. Bez zásahu: data-manifest.json (žádná nová entita, služba, cookie ani úložiště, sg-volba už v zásadách je), migrace, functions/** včetně _middleware.js, overeni.js a jazyk.js, cenik.js, web/cenik.json, web/play.js, web/produkt.css, .github/. Modul SCHRÁNKA (hlaseni.js, migrace hlášení) do tohoto buildu nepatří: majitel zakázal měnit funkce a data a hlášení dnes obsluhuje nahlasit.js. Je to samostatná stavba.
-12. Generátory pustí člověk (Python tu neběží): python vykresli_napovedu.py, python vykresli_seo.py (meta zůstávají, ale kontrola porovnává), python vykresli_aplikaci.py a pak python kontrola_manifestu.py, python kontrola_jazyku.py, python uat_kontrola.py a vizualni_kontrola.py.
+1. Příčiny (zjištěné čtením kódu, data z produkce nemám a neotvírám):
+   a) Proč „jine“: celý produktový skript je inline v web/index.html. Chyba v inline skriptu má jako soubor adresu stránky („/“, „/?aplikace=play“, „/?utm_…“). simtegen.js z ní vezme poslední úsek bez dotazu, tedy prázdný řetězec, a misto „:3551“ regex v chyba-stranky.js odmítne → „jine“. Odmítnutý promise počítá šablona vždy jako „jine“.
+   b) api() (index.html, funkce api) nechytá síťovou chybu fetch. posliOdkaz při slabém signálu skončí odmítnutým promisem (chyba na „prihlaseni“), zpráva visí na „Odesílám…“ a tlačítko není blokované. Zákazník klepne znovu, nebo Enter + klik, a po třech odkazech za hodinu dostane „Příliš mnoho pokusů“. Přihlášení „se opakovaně rozbíjí“.
+   c) obnov(): Promise.all([nactiUcet(), /api/predvolby]). nactiUcet nemá catch, takže výpadek sítě po /api/ja nechá aplikaci navždy na kostře Načítání (chyba na „nacitani“). Opakované obnov (událost online, Zkusit znovu) běží souběžně.
+   d) Návrat po přihlášení: odkaz z e-mailu se potvrdí v prohlížeči nebo v jiné kartě. Aplikace z Google Play (TWA sdílí cookies s Chromem) i původní karta zůstanou na přihlášení a nic stav znovu neověří. Zákazník pak žádá nový odkaz a narazí na limit.
+   e) popstate bez přihlášení otevře „obrazovka-dnes“ odhlášenému.
+2. web/pneusklad.js (nový): přesunout doslova obsah hlavního inline &lt;script&gt; z index.html, kromě bloku přihlášení a startu. Bez změny chování, „use strict“ a top-level deklarace zůstanou (klasický skript, sdílený globální rozsah).
+3. web/prihlaseni.js (nový), kroky přihlášení každý ve vlastní funkci, aby řádek v počítadle řekl krok:
+   - posliOdkaz: try/catch kolem api, tlačítko disabled + aria-busy po dobu odeslání, ochrana proti dvojímu odeslání (Enter i klik), při síťové chybě obecne.nepovedlo_znovu a odblokování;
+   - vykresliUvod: beze změny;
+   - zkontrolujNavrat: při visibilitychange → visible a pageshow(persisted), jen když body není .prihlasen a aktivní je #obrazovka-prihlaseni, zavolá obnov() (přes SimteGen.kdoJsem, nikdy vlastní fetch /api/ja);
+   - popstate bez .prihlasen nechá přihlášení.
+4. web/index.html:
+   - místo inline skriptu &lt;script src="pneusklad.js"&gt;&lt;/script&gt; a &lt;script src="prihlaseni.js"&gt;&lt;/script&gt; za simtegen.js a texty.js;
+   - inline zůstane jen start: zapisNavstevu (POST /api/navsteva {stranka:"uvod"}, beze změny) a obnov() podle vzoru šablony;
+   - obnov dostane: příznak „běží“ proti souběhu; nactiUcet se síťovou chybou → SimteGen.offline(obnov) místo věčné kostry; 401 z /api/nastaveni → přihlášení; jinak jako dosud;
+   - markup obrazovek, ID, data-ukazka, data-objednavka, data-predplatne-play, patička a registrace sw.js se nemění.
+5. uat/scenare.json: přidat scénáře z pole akceptace. Úvodní scénář doplnit o obsahuje „src=\"pneusklad.js\"“, „src=\"prihlaseni.js\"“, „/api/navsteva“, „SimteGen.kdoJsem“.
+6. play/co_je_noveho.txt: „Opravili jsme přihlášení: odkaz z e-mailu vás po návratu do aplikace rovnou přihlásí a při slabém signálu už se přihlášení nezasekne. Nic jiného se nemění.“ (anglicky obdobně, je-li soubor dvojjazyčný).
+7. SPEC.md: specifikace buildu 18, nalezené příčiny, odchylka „zařízení“ k potvrzení a seznam souborů mimo rozsah. README.md: jedna věta, že produktový skript je v pneusklad.js a prihlaseni.js kvůli čitelnému počítadlu chyb.
+8. Bez zásahu: data-manifest.json (žádná nová data, služba, cookie ani úložiště, play_nakupy, Google Play a cookie aplikace už v manifestu jsou), migrace, zásady, functions/** včetně overeni.js, prihlaseni.js, chyba-stranky.js a _middleware.js (obou), web/simtegen.js, web/play.js, web/sw.js (generuje vykresli_aplikaci.py), styl.css, produkt.css, texty.js (pokud nebude nutný nový klíč), .github/.
+9. Generátory a kontroly pustí člověk (Python ani node tu neběží): python vykresli_aplikaci.py, python kontrola_manifestu.py (včetně node --check obou nových souborů), python kontrola_jazyku.py (prochází i web/*.js), python uat_kontrola.py, vizualni_kontrola.py, bezpecnostni_kontrola.py (inline skriptů ubyde).
+10. Po nasazení měření pokusu: 7 dní sledovat chyby_stranek pro obrazovky prihlaseni a nacitani a 30 dní nové účty se zdrojem google-play nebo z úvodu (zdroje_navstev / uzivatele.zdroj zapisuje šablona).
 
 ## Soubory
 - web/index.html
-- web/texty.js
+- web/pneusklad.js (nový — přesunutý produktový skript)
+- web/prihlaseni.js (nový — kroky přihlášení a návrat po přihlášení)
 - uat/scenare.json
-- napoveda.json
-- web/napoveda.html (generuje vykresli_napovedu.py)
 - play/co_je_noveho.txt
-- README.md
 - SPEC.md
-- obnova šablony, ne stavitel: DESIGN.md, web/styl.css, web/simtegen.js, web/ikony.svg, kontrolní skripty (*_kontrola.py, kontrola_jazyku.py, vykresli_*.py); kdyby obnova přinesla změny v functions/api/_middleware.js, web/play.js nebo .github/workflows/deploy.yml, uvést je v PR jako obnovu šablony
+- README.md
+- mimo rozsah, jen pokud je přinese obnova šablony (ne stavitel): web/simtegen.js, web/play.js, functions/api/_middleware.js, functions/api/overeni.js, .github/workflows/deploy.yml — uvést v PR jako obnovu šablony
 
 ## Rizika
-- Jazyk se volí sám: stávající česky mluvící uživatel s telefonem nastaveným anglicky, který jazyk nikdy nezvolil, uvidí po buildu aplikaci anglicky. Majitel to výslovně chce. Návrat je jedno klepnutí v Účtu a volba se uloží k účtu. Zmíní to co_je_noveho.txt a nápověda.
-- Měna podle země: zahraniční návštěvník uvidí na úvodu 4,90 € (schválený web/cenik.json), ale fakturační objednávka je dál jen v Kč a v aplikaci platí cena z Google Play. Podle šablony je to záměr, ale majitel by měl potvrdit, že na úvodu stačí cena v jiné měně a placení zůstává v Kč.
-- Jeden tarif na úvodu: Sezónní vstup a Větší provozovna zmizí z úvodu, ale v objednávce na Předplatném se dál dají vybrat, protože majitel zakázal měnit funkce. Kdyby chtěl prodávat jen Standard, je to změna ceníku a objednávky a patří do jiného zadání.
-- Neznámé limity slov: nová část Text v DESIGN.md v repu zatím není, přijde s obnovou šablony. Cíle ve specifikaci jsou odhad. Při přísnější kontrole se texty zkrátí víc, struktura zůstává.
-- Patička na jednom řádku na 360 px: „Zásady · Podmínky · Smlouva o zpracování · Odstoupení“ je na hraně šířky. Kdyby se nevešla, zkrátí se popisky odkazů (názvy dokumentů na stránkách zůstanou celé), řádek se nezalomí.
-- Ukázka jen v aplikaci: kontrola Google Play hledá data-ukazka v aplikaci, kde zůstává. Kdyby vizuální kontrola vyžadovala viditelné tlačítko i na webu, vrátí se jako vedlejší tlačítko bez odstavce.
-- Tablet bez menu před přihlášením: zůstává levý pruh se značkou a Nahlásit chybu. Kdyby recenzent chtěl i tam plochu bez menu, je to jedno pravidlo v CSS.
-- Generátory a kontroly tu nejdou spustit (Python ani Node), před CI je musí pustit člověk.
+- Příčinu jsem určil z kódu, ne z dat. Počítadlo dnes zapisuje „jine“ a produkční data jsem neviděl. Opravené příčiny (síťová chyba při odeslání odkazu, věčné Načítání, chybějící kontrola po návratu, dvojí odeslání) odpovídají obrazovkám i počtu, ale nemusí být všechny.
+- Část chyb nemusí být naše: automatické testy Google Play (pre-launch report) na desítkách zařízení, rozšíření prohlížeče, Překladač Google a skript, který vkládá Cloudflare, se zapíší na „prihlaseni“ jako „jine“ nebo pod cizí soubor.
+  - Po buildu jdou naše chyby poznat podle pneusklad.js/prihlaseni.js:řádek.
+  - Navrhuji, aby měřítko „pod 2 chyby přihlášení za 7 dní“ počítalo jen chyby v našich souborech. Prosím o potvrzení majitelem.
+- Zařízení do počítadla build nedodá. Šablona to zakazuje (bez user agentu, „jen čísla“) a vlastní měření je vyloučené. Je to odchylka k potvrzení, návrh patří do šablony.
+- Návrat do aplikace z Google Play funguje automaticky jen tehdy, když e-mailový klient otevře odkaz v Chromu nebo jeho kartě (sdílené cookies s TWA), nebo když Android ověřeným App Link (assetlinks.json) otevře odkaz rovnou v aplikaci.
+  - Samsung Internet nebo jiný výchozí prohlížeč má vlastní cookies a aplikace přihlášení nepozná.
+  - Ověří to ruční test. Jiné řešení, třeba kód z e-mailu opsaný do aplikace, je změna šablony přihlášení a patří do jiné stavby.
+- Přesun skriptu se dotkne ~2 700 řádků. Má proběhnout doslova (vyjmout a vložit), jinak hrozí rozbití celé aplikace. Pojistkou je kontrola syntaxe node --check v kontrola_manifestu.py, vizuální kontrola a UAT.
+- Čísla řádků se s každým buildem posunou. Revize musí číst místo spolu s verzí, proto jsou kroky přihlášení ve vlastním malém souboru.
+- Offline: sw.js (generovaný) si předem ukládá jen „/“ a styl, ne skripty. Offline skořápka je tak bez skriptů už dnes, nové soubory na tom nic nezhorší. Oprava patří do generátoru šablony.
+- Měřítko „3 nové účty do 30 dní“ závisí i na návštěvnosti z Google Play a z úvodu. Oprava může být úplná, a přesto cíl nesplnit pro malý provoz.
+- Generátory a kontroly tu nejdou spustit. Před CI je musí pustit člověk.
 
 ## Jak ověřit
-1. Telefon 360×740, anonymní okno, https://pneusklad.simtegen.com: vidíte jen H1, podvětu, tři krátké přednosti, kartu „Standard 129 Kč / firma / měsíc“ s větou „Prvních 30 dní zdarma, bez karty.“, pole e-mailu a jedno černé tlačítko „Začít zdarma“. Dole nesmí být spodní menu, tlačítko English ani přepínač měny. Pod tím je jeden řádek právních odkazů.
-2. Totéž přes VPN z Německa: cena je 4,90 € a přepínač měny nikde není.
-3. Přihlásit se odkazem: spodní menu se objeví a patička zmizí na Dnes, Skladu, Objednávkách i Nastavení. Nový účet: na Dnes je jednořádkový prázdný stav, „Nová sada na uskladnění“ a „Naplnit ukázkovými daty“.
-4. Projít Sklad, Zákazníky, Objednávky, Přípravu, Sezónní přehled, Nastavení, Tým a Předplatné: pod nadpisy sekcí nesmí být žádný vysvětlující odstavec a prázdné stavy mají jeden řádek. Zapsat sadu, vytisknout štítek, založit objednávku a připravit kola: vše funguje jako v buildu 15.
-5. Nastavení → Účet a data: je tu řádek Jazyk (Čeština | English), řádek Nápověda a dole patička. Přepnout na English: aplikace se znovu otevře v Účtu, anglicky, s „Language saved“ a Vrátit. Na druhém zařízení se stejným účtem je rovnou anglicky.
-6. Totéž s ?jazyk=en a na tabletu 820 px a notebooku 1440 px: úvod ve dvou sloupcích, patička na celou šířku, levé menu jen se značkou a Nahlásit chybu.
-7. Aplikace z Google Play: na úvodu je navíc vedlejší „Vyzkoušet ukázku“, v patičce jen Zásady a Smlouva o zpracování, nikde faktura ani převod.
-8. CI zelené: kontrola jazyků, vizuální kontrola (počet slov, jedno černé tlačítko, 13 px, EN bez diakritiky), UAT a kontrola manifestu.
+1. Telefon s aplikací Pneusklad z Google Play, nový e-mail: otevřít aplikaci (otevře se s ?aplikace=play), zadat e-mail, klepnout „Začít zdarma“ a rychle ještě Enter. Musí přijít jen jeden e-mail a tlačítko je do odpovědi zablokované.
+2. V Gmailu klepnout na odkaz, potvrdit „Přihlásit se“ a přepnout zpět do aplikace Pneusklad. Aplikace bez dalšího klepnutí ukáže Dnes nového účtu s průvodcem a prázdným stavem („Nová sada na uskladnění“, „Naplnit ukázkovými daty“).
+3. Počítač: v kartě A zadat e-mail. Odkaz z e-mailu otevřít v kartě B a přihlásit se. Po přepnutí do karty A je i ta přihlášená na Dnes.
+4. Slabý signál: v Chrome DevTools zapnout Offline a klepnout „Začít zdarma“. Pod polem je „Něco se nepovedlo. Zkuste to prosím znovu.“, tlačítko jde znovu stisknout a v konzoli není „Uncaught (in promise)“.
+5. Přihlášený účet: v DevTools zablokovat /api/nastaveni (Network request blocking) a obnovit stránku. Místo věčné kostry je pruh „Zkusit znovu“. Po odblokování a klepnutí se otevře Dnes.
+6. Odhlášený na úvodu: tlačítko Zpět (i systémové na Androidu) neotevře Dnes.
+7. Kontrola počítadla: na náhledu s VYVOJ v konzoli spustit setTimeout(() => { throw new Error("test") }) v kontextu prihlaseni.js (nebo dočasně vyvolat chybu). V D1 chyby_stranek musí být řádek obrazovka „prihlaseni“, místo „prihlaseni.js:N“, ne „jine“.
+8. Regrese: zapsat sadu, vytisknout štítek, založit objednávku a připravit kola. Vše jako v buildu 17. Na webu i v aplikaci je volání /api/navsteva při úvodu vidět v záložce Network.
+9. CI zelené: kontrola manifestu (včetně node --check pneusklad.js a prihlaseni.js), kontrola jazyků, vizuální kontrola, UAT a bezpečnostní kontrola.
+10. Po 7 a 30 dnech: v metrikách SimteGen chyby na prihlaseni/nacitani pod 2 za 7 dní (jen naše soubory) a aspoň 3 nové účty ze zdroje google-play nebo z úvodu.
 
 ## Akceptační scénáře (CI je spustí proti API)
-- Nepřihlášený návštěvník otevře GET / a musí vidět nadpis „Víte, kde má který zákazník uložené pneu?“, data-cena="doporuceni", pole e-mailu a #poslat-odkaz, a nesmí vidět hlavicka-jazyk, jazyk-nabidka ani data-prepinac-meny.
-- Přihlášený účet A založí přes POST /api/sady sadu s pozicí v regálu a pak ji dostane přes GET /api/sady/{id} se stejným kódem a pozicí, tedy evidence funguje beze změny.
-- Přihlášený účet B po zápisu účtu A zavolá GET /api/sady a GET /api/jazyk a nesmí vidět žádnou sadu účtu A ani jeho jazykovou volbu.
-- Přihlášený účet A pošle POST /api/jazyk {"jazyk":"en"} a GET /api/jazyk musí vrátit „en“, které je i v GET /api/ucet/export v tabulce predvolby.
-- Nepřihlášený návštěvník zavolá GET /api/ja a musí vidět ceník se Standardem za 129 a "zkusebni_dni":30, bez jakéhokoli e-mailu.
+- Nepřihlášený návštěvník otevře GET /?aplikace=play a musí vidět pole e-mailu, #poslat-odkaz, data-ukazka, volání /api/navsteva, SimteGen.kdoJsem a skripty src="pneusklad.js" a src="prihlaseni.js".
+- Nepřihlášený návštěvník otevře GET /prihlaseni.js a GET /pneusklad.js a musí dostat 200 se skriptem, který obsahuje posliOdkaz a /api/prihlaseni, resp. /api/nastaveni.
+- Nepřihlášený návštěvník pošle POST /api/prihlaseni s e-mailem @example.cz a musí dostat 200 s odkazem /api/overeni?token= (vývojový režim CI).
+- Nově přihlášený účet A zavolá GET /api/ja a GET /api/nastaveni a musí dostat 200 se svým e-mailem a zkušebním předplatným, tedy registrace a první přihlášení projdou až k datům, která aplikace načítá při startu.
+- Nepřihlášený návštěvník pošle POST /api/chyba-stranky {obrazovka:"prihlaseni", misto:"prihlaseni.js:42"} a musí dostat 200 {"ok":true}, tedy nový tvar místa server přijme.
+- Přihlášený účet B po zápisu sady účtem A zavolá GET /api/sady a GET /api/nastaveni a nesmí vidět žádnou sadu ani e-mail účtu A.
 
 _Schvaluje se přes ARGA (simtegen_approve_spec) nebo na mini PC._
-
-## Co se při stavbě oproti specifikaci změnilo
-
-1. **Nápověda zůstala v patičce, ne jako řádek v Účtu.** Generátor `vykresli_napovedu.py` vyžaduje v `index.html` přesně odkaz `<a href="napoveda.html">Nápověda</a>`. Patička je v Účtu vidět, takže je Nápověda na stejném místě, jen v řádku s právními odkazy.
-2. **Řádek Jazyk kreslí obnovená šablona jako výběr** (`<select>` s popiskem „Jazyk“), ne jako dvě tlačítka. V patičce šablona nic nekreslí. Produkt změnu výběru zachytí dřív než šablona, aby se volba nejdřív uložila k účtu. Když se uložení nepodaří, výběr se vrátí a pod řádkem se ukáže chyba. Jinak by jazyk při příštím otevření vrátila volba uložená k účtu.
-3. **V Účtu zmizel nadpis „Vaše data“.** Bez odstavce by pod ním nic nebylo. Stažení dat je hlavní akce dole.
-4. **Limity slov stavba převzala z `vizualni_kontrola.py`**: nejvýš 20 slov v jednom textu (`p`, `.napoveda`) a 50 na obrazovce. Nová část Text v DESIGN.md v repu zatím není.
-   - Kvůli limitu jsou zkrácené i věty na Předplatném (stav, kdo kupuje, souhlas s podmínkami), nápověda formátu štítku v Nastavení a pozvánka do týmu.
-   - Právně závazný souhlas spotřebitele (§ 1837) zůstal doslova.
-5. **Značka v menu** je „SimteGen“ místo „simtegen“, stejně jako ji za běhu opravuje šablona.
-6. **Modul SCHRÁNKA je zapojený** (po recenzi; je to pokyn majitele). Obrazovka Účet a data má:
-   - kartu „Napište nám“: pole zprávy a vedlejší tlačítko „Odeslat zprávu“ → `POST /api/hlaseni`;
-   - pod ní seznam vlastních zpráv se stavem (Přijato, Řešíme, Vyřízeno, Odloženo), datem a odpovědí → `GET /api/hlaseni`;
-   - stavy: kostra při načítání, jednořádkový prázdný stav, chyba s radou;
-   - nic z toho nehlídá předplatné, takže psát nám jde i po jeho vypršení;
-   - tlačítko Nahlásit chybu ze šablony posílá přihlášenému na stejný endpoint, takže se jeho zpráva objeví ve stejném seznamu.
-
-   Tabulka i endpoint přišly s obnovou šablony, nová funkce ani data tím nevznikají.
-7. **Soubory mimo rozsah stavby:**
-   - *obnova šablony, ne stavitel:*
-     - `web/simtegen.js`, `web/styl.css`, `DESIGN.md`, kontrolní skripty a generátory (`*_kontrola.py`, `vykresli_*.py`);
-     - `functions/api/hlaseni.js`, `schranka_sifra.js`, `db/migrace/0003_hlaseni.sql`;
-     - případně další soubory, které obnova přinesla (`functions/api/_middleware.js`, `web/play.js`, `.github/workflows/deploy.yml`) — je potřeba je ověřit v diffu PR;
-   - *stavitel:*
-     - `kontrola_manifestu.py` — vlastní úprava stavitele už v diffu není. Majitel chtěl opravit nález GitHub code scanning „Bad HTML filtering regexp“ a navrhl konec výrazu `</script\s*>`. Mezitím soubor přepsala obnova šablony a ta už opravu nese (ř. 342):
-       - výraz končí `</script\b[^>]*>`, takže pozná `</script>`, `</script >` i `</script x>`. Pokrývá všechno, co pokrývá výraz majitele, a k tomu i značku s atributem, kterou CodeQL (`py/bad-tag-filter`) také hlásí;
-       - oprava je přímo v šabloně, takže ji příští obnova nepřepíše;
-       - výraz majitele by naopak značku s atributem znovu nechal bez shody a šel by proti šabloně, proto zůstává verze ze šablony;
-     - `data-manifest.json`: entita `hlaseni` a přesný popis služby GitHub (bod 8);
-     - `functions/api/overeni.js` (bod 9, mění odpověď hranice přihlášení na neplatný odkaz, schvaluje SimteGen);
-     - `functions/api/hlaseni.js`, vyžádala bezpečnostní recenze. Soubor přišel s obnovou šablony a stejnou opravu by měla dostat i šablona, jinak ji příští obnova přepíše.
-       - Limit hlášení se počítá atomicky před zápisem přes `ochrana.vLimitu`: 5 za hodinu na účet, 30 za hodinu a 200 za den na celý produkt.
-       - Dřív to byl `SELECT COUNT` a pak `INSERT`, takže paralelní požadavky limit obešly a každý založil řádek i issue ve veřejném repozitáři.
-       - Ukázkové a kontrolní účty firmy (`@ukazka.invalid`) se do GitHubu nezrcadlí, jejich řádek v aplikaci zůstává.
-
-   Nevzniká žádné nové úložiště v prohlížeči ani cookie. `sg-volba` už zásady uvádějí.
-8. **Oprava po kontrole manifestu:**
-   - Obnova šablony přinesla `db/migrace/0003_hlaseni.sql` a `functions/api/hlaseni.js` (schránka). Manifest proto deklaruje entitu `hlaseni` (hlášení a dotazy zákazníka a naše odpovědi, do smazání účtu).
-   - Popis služby GitHub už netvrdí, že se hlášení v aplikaci neukládá.
-   - Karta tarifu na úvodu na tabletu nepřetéká: číslo se řídí šířkou okna a jednotka se zalomí pod něj.
-   - Nápověda má kratší úvod a témata jako krátké kroky (limit 20 slov na odstavec) a nové téma „Jak nám napsat“.
-   - Řádek patičky se na telefonu do 400 px zalomí do dvou řádků. Celý má asi 64 znaků a na 360 px se vejde asi 43, takže by nestačilo ani zkrácení popisků. Na tabletu a notebooku je na jednom řádku, v aplikaci z Google Play (bez Podmínek a Odstoupení) i na telefonu.
-9. **Oprava po kontrole migrace na datech staré verze:** změněn `functions/api/overeni.js`. Jde o soubor mimo rozsah stavby; je to změna stavitele, ne obnova šablony, a vyžádala si ji kontrola.
-   - **Co kontrola hlásila:** u účtů ze staré verze zopakovala i stránku „Přihlásit se jako …?“ z už použitého jednorázového odkazu. Dostala 403 a ohlásila to jako odhlášení zákazníků.
-   - **Migrace `0003_hlaseni.sql`** jen zakládá novou tabulku a nikoho neodhlašuje.
-   - **Teď:** použitý nebo vypršelý odkaz otevřený z e-mailu dostane stránku „Odkaz už neplatí“ s cestou zpět na úvod a kódem 410 Gone místo holého textu s 403.
-   - **Beze změny:** přihlášení dál umí jen tlačítko (POST) a ten neplatný odkaz odmítá s 403, hranice přihlášení se nemění.
-10. **Volba jazyka účtu má vlastní cestu `/api/predvolby`** (oprava po kontrole). Obnova šablony přepsala produktový `functions/api/jazyk.js` šablonovým.
-    - **Šablonový `/api/jazyk`** umí jen POST, ukládá jazyk pro pozdější e-maily firmy do `uzivatele.jazyk` (migrace 0950) a `simtegen.js` ho volá sám. Je ze šablony a stavitel na něj nesahá.
-    - **Proč scénáře padaly:** produktové GET a POST nad tabulkou `predvolby` (build 15) zmizely. GET proto vracel HTML stránku a volba nebyla v exportu.
-    - **Oprava:** totéž chování teď nese nový `functions/api/predvolby.js`:
-      - GET vrací `{jazyk}`;
-      - POST vrací `{stav:"ulozeno", jazyk}`;
-      - neznámý jazyk 422, nepřihlášený 401.
-    - **Stránka** volá tuto cestu. Ve scénářích UAT se změnil jen technický zápis cesty, očekávání ne.
-    - **Data:** tabulka, manifest ani zásady se nemění.
-11. **Anglický záznam v obchodě** (`aplikace.en` v manifestu): název, krátký a dlouhý popis, hlavní věta a slova ke stejným šesti snímkům. Produkt mluví anglicky, takže ho generátor vyžaduje.
-12. **Objednávka předplatného v akceptačních testech** (oprava po kontrole CI).
-    - **Co se stalo:** obnovený šablonový `functions/api/_middleware.js` odmítá fakturační objednávku mimo Česko podle země připojení. Jeho komentář počítá s tím, že lokální běh zemi nemá. `wrangler pages dev` ji ale dosadí podle skutečného připojení a runner GitHubu není v Česku. Schválený scénář „Objednávka předplatného…“ proto dostal 422.
-    - **Proč ne v šablonovém souboru:** oprava přímo v `functions/api/_middleware.js` nepřežila, šablona se obnovuje před každou kontrolou.
-    - **Oprava:** je v produktovém `functions/_middleware.js`, který běží dřív. Jen ve vývojovém režimu (`VYVOJ=ano`, tedy lokální běhy a náhledy s vlastní databází) předá požadavek na `/api/objednavka` dál bez údaje o zemi a šablonové pravidlo ho nechá projít.
-    - **Produkce** `VYVOJ` nemá, zahraniční fakturační objednávku dál odmítá.
-    - **Do šablony:** trvalá oprava patří tam (vývojový režim přeskočit přímo v `objednavkaMimoCesko`). Pak tento kus produktu půjde smazat.
-13. **Generátory ani kontroly stavitel nespustil**, Python tu neběží. Před CI je musí pustit člověk:
-   - `python vykresli_napovedu.py`
-   - `python vykresli_zasady.py`
-   - `python vykresli_seo.py`
-   - `python vykresli_aplikaci.py`
-   - pak `python kontrola_manifestu.py`, `python kontrola_jazyku.py`, `python uat_kontrola.py` a `vizualni_kontrola.py`
