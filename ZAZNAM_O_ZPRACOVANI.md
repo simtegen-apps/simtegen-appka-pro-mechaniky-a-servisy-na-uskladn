@@ -1,11 +1,11 @@
 <!-- GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: data-manifest.json, generátor: vykresli_zasady.py. -->
 # Záznam o činnostech zpracování — Pneusklad — evidence uskladněných pneu
 
-**Verze:** 2.1 · **poslední aktualizace:** 24. 11. 2026 · **zpracoval:** (doplnit jméno)
+**Verze:** 2.1 · **poslední aktualizace:** 24. 11. 2026 · **zpracoval:** jednatel společnosti
 **Přezkoumat:** nejméně 1× ročně a při každé změně zpracování, zpracovatelů nebo účelů.
 
 **Správce:** SimteGen, s.r.o., IČO 13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10,
-e-mail support@simtegen.com, datová schránka (doplnit).
+e-mail support@simtegen.com, datová schránka f57tb7i.
 **Zástupce podle čl. 27 GDPR:** nejmenován (správce je usazen v EU).
 **Pověřenec pro ochranu osobních údajů:** nejmenován — nesplněna žádná z podmínek čl. 37 GDPR.
 
@@ -47,7 +47,7 @@ proveden 24. 11. 2026 (dokument vede správce, na vyžádání jej předloží).
 
 ### A.2 Kategorie příjemců
 
-Zpracovatelé uvedení v části A.3; účetnictví: (doplnit obchodní firmu účetního); orgány veřejné moci
+Zpracovatelé uvedení v části A.3; účetnictví: účetnictví vede správce sám; orgány veřejné moci
 v rozsahu, v jakém to ukládá zákon. Údaje se neprodávají ani nepředávají k reklamním účelům.
 
 ### A.3 Zpracovatelé a předávání mimo EU

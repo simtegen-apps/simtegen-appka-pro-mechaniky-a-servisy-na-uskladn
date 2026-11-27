@@ -6,7 +6,7 @@ k uloženým údajům dostal někdo nepovolaný, že byly změněny nebo zničen
 nedostupnými (únik databáze, kompromitovaný token, chyba zpřístupňující cizí data,
 ransomware, ztráta záloh).
 
-**Odpovědná osoba:** (doplnit jméno), zástup: (doplnit jméno).
+**Odpovědná osoba:** jednatel společnosti, zástup: nestanoven.
 Kdo incident zjistí, uvědomí ji neprodleně — lhůty níže běží od okamžiku, kdy se
 o incidentu dozvěděl kdokoli z firmy, ne od okamžiku, kdy se to dozvěděla odpovědná osoba.
 
